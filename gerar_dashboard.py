@@ -722,6 +722,19 @@ def gerar_html_dashboard(
         </table>
       </div>
     </div>
+
+	    <div class="panel full">
+	      <h2 class="section-title">Reincidência por cliente/contrato</h2>
+	      <div class="panel-meta" id="reincidenciaMeta">Mostrando as O.S. dos clientes/contratos com reincidência no período filtrado.</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>{header_cols}</tr>
+          </thead>
+          <tbody id="reincidenciasBody"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -745,10 +758,12 @@ def gerar_html_dashboard(
 	    const tempoBacklogBody = document.getElementById("tempoBacklogBody");
 		    const rankingBody = document.getElementById("rankingBody");
 		    const detalhesBody = document.getElementById("detalhesBody");
+    const reincidenciasBody = document.getElementById("reincidenciasBody");
 		    const painelTempoMeta = document.getElementById("painelTempoMeta");
 		    const rankingMeta = document.getElementById("rankingMeta");
 	    const graficoDiarioMeta = document.getElementById("graficoDiarioMeta");
     const detalheMeta = document.getElementById("detalheMeta");
+    const reincidenciaMeta = document.getElementById("reincidenciaMeta");
 	    const movimentacoesGrid = document.getElementById("movimentacoesGrid");
 	    const popsGrid = document.getElementById("popsGrid");
     const storageKey = "dashboard_tecnico_filtros";
@@ -1373,6 +1388,85 @@ def gerar_html_dashboard(
       }});
     }}
 
+    function obterChavesReincidentes(registros) {{
+      const mapa = new Map();
+
+      registros.forEach((registro) => {{
+        const cliente = normalizarTexto(registro.cliente);
+        const contrato = normalizarTexto(registro.contrato);
+        if (!cliente && !contrato) return;
+
+        const chave = `${{cliente}}|||${{contrato}}`;
+        if (!mapa.has(chave)) {{
+          mapa.set(chave, {{
+            cliente,
+            contrato,
+            ids: [],
+          }});
+        }}
+
+        const item = mapa.get(chave);
+        const id = normalizarTexto(registro.id || registro.ordem_servico);
+        if (id) item.ids.push(id);
+      }});
+
+      return new Set(
+        [...mapa.entries()]
+          .map(([chave, item]) => [chave, [...new Set(item.ids)]])
+          .filter(([, ids]) => ids.length > 1)
+          .map(([chave]) => chave)
+      );
+    }}
+
+    function renderReincidencias(registros) {{
+      const chavesReincidentes = obterChavesReincidentes(registros);
+      reincidenciasBody.innerHTML = "";
+
+      if (!chavesReincidentes.size) {{
+        reincidenciasBody.innerHTML = `<tr><td colspan="${len(detalhe_cols) if detalhe_cols else 1}" class="empty">Nenhuma reincidência encontrada para os filtros atuais.</td></tr>`;
+        return;
+      }}
+
+      const linhas = registros
+        .filter((registro) => {{
+          const cliente = normalizarTexto(registro.cliente);
+          const contrato = normalizarTexto(registro.contrato);
+          const chave = `${{cliente}}|||${{contrato}}`;
+          return chavesReincidentes.has(chave);
+        }})
+        .sort((a, b) => {{
+          const clienteA = normalizarTexto(a.cliente);
+          const clienteB = normalizarTexto(b.cliente);
+          const contratoA = normalizarTexto(a.contrato);
+          const contratoB = normalizarTexto(b.contrato);
+          const dataA = obterDataBaseTexto(a);
+          const dataB = obterDataBaseTexto(b);
+          return clienteA.localeCompare(clienteB, "pt-BR", {{ sensitivity: "base" }})
+            || contratoA.localeCompare(contratoB, "pt-BR", {{ sensitivity: "base" }})
+            || dataA.localeCompare(dataB, "pt-BR", {{ sensitivity: "base" }});
+        }});
+
+      linhas.forEach((registro) => {{
+        const tr = document.createElement("tr");
+        const linkSgp = obterLinkSgp(registro);
+        if (linkSgp) {{
+          tr.classList.add("row-link");
+          tr.title = "Abrir no SGP";
+          tr.addEventListener("click", () => {{
+            window.open(linkSgp, "_blank", "noopener,noreferrer");
+          }});
+        }}
+        detalheCols.forEach((coluna) => {{
+          const td = document.createElement("td");
+          td.textContent = coluna === "grupo_dashboard"
+            ? obterGrupo(registro)
+            : normalizarTexto(registro[coluna]);
+          tr.appendChild(td);
+        }});
+        reincidenciasBody.appendChild(tr);
+      }});
+    }}
+
 	    const graficoMensal = new Chart(document.getElementById("graficoMensal"), {{
       type: "bar",
       data: {{
@@ -1541,6 +1635,7 @@ def gerar_html_dashboard(
       painelTempoMeta.textContent = `Tempo médio e backlog para o recorte: ${{textoFiltro}}.`;
       rankingMeta.textContent = `Ranking atualizado com ${{registrosFinalizados.length}} OS encerradas no recorte atual.`;
       detalheMeta.textContent = `Mostrando ${{totalDetalhes}} registro(s) após aplicar os filtros.`;
+      reincidenciaMeta.textContent = `Mostrando as O.S. reincidentes de cliente/contrato no recorte: ${{textoFiltro}}.`;
     }}
 
 	    function aplicarFiltros() {{
@@ -1559,6 +1654,7 @@ def gerar_html_dashboard(
 	      renderTempoBacklog(registros, registrosFinalizados);
 	      renderRanking(registrosFinalizados, registrosBaseRanking);
 	      renderDetalhes(registros);
+	      renderReincidencias(registros);
 	      renderGrafico(registrosFinalizados);
 	      renderGraficoDiario(registrosFinalizados);
 	      atualizarMetas(registrosFinalizados, registros.length);
