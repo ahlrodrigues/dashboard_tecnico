@@ -16,6 +16,8 @@ def _serializar_registros(df: pd.DataFrame, detalhe_cols: list[str]) -> list[dic
         view["data_finalizacao_dashboard"] = view["data_finalizacao_dashboard"].dt.strftime("%Y-%m-%d")
     if "data_criacao_dashboard" in view.columns:
         view["data_criacao_dashboard"] = view["data_criacao_dashboard"].dt.strftime("%Y-%m-%d")
+    if "data_base_dashboard" in view.columns:
+        view["data_base_dashboard"] = view["data_base_dashboard"].dt.strftime("%Y-%m-%d")
 
     base_cols = list(detalhe_cols)
     for extra_col in [
@@ -23,8 +25,10 @@ def _serializar_registros(df: pd.DataFrame, detalhe_cols: list[str]) -> list[dic
         "mes_num",
         "grupo_dashboard",
         "grupo_encerramento_dashboard",
+        "responsavel_encerramento_dashboard",
         "contrato_status_dashboard",
         "finalizado_por_dashboard",
+        "data_base_dashboard",
         "data_finalizacao_dashboard",
         "data_criacao_dashboard",
         "mes_criacao_num",
@@ -67,6 +71,7 @@ def gerar_html_dashboard(
     detalhe_cols += [c for c in extra_cols if c in detalhes_df.columns and c not in detalhe_cols]
     detalhe_labels = {
         "data_finalizacao_dashboard": "Data finalizacao",
+        "data_base_dashboard": "Data base",
         "data_criacao_dashboard": "Criada em",
         "finalizado_por_dashboard": "Finalizado por",
         "grupo_dashboard": "Grupo",
@@ -78,12 +83,14 @@ def gerar_html_dashboard(
         "encerrada": int((detalhes_df["status_dashboard"] == "Encerrada").sum()) if not detalhes_df.empty else 0,
         "pendente": int((detalhes_df["status_dashboard"] == "Pendente").sum()) if not detalhes_df.empty else 0,
         "em_execucao": int((detalhes_df["status_dashboard"] == "Em execução").sum()) if not detalhes_df.empty else 0,
+        "inviabilidade": int((detalhes_df["contrato_status_dashboard"].fillna("").astype(str).str.strip() == "Inviabilidade Técnica").sum())
+        if "contrato_status_dashboard" in detalhes_df.columns and not detalhes_df.empty else 0,
         "instalacoes": int((detalhes_df["motivo"].fillna("").astype(str).str.strip() == "Instalação de KIT").sum()) if "motivo" in detalhes_df.columns else 0,
         "remocoes": int((detalhes_df["motivo"].fillna("").astype(str).str.strip() == "Remoção de KIT").sum()) if "motivo" in detalhes_df.columns else 0,
-        "tecnicos": int((finalizadas_df["grupo_encerramento_dashboard"] == "Técnicos").sum()) if "grupo_encerramento_dashboard" in finalizadas_df.columns and not finalizadas_df.empty else 0,
-        "infra": int((finalizadas_df["grupo_encerramento_dashboard"] == "Infra").sum()) if "grupo_encerramento_dashboard" in finalizadas_df.columns and not finalizadas_df.empty else 0,
-        "inviabilidade": int((finalizadas_df["grupo_dashboard"] == "Inviabilidade").sum()) if not finalizadas_df.empty else 0,
-        "outros": int((finalizadas_df["grupo_encerramento_dashboard"] == "Outros").sum()) if "grupo_encerramento_dashboard" in finalizadas_df.columns and not finalizadas_df.empty else 0,
+        "pelo_responsavel": int((finalizadas_df["responsavel_encerramento_dashboard"] == "Pelo responsável").sum())
+        if "responsavel_encerramento_dashboard" in finalizadas_df.columns and not finalizadas_df.empty else 0,
+        "por_outros": int((finalizadas_df["responsavel_encerramento_dashboard"] == "Por outros").sum())
+        if "responsavel_encerramento_dashboard" in finalizadas_df.columns and not finalizadas_df.empty else 0,
     }
 
     detalhes_data = _serializar_registros(detalhes_df, detalhe_cols) if detalhe_cols else []
@@ -240,19 +247,19 @@ def gerar_html_dashboard(
     }}
     .cards-stack {{
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 16px;
       margin-bottom: 18px;
       align-items: stretch;
     }}
     .summary-card {{
-      min-height: 220px;
+      min-height: 0;
+      height: 100%;
       padding: 22px 20px;
-      display: flex;
-      flex-direction: column;
-      justify-content: flex-start;
-      align-items: flex-start;
-      text-align: left;
+      display: grid;
+      grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
       background:
         linear-gradient(180deg, rgba(220, 239, 231, 0.55), rgba(255, 255, 255, 0.96));
       position: relative;
@@ -272,6 +279,12 @@ def gerar_html_dashboard(
     }}
     .summary-card.tertiary {{
       background: linear-gradient(135deg, rgba(220, 239, 231, 0.92), rgba(255, 255, 255, 0.98));
+      grid-column: 1 / -1;
+      grid-template-columns: 1fr;
+    }}
+    .summary-card.tertiary .summary-card-head {{
+      padding-right: 0;
+      margin-bottom: 2px;
     }}
     .summary-card h3 {{
       margin: 0 0 6px;
@@ -282,44 +295,73 @@ def gerar_html_dashboard(
       z-index: 1;
     }}
     .summary-card .caption {{
-      margin: 0 0 16px;
+      margin: 0;
       font-size: 13px;
       color: var(--muted);
       position: relative;
       z-index: 1;
     }}
-    .metric-grid {{
-      width: 100%;
-      display: grid;
-      gap: 10px;
+    .summary-card-head {{
       position: relative;
       z-index: 1;
+      padding-right: 8px;
+      align-self: start;
+      justify-self: start;
+      text-align: left;
     }}
-    .metric-grid.cols-2 {{
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+    .metric-grid {{
+      width: 100%;
+      display: flex;
+      flex-wrap: wrap;
+      flex-direction: row;
+      gap: 12px;
+      position: relative;
+      z-index: 1;
+      align-self: start;
+      justify-content: flex-start;
+      align-content: flex-start;
+      align-items: stretch;
     }}
     .metric-grid.scrollable {{
-      max-height: 292px;
-      overflow: auto;
-      padding-right: 4px;
+      max-height: none;
+      overflow: visible;
+      padding-right: 0;
+    }}
+    .metric-grid.flow {{
+      justify-content: flex-start;
+      width: 100%;
+    }}
+    .metric-grid.flow .metric-item {{
+      flex: 0 1 calc((100% - 60px) / 6);
+      min-width: 150px;
     }}
     .metric-item {{
-      padding: 12px 12px 10px;
+      width: auto;
+      min-width: 180px;
+      max-width: 100%;
+      padding: 12px 16px 10px;
       border-radius: 16px;
       background: rgba(255, 255, 255, 0.72);
       border: 1px solid rgba(23, 98, 76, 0.10);
       min-height: 84px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      flex: 1 1 180px;
     }}
     .metric-item.compact {{
-      min-height: 72px;
-      padding: 10px 11px 9px;
+      min-height: 84px;
+      padding: 12px 12px 10px;
     }}
     .metric-label {{
       display: block;
       margin-bottom: 8px;
       font-size: 12px;
-      line-height: 1.35;
+      line-height: 1.2;
       color: var(--muted);
+      white-space: nowrap;
     }}
     .metric-value {{
       display: block;
@@ -430,9 +472,21 @@ def gerar_html_dashboard(
 	      }}
 	    }}
 	    @media (max-width: 720px) {{
-	      .toolbar,
-	      .metric-grid.cols-2 {{
+	      .toolbar {{
 	        grid-template-columns: 1fr;
+	      }}
+	      .metric-grid {{
+	        justify-content: flex-start;
+	      }}
+	      .metric-grid.flow .metric-item {{
+	        flex-basis: 180px;
+	      }}
+	      .summary-card {{
+	        grid-template-columns: 1fr;
+	        gap: 14px;
+	      }}
+	      .summary-card {{
+	        min-height: 0;
 	      }}
 	      .wrap {{
 	        padding: 0 14px 28px;
@@ -493,55 +547,56 @@ def gerar_html_dashboard(
 
 	    <div class="cards-stack">
 	      <div class="summary-card primary">
-	        <h3>Encerramentos</h3>
-	        <p class="caption">Visão consolidada das O.S. encerradas e da distribuição por equipe.</p>
+	        <div class="summary-card-head">
+	          <h3>Encerramentos</h3>
+	          <p class="caption">Visão consolidada das O.S. encerradas e da comparação entre responsável e finalizador.</p>
+	        </div>
 	        <div class="metric-grid cols-2">
 	          <div class="metric-item"><span class="metric-label">Total de O.S. encerradas</span><span class="metric-value" id="cardEncerrada">{cards['encerrada']}</span></div>
-	          <div class="metric-item"><span class="metric-label">Encerradas pelos técnicos</span><span class="metric-value" id="cardTecnicos">{cards['tecnicos']}</span></div>
-	          <div class="metric-item"><span class="metric-label">Encerradas pela infra</span><span class="metric-value" id="cardInfra">{cards['infra']}</span></div>
-	          <div class="metric-item"><span class="metric-label">Encerradas por outros</span><span class="metric-value" id="cardOutros">{cards['outros']}</span></div>
+	          <div class="metric-item"><span class="metric-label">Encerradas pelo responsável</span><span class="metric-value" id="cardPeloResponsavel">{cards['pelo_responsavel']}</span></div>
+	          <div class="metric-item"><span class="metric-label">Encerradas por outros</span><span class="metric-value" id="cardPorOutros">{cards['por_outros']}</span></div>
 	        </div>
 	      </div>
 	      <div class="summary-card secondary">
-	        <h3>Status Operacional</h3>
-	        <p class="caption">Panorama das ordens ainda em andamento ou com impedimentos no período filtrado.</p>
+	        <div class="summary-card-head">
+	          <h3>Status Operacional</h3>
+	          <p class="caption">Panorama das ordens ainda em andamento ou com impedimentos no período filtrado.</p>
+	        </div>
 	        <div class="metric-grid cols-2">
 	          <div class="metric-item"><span class="metric-label">Em aberto</span><span class="metric-value" id="cardAberta">{cards['aberta']}</span></div>
 	          <div class="metric-item"><span class="metric-label">Pendentes</span><span class="metric-value" id="cardPendente">{cards['pendente']}</span></div>
 	          <div class="metric-item"><span class="metric-label">Em execução</span><span class="metric-value" id="cardEmExecucao">{cards['em_execucao']}</span></div>
-	          <div class="metric-item"><span class="metric-label">Inviabilidades</span><span class="metric-value" id="cardInviabilidade">{cards['inviabilidade']}</span></div>
 	        </div>
 	      </div>
 	      <div class="summary-card tertiary">
-	        <h3>Movimentações</h3>
-	        <p class="caption">Distribuição completa dos atendimentos por motivo no recorte filtrado.</p>
-	        <div class="metric-grid cols-2 scrollable" id="movimentacoesGrid">
+	        <div class="summary-card-head">
+	          <h3>Movimentações</h3>
+	          <p class="caption">Distribuição completa dos atendimentos por motivo no recorte filtrado.</p>
+	        </div>
+	        <div class="metric-grid flow scrollable" id="movimentacoesGrid">
+	          <div class="metric-item compact"><span class="metric-label">Inviabilidades</span><span class="metric-value" id="cardInviabilidade">{cards['inviabilidade']}</span></div>
 	          <div class="metric-item compact"><span class="metric-label">Instalação de KIT</span><span class="metric-value" id="cardInstalacoes">{cards['instalacoes']}</span></div>
 	          <div class="metric-item compact"><span class="metric-label">Remoção de KIT</span><span class="metric-value" id="cardRemocoes">{cards['remocoes']}</span></div>
 	        </div>
 	      </div>
 	    </div>
 
-    <div class="grid-panels">
-      <div class="panel">
-        <h2 class="section-title">Resumo por mês</h2>
-        <div class="panel-meta"><span class="chip" id="indicadorResumo">Filtro ativo: Todos</span></div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Mês</th>
-                <th>Finalizadas</th>
-                <th>Técnicos</th>
-                <th>Infra</th>
-                <th>Inviabilidade</th>
-                <th>Outros</th>
-              </tr>
-            </thead>
-            <tbody id="resumoBody"></tbody>
-          </table>
-        </div>
-      </div>
+	    <div class="grid-panels">
+	      <div class="panel">
+	        <h2 class="section-title">Tempo médio e backlog</h2>
+	        <div class="panel-meta" id="painelTempoMeta">Tempo médio e backlog no recorte atual.</div>
+	        <div class="table-wrap">
+	          <table>
+	            <thead>
+	              <tr>
+	                <th>Indicador</th>
+	                <th>Valor</th>
+	              </tr>
+	            </thead>
+	            <tbody id="tempoBacklogBody"></tbody>
+	          </table>
+	        </div>
+	      </div>
 
       <div class="panel">
         <h2 class="section-title">Ranking por finalizador</h2>
@@ -603,11 +658,11 @@ def gerar_html_dashboard(
     const filtroBusca = document.getElementById("filtroBusca");
     const refreshCountdown = document.getElementById("refreshCountdown");
     const refreshNowButton = document.getElementById("refreshNowButton");
-    const resumoBody = document.getElementById("resumoBody");
-	    const rankingBody = document.getElementById("rankingBody");
-	    const detalhesBody = document.getElementById("detalhesBody");
-	    const indicadorResumo = document.getElementById("indicadorResumo");
-	    const rankingMeta = document.getElementById("rankingMeta");
+	    const tempoBacklogBody = document.getElementById("tempoBacklogBody");
+		    const rankingBody = document.getElementById("rankingBody");
+		    const detalhesBody = document.getElementById("detalhesBody");
+		    const painelTempoMeta = document.getElementById("painelTempoMeta");
+		    const rankingMeta = document.getElementById("rankingMeta");
 	    const graficoDiarioMeta = document.getElementById("graficoDiarioMeta");
 	    const detalheMeta = document.getElementById("detalheMeta");
 	    const movimentacoesGrid = document.getElementById("movimentacoesGrid");
@@ -617,7 +672,7 @@ def gerar_html_dashboard(
     }}
 
     function obterAno(registro) {{
-      const data = normalizarTexto(registro.data_criacao_dashboard);
+      const data = normalizarTexto(registro.data_base_dashboard || registro.data_finalizacao_dashboard || registro.data_criacao_dashboard);
       if (!data) return "";
       return data.slice(0, 4);
     }}
@@ -655,9 +710,30 @@ def gerar_html_dashboard(
 	    }}
 
 	    function obterDiaNumero(registro) {{
-	      const data = normalizarTexto(registro.data_criacao_dashboard);
+	      const data = normalizarTexto(registro.data_base_dashboard || registro.data_finalizacao_dashboard || registro.data_criacao_dashboard);
 	      if (!data || data.length < 10) return 0;
 	      return Number(data.slice(8, 10));
+	    }}
+
+	    function obterDataBase(registro) {{
+	      const valor = normalizarTexto(registro.data_base_dashboard || registro.data_finalizacao_dashboard || registro.data_criacao_dashboard);
+	      if (!valor) return null;
+	      const data = new Date(`${{valor}}T00:00:00`);
+	      return Number.isNaN(data.getTime()) ? null : data;
+	    }}
+
+	    function obterDataCriacao(registro) {{
+	      const valor = normalizarTexto(registro.data_criacao_dashboard);
+	      if (!valor) return null;
+	      const data = new Date(`${{valor}}T00:00:00`);
+	      return Number.isNaN(data.getTime()) ? null : data;
+	    }}
+
+	    function obterDataFinalizacao(registro) {{
+	      const valor = normalizarTexto(registro.data_finalizacao_dashboard);
+	      if (!valor) return null;
+	      const data = new Date(`${{valor}}T00:00:00`);
+	      return Number.isNaN(data.getTime()) ? null : data;
 	    }}
 
     function obterTextoBusca(registro) {{
@@ -745,28 +821,23 @@ def gerar_html_dashboard(
       return obterStatus(registro) === "Encerrada";
     }}
 
-	    function calcularCardsGrupo(registros) {{
-	      let tecnicos = 0;
-	      let infra = 0;
-	      let inviabilidade = 0;
-	      let outros = 0;
+	    function calcularCardsEncerramentos(registros) {{
+	      let peloResponsavel = 0;
+	      let porOutros = 0;
 
 	      registros.forEach((registro) => {{
-	        const grupoEncerramento = obterGrupoEncerramento(registro);
-	        const grupoStatusContrato = obterGrupo(registro);
-
-	        if (grupoEncerramento === "Técnicos") tecnicos += 1;
-	        else if (grupoEncerramento === "Infra") infra += 1;
-	        else outros += 1;
-
-	        if (grupoStatusContrato === "Inviabilidade") inviabilidade += 1;
+	        const finalizador = normalizarTexto(registro.finalizado_por_dashboard);
+	        const responsavel = normalizarTexto(registro.responsavel);
+	        if (finalizador && responsavel && finalizador.localeCompare(responsavel, "pt-BR", {{ sensitivity: "base" }}) === 0) {{
+	          peloResponsavel += 1;
+	        }} else {{
+	          porOutros += 1;
+	        }}
 	      }});
 
       return {{
-        tecnicos,
-        infra,
-        inviabilidade,
-        outros,
+        peloResponsavel,
+        porOutros,
       }};
     }}
 
@@ -792,8 +863,13 @@ def gerar_html_dashboard(
 
 	    function renderMotivoCards(registros) {{
 	      const contagem = new Map();
+	      let inviabilidade = 0;
 
 	      registros.forEach((registro) => {{
+	        if (obterGrupo(registro) === "Inviabilidade") {{
+	          inviabilidade += 1;
+	          return;
+	        }}
 	        const motivo = obterMotivo(registro);
 	        if (!motivo) return;
 	        contagem.set(motivo, (contagem.get(motivo) || 0) + 1);
@@ -804,8 +880,14 @@ def gerar_html_dashboard(
 
 	      movimentacoesGrid.innerHTML = "";
 
+	      const cardInviabilidade = document.createElement("div");
+	      cardInviabilidade.className = "metric-item compact";
+	      cardInviabilidade.innerHTML = `<span class="metric-label">Inviabilidades</span><span class="metric-value">${{inviabilidade}}</span>`;
+	      movimentacoesGrid.appendChild(cardInviabilidade);
+
 	      if (!itens.length) {{
 	        movimentacoesGrid.innerHTML = '<div class="metric-item compact"><span class="metric-label">Sem motivos no recorte</span><span class="metric-value">0</span></div>';
+	        movimentacoesGrid.prepend(cardInviabilidade);
 	        return;
 	      }}
 
@@ -827,12 +909,10 @@ def gerar_html_dashboard(
 	      }});
 	    }}
 
-    function renderCardsGrupo(registros) {{
-      const cards = calcularCardsGrupo(registros);
-      document.getElementById("cardTecnicos").textContent = cards.tecnicos;
-      document.getElementById("cardInfra").textContent = cards.infra;
-      document.getElementById("cardInviabilidade").textContent = cards.inviabilidade;
-      document.getElementById("cardOutros").textContent = cards.outros;
+    function renderCardsEncerramentos(registros) {{
+      const cards = calcularCardsEncerramentos(registros);
+      document.getElementById("cardPeloResponsavel").textContent = cards.peloResponsavel;
+      document.getElementById("cardPorOutros").textContent = cards.porOutros;
     }}
 
     function agruparResumo(registros) {{
@@ -841,39 +921,77 @@ def gerar_html_dashboard(
         return {{
           mes_nome: mes,
           finalizadas: itens.length,
-          tecnicos: itens.filter((registro) => obterGrupo(registro) === "Técnicos").length,
-          infra: itens.filter((registro) => obterGrupo(registro) === "Infra").length,
+          tecnicos: itens.filter((registro) => obterGrupoEncerramento(registro) === "Técnicos").length,
+          infra: itens.filter((registro) => obterGrupoEncerramento(registro) === "Infra").length,
           inviabilidade: itens.filter((registro) => obterGrupo(registro) === "Inviabilidade").length,
-          outros: itens.filter((registro) => obterGrupo(registro) === "Outros").length,
+          outros: itens.filter((registro) => obterGrupoEncerramento(registro) === "Outros").length,
         }};
       }});
     }}
 
-    function renderResumo(registros) {{
-      const linhas = agruparResumo(registros).filter((item) => {{
-        if (filtroMes.value) return item.mes_nome === filtroMes.value;
-        return item.finalizadas > 0;
-      }});
-      resumoBody.innerHTML = "";
+	    function formatarDuracaoDias(mediaDias) {{
+	      if (mediaDias === null || Number.isNaN(mediaDias)) return "-";
+	      return `${{mediaDias.toFixed(1)}} dia(s)`;
+	    }}
 
-      if (!linhas.length) {{
-        resumoBody.innerHTML = '<tr><td colspan="6" class="empty">Nenhum dado encontrado para os filtros atuais.</td></tr>';
-        return;
-      }}
+	    function renderTempoBacklog(registros, registrosFinalizados) {{
+	      tempoBacklogBody.innerHTML = "";
 
-      linhas.forEach((linha) => {{
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td><b>${{linha.mes_nome}}</b></td>
-          <td>${{linha.finalizadas}}</td>
-          <td>${{linha.tecnicos}}</td>
-          <td>${{linha.infra}}</td>
-          <td>${{linha.inviabilidade}}</td>
-          <td>${{linha.outros}}</td>
-        `;
-        resumoBody.appendChild(tr);
-      }});
-    }}
+	      const backlogAberta = registros.filter((registro) => obterStatus(registro) === "Aberta").length;
+	      const backlogPendente = registros.filter((registro) => obterStatus(registro) === "Pendente").length;
+	      const backlogExecucao = registros.filter((registro) => obterStatus(registro) === "Em execução").length;
+	      const backlogTotal = backlogAberta + backlogPendente + backlogExecucao;
+
+	      const duracoes = registrosFinalizados
+	        .map((registro) => {{
+	          const criacao = obterDataCriacao(registro);
+	          const finalizacao = obterDataFinalizacao(registro);
+	          if (!criacao || !finalizacao) return null;
+	          return (finalizacao.getTime() - criacao.getTime()) / 86400000;
+	        }})
+	        .filter((valor) => valor !== null && valor >= 0);
+
+	      const mediaTotal = duracoes.length
+	        ? duracoes.reduce((acc, valor) => acc + valor, 0) / duracoes.length
+	        : null;
+
+	      const mediaPorGrupo = (grupo) => {{
+	        const valores = registrosFinalizados
+	          .filter((registro) => obterGrupoEncerramento(registro) === grupo)
+	          .map((registro) => {{
+	            const criacao = obterDataCriacao(registro);
+	            const finalizacao = obterDataFinalizacao(registro);
+	            if (!criacao || !finalizacao) return null;
+	            return (finalizacao.getTime() - criacao.getTime()) / 86400000;
+	          }})
+	          .filter((valor) => valor !== null && valor >= 0);
+
+	        return valores.length
+	          ? valores.reduce((acc, valor) => acc + valor, 0) / valores.length
+	          : null;
+	      }};
+
+	      const linhas = [
+	        ["Backlog total", String(backlogTotal)],
+	        ["Em aberto", String(backlogAberta)],
+	        ["Pendentes", String(backlogPendente)],
+	        ["Em execução", String(backlogExecucao)],
+	        ["Tempo médio até encerramento", formatarDuracaoDias(mediaTotal)],
+	        ["Tempo médio dos técnicos", formatarDuracaoDias(mediaPorGrupo("Técnicos"))],
+	        ["Tempo médio da infra", formatarDuracaoDias(mediaPorGrupo("Infra"))],
+	        ["Tempo médio de outros", formatarDuracaoDias(mediaPorGrupo("Outros"))],
+	      ];
+
+	      linhas.forEach(([indicador, valor]) => {{
+	        const tr = document.createElement("tr");
+	        tr.innerHTML = `
+	          <td><b>${{indicador}}</b></td>
+	          <td>${{valor}}</td>
+	        `;
+	        tempoBacklogBody.appendChild(tr);
+	      }});
+
+	    }}
 
     function agruparRanking(registros) {{
       const mapa = new Map();
@@ -1088,7 +1206,7 @@ def gerar_html_dashboard(
 
 	      const candidatos = registros
 	        .map((registro) => {{
-	          const data = normalizarTexto(registro.data_criacao_dashboard);
+	          const data = normalizarTexto(registro.data_base_dashboard || registro.data_finalizacao_dashboard || registro.data_criacao_dashboard);
 	          if (!data || data.length < 7) return null;
 	          return {{
 	            ano: Number(data.slice(0, 4)),
@@ -1119,7 +1237,7 @@ def gerar_html_dashboard(
 	      const mapaMembros = new Map();
 
 	      registros.forEach((registro) => {{
-	        const data = normalizarTexto(registro.data_criacao_dashboard);
+	        const data = normalizarTexto(registro.data_base_dashboard || registro.data_finalizacao_dashboard || registro.data_criacao_dashboard);
 	        const dia = obterDiaNumero(registro);
 	        if (!data || data.length < 10 || dia <= 0 || dia > diasNoMes) return;
 
@@ -1172,7 +1290,7 @@ def gerar_html_dashboard(
 	      }}
 
 	      const contextoGrupo = filtroGrupo.value ? ` do grupo ${{filtroGrupo.value}}` : "";
-	      graficoDiarioMeta.textContent = `Evolução diária por membro${{contextoGrupo}} em ${{resumo.referencia.nomeMes}}/${{resumo.referencia.ano}}, usando a data de criação da O.S.`;
+	      graficoDiarioMeta.textContent = `Evolução diária por membro${{contextoGrupo}} em ${{resumo.referencia.nomeMes}}/${{resumo.referencia.ano}}, usando a data-base de encerramento da O.S.`;
 	    }}
 
     function atualizarMetas(registrosFinalizados, totalDetalhes) {{
@@ -1184,7 +1302,7 @@ def gerar_html_dashboard(
       if (filtroBusca.value.trim()) partes.push(`Busca: ${{filtroBusca.value.trim()}}`);
 
       const textoFiltro = partes.length ? partes.join(" | ") : "Todos";
-      indicadorResumo.textContent = `Filtro ativo: ${{textoFiltro}}`;
+      painelTempoMeta.textContent = `Tempo médio e backlog para o recorte: ${{textoFiltro}}.`;
       rankingMeta.textContent = `Ranking atualizado com ${{registrosFinalizados.length}} OS encerradas no recorte atual.`;
       detalheMeta.textContent = `Mostrando ${{totalDetalhes}} registro(s) após aplicar os filtros.`;
     }}
@@ -1193,10 +1311,10 @@ def gerar_html_dashboard(
       const registros = filtrarDetalhes();
       const registrosFinalizados = registros.filter((registro) => ehStatusEncerrada(registro));
       const registrosBaseRanking = filtrarBaseRanking().filter((registro) => ehStatusEncerrada(registro));
-      renderStatusCards(registros);
-      renderMotivoCards(registros);
-      renderCardsGrupo(registrosFinalizados);
-      renderResumo(registrosFinalizados);
+	      renderStatusCards(registros);
+	      renderMotivoCards(registros);
+	      renderCardsEncerramentos(registrosFinalizados);
+	      renderTempoBacklog(registros, registrosFinalizados);
 	      renderRanking(registrosFinalizados, registrosBaseRanking);
 	      renderDetalhes(registros);
 	      renderGrafico(registrosFinalizados);

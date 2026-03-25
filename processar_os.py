@@ -94,6 +94,16 @@ def classificar_grupo_encerramento(
     return classificar_finalizador(finalizador, tecnicos, infra_keywords)
 
 
+def classificar_responsavel_encerramento(finalizador: Any, responsavel: Any) -> str:
+    finalizador_norm = normalizar_nome(finalizador)
+    responsavel_norm = normalizar_nome(responsavel)
+
+    if finalizador_norm and responsavel_norm and finalizador_norm == responsavel_norm:
+        return "Pelo responsável"
+
+    return "Por outros"
+
+
 def detectar_coluna(df: pd.DataFrame, candidatas: List[str]) -> str:
     cols_norm = {str(c).strip().lower(): c for c in df.columns}
     for cand in candidatas:
@@ -165,6 +175,9 @@ def preparar_dataframe(raw_data: List[Dict[str, Any]], config: Dict[str, Any]) -
     df["finalizado_por_dashboard"] = df[col_finalizado].astype(str).str.strip()
     df["data_finalizacao_dashboard"] = pd.to_datetime(df[col_data_finalizacao], errors="coerce")
     df["data_criacao_dashboard"] = pd.to_datetime(df[col_data_criacao], errors="coerce")
+    # A base principal do dashboard usa a data de encerramento; para OS sem encerramento,
+    # mantemos a criacao como fallback para nao perder o acompanhamento operacional.
+    df["data_base_dashboard"] = df["data_finalizacao_dashboard"].combine_first(df["data_criacao_dashboard"])
     df["contrato_status_dashboard"] = (
         df[col_contrato_status].astype(str).str.strip()
         if col_contrato_status
@@ -177,8 +190,7 @@ def preparar_dataframe(raw_data: List[Dict[str, Any]], config: Dict[str, Any]) -
         ),
         axis=1,
     )
-    # O recorte principal do dashboard usa a data de criacao da OS.
-    df["mes_num"] = df["data_criacao_dashboard"].dt.month
+    df["mes_num"] = df["data_base_dashboard"].dt.month
     df["mes_nome"] = df["mes_num"].map(MAPA_MESES)
     df["mes_criacao_num"] = df["data_criacao_dashboard"].dt.month
     df["mes_criacao_nome"] = df["mes_criacao_num"].map(MAPA_MESES)
@@ -197,6 +209,13 @@ def preparar_dataframe(raw_data: List[Dict[str, Any]], config: Dict[str, Any]) -
             responsavel=row.get("responsavel", ""),
             tecnicos=tecnicos,
             infra_keywords=infra_keywords,
+        ),
+        axis=1,
+    )
+    df["responsavel_encerramento_dashboard"] = df.apply(
+        lambda row: classificar_responsavel_encerramento(
+            finalizador=row.get("finalizado_por_dashboard"),
+            responsavel=row.get("responsavel", ""),
         ),
         axis=1,
     )

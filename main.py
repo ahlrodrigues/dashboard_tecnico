@@ -47,7 +47,8 @@ def main() -> None:
     mes = config.get("dashboard", {}).get("mes_padrao", "Todos")
     refresh_seconds = int(config.get("dashboard", {}).get("atualizacao_segundos", 300))
 
-    # A consulta busca as OS do ano selecionado pela data de criacao.
+    # A coleta continua ampla por criacao para nao perder OS abertas; no dashboard,
+    # a data-base principal passa a ser o encerramento, com fallback para criacao.
     data_inicio, data_fim = montar_periodo(ano, "Todos")
 
     client = SGPClient(config)
