@@ -22,6 +22,7 @@ def _serializar_registros(df: pd.DataFrame, detalhe_cols: list[str]) -> list[dic
         "mes_nome",
         "mes_num",
         "grupo_dashboard",
+        "grupo_encerramento_dashboard",
         "contrato_status_dashboard",
         "finalizado_por_dashboard",
         "data_finalizacao_dashboard",
@@ -79,10 +80,10 @@ def gerar_html_dashboard(
         "em_execucao": int((detalhes_df["status_dashboard"] == "Em execução").sum()) if not detalhes_df.empty else 0,
         "instalacoes": int((detalhes_df["motivo"].fillna("").astype(str).str.strip() == "Instalação de KIT").sum()) if "motivo" in detalhes_df.columns else 0,
         "remocoes": int((detalhes_df["motivo"].fillna("").astype(str).str.strip() == "Remoção de KIT").sum()) if "motivo" in detalhes_df.columns else 0,
-        "tecnicos": int((finalizadas_df["grupo_dashboard"] == "Técnicos").sum()) if not finalizadas_df.empty else 0,
-        "infra": int((finalizadas_df["grupo_dashboard"] == "Infra").sum()) if not finalizadas_df.empty else 0,
+        "tecnicos": int((finalizadas_df["grupo_encerramento_dashboard"] == "Técnicos").sum()) if "grupo_encerramento_dashboard" in finalizadas_df.columns and not finalizadas_df.empty else 0,
+        "infra": int((finalizadas_df["grupo_encerramento_dashboard"] == "Infra").sum()) if "grupo_encerramento_dashboard" in finalizadas_df.columns and not finalizadas_df.empty else 0,
         "inviabilidade": int((finalizadas_df["grupo_dashboard"] == "Inviabilidade").sum()) if not finalizadas_df.empty else 0,
-        "outros": int((finalizadas_df["grupo_dashboard"] == "Outros").sum()) if not finalizadas_df.empty else 0,
+        "outros": int((finalizadas_df["grupo_encerramento_dashboard"] == "Outros").sum()) if "grupo_encerramento_dashboard" in finalizadas_df.columns and not finalizadas_df.empty else 0,
     }
 
     detalhes_data = _serializar_registros(detalhes_df, detalhe_cols) if detalhe_cols else []
@@ -297,12 +298,21 @@ def gerar_html_dashboard(
     .metric-grid.cols-2 {{
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }}
+    .metric-grid.scrollable {{
+      max-height: 292px;
+      overflow: auto;
+      padding-right: 4px;
+    }}
     .metric-item {{
       padding: 12px 12px 10px;
       border-radius: 16px;
       background: rgba(255, 255, 255, 0.72);
       border: 1px solid rgba(23, 98, 76, 0.10);
       min-height: 84px;
+    }}
+    .metric-item.compact {{
+      min-height: 72px;
+      padding: 10px 11px 9px;
     }}
     .metric-label {{
       display: block;
@@ -504,10 +514,10 @@ def gerar_html_dashboard(
 	      </div>
 	      <div class="summary-card tertiary">
 	        <h3>Movimentações</h3>
-	        <p class="caption">Leitura rápida das principais entradas e saídas por motivo de atendimento.</p>
-	        <div class="metric-grid cols-2">
-	          <div class="metric-item"><span class="metric-label">Instalações</span><span class="metric-value" id="cardInstalacoes">{cards['instalacoes']}</span></div>
-	          <div class="metric-item"><span class="metric-label">Remoções</span><span class="metric-value" id="cardRemocoes">{cards['remocoes']}</span></div>
+	        <p class="caption">Distribuição completa dos atendimentos por motivo no recorte filtrado.</p>
+	        <div class="metric-grid cols-2 scrollable" id="movimentacoesGrid">
+	          <div class="metric-item compact"><span class="metric-label">Instalação de KIT</span><span class="metric-value" id="cardInstalacoes">{cards['instalacoes']}</span></div>
+	          <div class="metric-item compact"><span class="metric-label">Remoção de KIT</span><span class="metric-value" id="cardRemocoes">{cards['remocoes']}</span></div>
 	        </div>
 	      </div>
 	    </div>
@@ -594,12 +604,13 @@ def gerar_html_dashboard(
     const refreshCountdown = document.getElementById("refreshCountdown");
     const refreshNowButton = document.getElementById("refreshNowButton");
     const resumoBody = document.getElementById("resumoBody");
-    const rankingBody = document.getElementById("rankingBody");
+	    const rankingBody = document.getElementById("rankingBody");
 	    const detalhesBody = document.getElementById("detalhesBody");
 	    const indicadorResumo = document.getElementById("indicadorResumo");
 	    const rankingMeta = document.getElementById("rankingMeta");
 	    const graficoDiarioMeta = document.getElementById("graficoDiarioMeta");
 	    const detalheMeta = document.getElementById("detalheMeta");
+	    const movimentacoesGrid = document.getElementById("movimentacoesGrid");
 
     function normalizarTexto(valor) {{
       return String(valor || "").trim();
@@ -619,13 +630,17 @@ def gerar_html_dashboard(
       return normalizarTexto(registro.finalizado_por_dashboard);
     }}
 
-    function obterGrupo(registro) {{
-      const statusContrato = normalizarTexto(registro.contrato_status_dashboard);
-      if (statusContrato.localeCompare("Inviabilidade Técnica", "pt-BR", {{ sensitivity: "accent" }}) === 0) {{
-        return "Inviabilidade";
-      }}
-      return normalizarTexto(registro.grupo_dashboard);
-    }}
+	    function obterGrupo(registro) {{
+	      const statusContrato = normalizarTexto(registro.contrato_status_dashboard);
+	      if (statusContrato.localeCompare("Inviabilidade Técnica", "pt-BR", {{ sensitivity: "accent" }}) === 0) {{
+	        return "Inviabilidade";
+	      }}
+	      return normalizarTexto(registro.grupo_dashboard);
+	    }}
+
+	    function obterGrupoEncerramento(registro) {{
+	      return normalizarTexto(registro.grupo_encerramento_dashboard);
+	    }}
 
     function obterStatus(registro) {{
       return normalizarTexto(registro.status_dashboard || registro.status);
@@ -730,19 +745,22 @@ def gerar_html_dashboard(
       return obterStatus(registro) === "Encerrada";
     }}
 
-    function calcularCardsGrupo(registros) {{
-      let tecnicos = 0;
-      let infra = 0;
-      let inviabilidade = 0;
-      let outros = 0;
+	    function calcularCardsGrupo(registros) {{
+	      let tecnicos = 0;
+	      let infra = 0;
+	      let inviabilidade = 0;
+	      let outros = 0;
 
-      registros.forEach((registro) => {{
-        const grupo = obterGrupo(registro);
-        if (grupo === "Técnicos") tecnicos += 1;
-        else if (grupo === "Infra") infra += 1;
-        else if (grupo === "Inviabilidade") inviabilidade += 1;
-        else outros += 1;
-      }});
+	      registros.forEach((registro) => {{
+	        const grupoEncerramento = obterGrupoEncerramento(registro);
+	        const grupoStatusContrato = obterGrupo(registro);
+
+	        if (grupoEncerramento === "Técnicos") tecnicos += 1;
+	        else if (grupoEncerramento === "Infra") infra += 1;
+	        else outros += 1;
+
+	        if (grupoStatusContrato === "Inviabilidade") inviabilidade += 1;
+	      }});
 
       return {{
         tecnicos,
@@ -772,19 +790,42 @@ def gerar_html_dashboard(
       document.getElementById("cardEmExecucao").textContent = emExecucao;
     }}
 
-    function renderMotivoCards(registros) {{
-      let instalacoes = 0;
-      let remocoes = 0;
+	    function renderMotivoCards(registros) {{
+	      const contagem = new Map();
 
-      registros.forEach((registro) => {{
-        const motivo = obterMotivo(registro);
-        if (motivo === "Instalação de KIT") instalacoes += 1;
-        else if (motivo === "Remoção de KIT") remocoes += 1;
-      }});
+	      registros.forEach((registro) => {{
+	        const motivo = obterMotivo(registro);
+	        if (!motivo) return;
+	        contagem.set(motivo, (contagem.get(motivo) || 0) + 1);
+	      }});
 
-      document.getElementById("cardInstalacoes").textContent = instalacoes;
-      document.getElementById("cardRemocoes").textContent = remocoes;
-    }}
+	      const itens = [...contagem.entries()]
+	        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "pt-BR", {{ sensitivity: "base" }}));
+
+	      movimentacoesGrid.innerHTML = "";
+
+	      if (!itens.length) {{
+	        movimentacoesGrid.innerHTML = '<div class="metric-item compact"><span class="metric-label">Sem motivos no recorte</span><span class="metric-value">0</span></div>';
+	        return;
+	      }}
+
+	      itens.forEach(([motivo, total]) => {{
+	        const item = document.createElement("div");
+	        item.className = "metric-item compact";
+
+	        const label = document.createElement("span");
+	        label.className = "metric-label";
+	        label.textContent = motivo;
+
+	        const valor = document.createElement("span");
+	        valor.className = "metric-value";
+	        valor.textContent = String(total);
+
+	        item.appendChild(label);
+	        item.appendChild(valor);
+	        movimentacoesGrid.appendChild(item);
+	      }});
+	    }}
 
     function renderCardsGrupo(registros) {{
       const cards = calcularCardsGrupo(registros);
@@ -987,12 +1028,7 @@ def gerar_html_dashboard(
 	      type: "line",
 	      data: {{
 	        labels: [],
-	        datasets: [
-	          {{ label: "Técnicos", data: [], borderColor: "#17624c", backgroundColor: "rgba(23, 98, 76, 0.14)", tension: 0.28, fill: false }},
-	          {{ label: "Infra", data: [], borderColor: "#4e9c83", backgroundColor: "rgba(78, 156, 131, 0.14)", tension: 0.28, fill: false }},
-	          {{ label: "Inviabilidade", data: [], borderColor: "#d18b2c", backgroundColor: "rgba(209, 139, 44, 0.14)", tension: 0.28, fill: false }},
-	          {{ label: "Outros", data: [], borderColor: "#8aa89a", backgroundColor: "rgba(138, 168, 154, 0.14)", tension: 0.28, fill: false }}
-	        ]
+	        datasets: []
 	      }},
 	      options: {{
 	        responsive: true,
@@ -1007,6 +1043,29 @@ def gerar_html_dashboard(
 	        }}
 	      }}
 	    }});
+
+	    const paletaGraficoDiario = [
+	      "#17624c",
+	      "#4e9c83",
+	      "#d18b2c",
+	      "#7f5af0",
+	      "#e85d75",
+	      "#227c9d",
+	      "#8f6f3a",
+	      "#c05621",
+	      "#3d7a57",
+	      "#5c6ac4",
+	      "#b83280",
+	      "#2b6cb0",
+	    ];
+
+	    function hexParaRgba(hex, alpha) {{
+	      const valor = hex.replace("#", "");
+	      const r = Number.parseInt(valor.slice(0, 2), 16);
+	      const g = Number.parseInt(valor.slice(2, 4), 16);
+	      const b = Number.parseInt(valor.slice(4, 6), 16);
+	      return `rgba(${{r}}, ${{g}}, ${{b}}, ${{alpha}})`;
+	    }}
 
 	    function renderGrafico(registros) {{
 	      const resumo = agruparResumo(registros);
@@ -1052,18 +1111,12 @@ def gerar_html_dashboard(
 	    function agruparResumoDiario(registros) {{
 	      const referencia = obterReferenciaGraficoDiario(registros);
 	      if (!referencia) {{
-	        return {{ labels: [], tecnicos: [], infra: [], inviabilidade: [], outros: [], referencia: null }};
+	        return {{ labels: [], datasets: [], referencia: null }};
 	      }}
 
 	      const diasNoMes = new Date(referencia.ano, referencia.mes, 0).getDate();
 	      const labels = Array.from({{ length: diasNoMes }}, (_, i) => String(i + 1).padStart(2, "0"));
-	      const base = Array.from({{ length: diasNoMes }}, () => 0);
-	      const series = {{
-	        tecnicos: [...base],
-	        infra: [...base],
-	        inviabilidade: [...base],
-	        outros: [...base],
-	      }};
+	      const mapaMembros = new Map();
 
 	      registros.forEach((registro) => {{
 	        const data = normalizarTexto(registro.data_criacao_dashboard);
@@ -1074,24 +1127,43 @@ def gerar_html_dashboard(
 	        const mes = Number(data.slice(5, 7));
 	        if (ano !== referencia.ano || mes !== referencia.mes) return;
 
-	        const grupo = obterGrupo(registro);
+	        const membro = obterUsuario(registro) || "Sem usuário";
 	        const indice = dia - 1;
-	        if (grupo === "Técnicos") series.tecnicos[indice] += 1;
-	        else if (grupo === "Infra") series.infra[indice] += 1;
-	        else if (grupo === "Inviabilidade") series.inviabilidade[indice] += 1;
-	        else series.outros[indice] += 1;
+	        if (!mapaMembros.has(membro)) {{
+	          mapaMembros.set(membro, Array.from({{ length: diasNoMes }}, () => 0));
+	        }}
+	        mapaMembros.get(membro)[indice] += 1;
 	      }});
 
-	      return {{ labels, ...series, referencia }};
+	      const datasets = [...mapaMembros.entries()]
+	        .map(([membro, valores]) => ({{
+	          membro,
+	          valores,
+	          total: valores.reduce((acc, valor) => acc + valor, 0),
+	        }}))
+	        .sort((a, b) => b.total - a.total || a.membro.localeCompare(b.membro, "pt-BR", {{ sensitivity: "base" }}))
+	        .map((item, indice) => {{
+	          const cor = paletaGraficoDiario[indice % paletaGraficoDiario.length];
+	          return {{
+	            label: item.membro,
+	            data: item.valores,
+	            borderColor: cor,
+	            backgroundColor: hexParaRgba(cor, 0.14),
+	            tension: 0.28,
+	            fill: false,
+	          }};
+	        }});
+
+	      return {{ labels, datasets, referencia }};
 	    }}
 
 	    function renderGraficoDiario(registros) {{
-	      const resumo = agruparResumoDiario(registros);
+	      const registrosBase = filtroGrupo.value
+	        ? registros.filter((registro) => obterGrupoEncerramento(registro) === filtroGrupo.value)
+	        : registros;
+	      const resumo = agruparResumoDiario(registrosBase);
 	      graficoDiario.data.labels = resumo.labels;
-	      graficoDiario.data.datasets[0].data = resumo.tecnicos;
-	      graficoDiario.data.datasets[1].data = resumo.infra;
-	      graficoDiario.data.datasets[2].data = resumo.inviabilidade;
-	      graficoDiario.data.datasets[3].data = resumo.outros;
+	      graficoDiario.data.datasets = resumo.datasets;
 	      graficoDiario.update();
 
 	      if (!resumo.referencia) {{
@@ -1099,7 +1171,8 @@ def gerar_html_dashboard(
 	        return;
 	      }}
 
-	      graficoDiarioMeta.textContent = `Evolução diária por grupo em ${{resumo.referencia.nomeMes}}/${{resumo.referencia.ano}}, usando a data de criação da O.S.`;
+	      const contextoGrupo = filtroGrupo.value ? ` do grupo ${{filtroGrupo.value}}` : "";
+	      graficoDiarioMeta.textContent = `Evolução diária por membro${{contextoGrupo}} em ${{resumo.referencia.nomeMes}}/${{resumo.referencia.ano}}, usando a data de criação da O.S.`;
 	    }}
 
     function atualizarMetas(registrosFinalizados, totalDetalhes) {{

@@ -78,6 +78,22 @@ def classificar_grupo(
     return "Outros"
 
 
+def classificar_grupo_encerramento(
+    finalizador: Any,
+    responsavel: Any,
+    tecnicos: List[str],
+    infra_keywords: List[str],
+) -> str:
+    finalizador_norm = normalizar_nome(finalizador)
+    responsavel_norm = normalizar_nome(responsavel)
+
+    # Regra de negocio: quando houver divergencia, "Finalizado Por" prevalece.
+    if responsavel_norm and responsavel_norm != finalizador_norm:
+        return classificar_finalizador(finalizador, tecnicos, infra_keywords)
+
+    return classificar_finalizador(finalizador, tecnicos, infra_keywords)
+
+
 def detectar_coluna(df: pd.DataFrame, candidatas: List[str]) -> str:
     cols_norm = {str(c).strip().lower(): c for c in df.columns}
     for cand in candidatas:
@@ -170,6 +186,15 @@ def preparar_dataframe(raw_data: List[Dict[str, Any]], config: Dict[str, Any]) -
         lambda row: classificar_grupo(
             finalizador=row.get("finalizado_por_dashboard"),
             contrato_status=row.get("contrato_status_dashboard", ""),
+            tecnicos=tecnicos,
+            infra_keywords=infra_keywords,
+        ),
+        axis=1,
+    )
+    df["grupo_encerramento_dashboard"] = df.apply(
+        lambda row: classificar_grupo_encerramento(
+            finalizador=row.get("finalizado_por_dashboard"),
+            responsavel=row.get("responsavel", ""),
             tecnicos=tecnicos,
             infra_keywords=infra_keywords,
         ),
