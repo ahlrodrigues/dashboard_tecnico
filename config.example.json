@@ -1,0 +1,34 @@
+{
+  "url_base": "https://sgp.exemplo.com.br/",
+  "auth_mode": "basic",
+  "basic_auth": {
+    "username": "SEU_USUARIO",
+    "password": "SUA_SENHA"
+  },
+  "app_token_auth": {
+    "app": "SEU_APP",
+    "token": "SEU_TOKEN"
+  },
+  "classificacao": {
+    "tecnicos": [
+      "cabral",
+      "eriki",
+      "francivaldo",
+      "ivison",
+      "joaopaulo",
+      "LuisCarlos",
+      "micael",
+      "talis",
+      "wilton"
+    ],
+    "infra_keywords": [
+      "infra",
+      "infraestrutura"
+    ]
+  },
+  "dashboard": {
+    "ano_padrao": 2026,
+    "mes_padrao": "Todos",
+    "atualizacao_segundos": 300
+  }
+}

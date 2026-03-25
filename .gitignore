@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Local config with credentials
+config.json
+
+# Generated artifacts and operational data
+dashboard_os_sgp.html
+os_finalizadas_tratadas.csv
+atualizar_dashboard.log
