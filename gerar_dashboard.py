@@ -99,7 +99,14 @@ def gerar_html_dashboard(
     meses_ordem = resumo_df["mes_nome"].tolist()
     refresh_seconds = max(int(refresh_seconds), 30)
 
-    titulo_periodo = f"Ano inicial: {ano} | Mês inicial: {mes_selecionado}"
+    if "data_base_dashboard" in detalhes_df.columns and not detalhes_df["data_base_dashboard"].dropna().empty:
+        data_inicial_padrao = detalhes_df["data_base_dashboard"].dropna().min().strftime("%Y-%m-%d")
+        data_final_padrao = detalhes_df["data_base_dashboard"].dropna().max().strftime("%Y-%m-%d")
+    else:
+        data_inicial_padrao = ""
+        data_final_padrao = ""
+
+    titulo_periodo = "Base principal: data de encerramento"
     header_cols = "".join(f"<th>{escape(detalhe_labels.get(col, col))}</th>" for col in detalhe_cols)
 
     html = f"""<!doctype html>
@@ -213,7 +220,7 @@ def gerar_html_dashboard(
     }}
     .toolbar {{
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 14px;
       margin: 20px 0;
     }}
@@ -246,6 +253,29 @@ def gerar_html_dashboard(
       font-size: 14px;
       background: #f8fbf9;
       color: var(--text);
+    }}
+    .quick-range {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: -6px 0 20px;
+    }}
+    .quick-range button {{
+      border: 1px solid var(--line);
+      background: var(--panel-strong);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+    }}
+    .quick-range button:hover {{
+      transform: translateY(-1px);
+      background: #ffffff;
+      border-color: rgba(23, 98, 76, 0.22);
     }}
     .cards-stack {{
       display: grid;
@@ -288,9 +318,15 @@ def gerar_html_dashboard(
       grid-column: 1 / -1;
       grid-template-columns: 1fr;
     }}
+    .summary-card.quaternary {{
+      background: linear-gradient(135deg, rgba(228, 243, 237, 0.92), rgba(255, 255, 255, 0.98));
+      grid-column: 1 / -1;
+      grid-template-columns: 1fr;
+    }}
     .summary-card.primary .summary-card-head,
     .summary-card.secondary .summary-card-head,
-    .summary-card.tertiary .summary-card-head {{
+    .summary-card.tertiary .summary-card-head,
+    .summary-card.quaternary .summary-card-head {{
       padding-right: 0;
       margin-bottom: 2px;
     }}
@@ -546,12 +582,12 @@ def gerar_html_dashboard(
 
     <section class="toolbar">
       <div class="filter-card">
-        <label for="filtroAno">Ano</label>
-        <select id="filtroAno"></select>
+        <label for="filtroDataInicial">Data inicial</label>
+        <input id="filtroDataInicial" type="date"/>
       </div>
       <div class="filter-card">
-        <label for="filtroMes">Mês</label>
-        <select id="filtroMes"></select>
+        <label for="filtroDataFinal">Data final</label>
+        <input id="filtroDataFinal" type="date"/>
       </div>
       <div class="filter-card">
         <label for="filtroUsuario">Finalizado por</label>
@@ -561,10 +597,22 @@ def gerar_html_dashboard(
         <label for="filtroGrupo">Grupo</label>
         <select id="filtroGrupo"></select>
       </div>
+      <div class="filter-card">
+        <label for="filtroPop">POP</label>
+        <select id="filtroPop"></select>
+      </div>
+    </section>
+
+    <section class="quick-range">
+      <button type="button" data-range="hoje">Hoje</button>
+      <button type="button" data-range="ontem">Ontem</button>
+      <button type="button" data-range="7dias">Últimos 7 dias</button>
+      <button type="button" data-range="30dias">Últimos 30 dias</button>
+      <button type="button" data-range="mes-atual">Mês atual</button>
     </section>
 
     <section class="toolbar">
-      <div class="filter-card" style="grid-column: span 4;">
+      <div class="filter-card" style="grid-column: span 5;">
         <label for="filtroBusca">Busca no detalhamento</label>
         <input id="filtroBusca" type="text" placeholder="Digite cliente, contrato, POP, motivo ou usuário"/>
       </div>
@@ -602,6 +650,15 @@ def gerar_html_dashboard(
 	          <div class="metric-item compact"><span class="metric-label">Inviabilidades</span><span class="metric-value" id="cardInviabilidade">{cards['inviabilidade']}</span></div>
 	          <div class="metric-item compact"><span class="metric-label">Instalação de KIT</span><span class="metric-value" id="cardInstalacoes">{cards['instalacoes']}</span></div>
 	          <div class="metric-item compact"><span class="metric-label">Remoção de KIT</span><span class="metric-value" id="cardRemocoes">{cards['remocoes']}</span></div>
+	        </div>
+	      </div>
+	      <div class="summary-card quaternary">
+	        <div class="summary-card-head">
+	          <h3>POPs</h3>
+	          <p class="caption">Distribuição das O.S. por POP no recorte filtrado.</p>
+	        </div>
+	        <div class="metric-grid flow scrollable" id="popsGrid">
+	          <div class="metric-item compact"><span class="metric-label">Sem POPs no recorte</span><span class="metric-value">0</span></div>
 	        </div>
 	      </div>
 	    </div>
@@ -672,15 +729,17 @@ def gerar_html_dashboard(
     const detalheCols = {json.dumps(detalhe_cols, ensure_ascii=False)};
     const mesesOrdem = {json.dumps(meses_ordem, ensure_ascii=False)};
     const detalhes = {json.dumps(detalhes_data, ensure_ascii=False)};
-    const anoInicial = "{ano}";
-    const mesInicial = {json.dumps(mes_selecionado, ensure_ascii=False)};
+    const dataInicialPadrao = "{data_inicial_padrao}";
+    const dataFinalPadrao = "{data_final_padrao}";
     const refreshSeconds = {refresh_seconds};
     const sgpBaseUrl = {json.dumps(sgp_base_url.rstrip("/"), ensure_ascii=False)};
-    const filtroAno = document.getElementById("filtroAno");
-    const filtroMes = document.getElementById("filtroMes");
+    const filtroDataInicial = document.getElementById("filtroDataInicial");
+    const filtroDataFinal = document.getElementById("filtroDataFinal");
     const filtroUsuario = document.getElementById("filtroUsuario");
     const filtroGrupo = document.getElementById("filtroGrupo");
+    const filtroPop = document.getElementById("filtroPop");
     const filtroBusca = document.getElementById("filtroBusca");
+    const quickRangeButtons = Array.from(document.querySelectorAll("[data-range]"));
     const refreshCountdown = document.getElementById("refreshCountdown");
     const refreshNowButton = document.getElementById("refreshNowButton");
 	    const tempoBacklogBody = document.getElementById("tempoBacklogBody");
@@ -689,8 +748,10 @@ def gerar_html_dashboard(
 		    const painelTempoMeta = document.getElementById("painelTempoMeta");
 		    const rankingMeta = document.getElementById("rankingMeta");
 	    const graficoDiarioMeta = document.getElementById("graficoDiarioMeta");
-	    const detalheMeta = document.getElementById("detalheMeta");
+    const detalheMeta = document.getElementById("detalheMeta");
 	    const movimentacoesGrid = document.getElementById("movimentacoesGrid");
+	    const popsGrid = document.getElementById("popsGrid");
+    const storageKey = "dashboard_tecnico_filtros";
 
     function normalizarTexto(valor) {{
       return String(valor || "").trim();
@@ -708,6 +769,10 @@ def gerar_html_dashboard(
 
     function obterUsuario(registro) {{
       return normalizarTexto(registro.finalizado_por_dashboard);
+    }}
+
+    function obterPop(registro) {{
+      return normalizarTexto(registro.pop);
     }}
 
 	    function obterGrupo(registro) {{
@@ -742,6 +807,10 @@ def gerar_html_dashboard(
 
     function obterMotivo(registro) {{
       return normalizarTexto(registro.motivo);
+    }}
+
+    function motivoDeveSerExibido(motivo) {{
+      return Boolean(motivo) && !/^\\d/.test(motivo);
     }}
 
 	    function obterTecnicosAuxiliares(registro) {{
@@ -792,6 +861,10 @@ def gerar_html_dashboard(
 	      return Number.isNaN(data.getTime()) ? null : data;
 	    }}
 
+    function obterDataBaseTexto(registro) {{
+      return normalizarTexto(registro.data_base_dashboard || registro.data_finalizacao_dashboard || registro.data_criacao_dashboard);
+    }}
+
 	    function obterDataCriacao(registro) {{
 	      const valor = normalizarTexto(registro.data_criacao_dashboard);
 	      if (!valor) return null;
@@ -839,37 +912,86 @@ def gerar_html_dashboard(
       }}
     }}
 
+    function salvarFiltros() {{
+      const estado = {{
+        dataInicial: filtroDataInicial.value,
+        dataFinal: filtroDataFinal.value,
+        usuario: filtroUsuario.value,
+        grupo: filtroGrupo.value,
+        pop: filtroPop.value,
+        busca: filtroBusca.value,
+      }};
+      window.localStorage.setItem(storageKey, JSON.stringify(estado));
+    }}
+
+    function restaurarFiltros() {{
+      try {{
+        const bruto = window.localStorage.getItem(storageKey);
+        if (!bruto) return;
+        const estado = JSON.parse(bruto);
+        filtroDataInicial.value = estado.dataInicial || "";
+        filtroDataFinal.value = estado.dataFinal || "";
+        filtroUsuario.value = estado.usuario || "";
+        filtroGrupo.value = estado.grupo || "";
+        filtroPop.value = estado.pop || "";
+        filtroBusca.value = estado.busca || "";
+      }} catch (_erro) {{
+        window.localStorage.removeItem(storageKey);
+      }}
+    }}
+
     function popularFiltros() {{
-      const anos = [...new Set(detalhes.map(obterAno).filter(Boolean))].sort();
       const usuarios = [...new Set(detalhes.map(obterUsuario).filter(Boolean))].sort((a, b) =>
         a.localeCompare(b, "pt-BR", {{ sensitivity: "base" }})
       );
       const grupos = [...new Set(detalhes.map(obterGrupoFiltro).filter(Boolean))].sort((a, b) =>
         a.localeCompare(b, "pt-BR", {{ sensitivity: "base" }})
       );
-      const mesesDisponiveis = mesesOrdem.filter((mes) => detalhes.some((item) => obterMes(item) === mes));
+      const pops = [...new Set(detalhes.map(obterPop).filter(Boolean))].sort((a, b) =>
+        a.localeCompare(b, "pt-BR", {{ sensitivity: "base" }})
+      );
 
-      preencherSelect(filtroAno, anos, "Todos os anos");
-      preencherSelect(filtroMes, mesesDisponiveis, "Todos os meses");
       preencherSelect(filtroUsuario, usuarios, "Todos os finalizadores");
       preencherSelect(filtroGrupo, grupos, "Todos os grupos");
+      preencherSelect(filtroPop, pops, "Todos os POPs");
 
-      if (!filtroAno.value && anos.includes(anoInicial)) {{
-        filtroAno.value = anoInicial;
+      const datasDisponiveis = detalhes.map(obterDataBaseTexto).filter(Boolean).sort();
+      const dataMin = datasDisponiveis[0] || dataInicialPadrao;
+      const dataMax = datasDisponiveis[datasDisponiveis.length - 1] || dataFinalPadrao;
+
+      if (dataMin) {{
+        filtroDataInicial.min = dataMin;
+        filtroDataFinal.min = dataMin;
       }}
-      if (!filtroMes.value && mesInicial && mesInicial !== "Todos" && mesesDisponiveis.includes(mesInicial)) {{
-        filtroMes.value = mesInicial;
+      if (dataMax) {{
+        filtroDataInicial.max = dataMax;
+        filtroDataFinal.max = dataMax;
       }}
+
+      if (!filtroDataInicial.value) {{
+        filtroDataInicial.value = dataInicialPadrao || dataMin || "";
+      }}
+      if (!filtroDataFinal.value) {{
+        filtroDataFinal.value = dataFinalPadrao || dataMax || "";
+      }}
+    }}
+
+    function dataDentroDoIntervalo(registro) {{
+      const data = obterDataBaseTexto(registro);
+      if (!data) return false;
+      if (filtroDataInicial.value && data < filtroDataInicial.value) return false;
+      if (filtroDataFinal.value && data > filtroDataFinal.value) return false;
+      return true;
     }}
 
     function filtrarDetalhes() {{
       const busca = normalizarTexto(filtroBusca.value).toLowerCase();
 
       return detalhes.filter((registro) => {{
-        if (filtroAno.value && obterAno(registro) !== filtroAno.value) return false;
-        if (filtroMes.value && obterMes(registro) !== filtroMes.value) return false;
+        if (!dataDentroDoIntervalo(registro)) return false;
         if (filtroUsuario.value && obterUsuario(registro) !== filtroUsuario.value) return false;
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
+        if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
         if (busca && !obterTextoBusca(registro).includes(busca)) return false;
         return true;
       }});
@@ -879,9 +1001,10 @@ def gerar_html_dashboard(
       const busca = normalizarTexto(filtroBusca.value).toLowerCase();
 
       return detalhes.filter((registro) => {{
-        if (filtroAno.value && obterAno(registro) !== filtroAno.value) return false;
+        if (!dataDentroDoIntervalo(registro)) return false;
         if (filtroUsuario.value && obterUsuario(registro) !== filtroUsuario.value) return false;
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
+        if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
         if (busca && !obterTextoBusca(registro).includes(busca)) return false;
         return true;
       }});
@@ -891,9 +1014,9 @@ def gerar_html_dashboard(
 	      const busca = normalizarTexto(filtroBusca.value).toLowerCase();
 
 	      return detalhes.filter((registro) => {{
-	        if (filtroAno.value && obterAno(registro) !== filtroAno.value) return false;
-	        if (filtroMes.value && obterMes(registro) !== filtroMes.value) return false;
+	        if (!dataDentroDoIntervalo(registro)) return false;
 	        if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
+	        if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
 	        if (busca && !obterTextoBusca(registro).includes(busca)) return false;
 	        return true;
 	      }});
@@ -965,7 +1088,7 @@ def gerar_html_dashboard(
 	          return;
 	        }}
 	        const motivo = obterMotivo(registro);
-	        if (!motivo) return;
+	        if (!motivoDeveSerExibido(motivo)) return;
 	        contagem.set(motivo, (contagem.get(motivo) || 0) + 1);
 	      }});
 
@@ -1000,6 +1123,43 @@ def gerar_html_dashboard(
 	        item.appendChild(label);
 	        item.appendChild(valor);
 	        movimentacoesGrid.appendChild(item);
+	      }});
+	    }}
+
+	    function renderPopCards(registros) {{
+	      const contagem = new Map();
+
+	      registros.forEach((registro) => {{
+	        const pop = obterPop(registro);
+	        if (!pop) return;
+	        contagem.set(pop, (contagem.get(pop) || 0) + 1);
+	      }});
+
+	      const itens = [...contagem.entries()]
+	        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "pt-BR", {{ sensitivity: "base" }}));
+
+	      popsGrid.innerHTML = "";
+
+	      if (!itens.length) {{
+	        popsGrid.innerHTML = '<div class="metric-item compact"><span class="metric-label">Sem POPs no recorte</span><span class="metric-value">0</span></div>';
+	        return;
+	      }}
+
+	      itens.forEach(([pop, total]) => {{
+	        const item = document.createElement("div");
+	        item.className = "metric-item compact";
+
+	        const label = document.createElement("span");
+	        label.className = "metric-label";
+	        label.textContent = pop;
+
+	        const valor = document.createElement("span");
+	        valor.className = "metric-value";
+	        valor.textContent = String(total);
+
+	        item.appendChild(label);
+	        item.appendChild(valor);
+	        popsGrid.appendChild(item);
 	      }});
 	    }}
 
@@ -1110,37 +1270,38 @@ def gerar_html_dashboard(
         .sort((a, b) => b.total - a.total || a.usuario.localeCompare(b.usuario, "pt-BR", {{ sensitivity: "base" }}));
     }}
 
-    function obterMesReferenciaRanking(registros) {{
-      if (filtroMes.value) {{
-        return mesesOrdem.indexOf(filtroMes.value) + 1;
-      }}
+    function obterReferenciaMensalRanking(registros) {{
+      const referencias = registros
+        .map((registro) => obterDataBaseTexto(registro))
+        .filter((data) => data && data.length >= 7)
+        .map((data) => data.slice(0, 7))
+        .sort();
 
-      const meses = registros.map(obterMesNumero).filter((valor) => valor > 0);
-      if (!meses.length) return 0;
-      return Math.max(...meses);
+      if (!referencias.length) return null;
+
+      return referencias[referencias.length - 1];
     }}
 
     function calcularVariacaoRanking(registrosAtuais, registrosBase, usuario, grupo) {{
-      const mesAtual = obterMesReferenciaRanking(registrosAtuais);
-      if (mesAtual <= 0) {{
+      const referenciaAtual = obterReferenciaMensalRanking(registrosAtuais);
+      if (!referenciaAtual) {{
         return {{ texto: "-", classe: "flat" }};
       }}
 
-      const mesAnterior = mesAtual - 1;
-      if (mesAnterior <= 0) {{
-        return {{ texto: "-", classe: "flat" }};
-      }}
+      const [anoAtual, mesAtual] = referenciaAtual.split("-").map(Number);
+      const dataAnterior = new Date(anoAtual, mesAtual - 2, 1);
+      const referenciaAnterior = `${{dataAnterior.getFullYear()}}-${{String(dataAnterior.getMonth() + 1).padStart(2, "0")}}`;
 
       const atual = registrosBase.filter((registro) =>
         obterUsuario(registro) === usuario &&
         obterGrupoFiltro(registro) === grupo &&
-        obterMesNumero(registro) === mesAtual
+        obterDataBaseTexto(registro).startsWith(referenciaAtual)
       ).length;
 
       const anterior = registrosBase.filter((registro) =>
         obterUsuario(registro) === usuario &&
         obterGrupoFiltro(registro) === grupo &&
-        obterMesNumero(registro) === mesAnterior
+        obterDataBaseTexto(registro).startsWith(referenciaAnterior)
       ).length;
 
       if (anterior === 0 && atual === 0) {{
@@ -1290,60 +1451,39 @@ def gerar_html_dashboard(
 	      graficoMensal.update();
 	    }}
 
-	    function obterReferenciaGraficoDiario(registros) {{
-	      if (filtroMes.value) {{
-	        const indiceMes = mesesOrdem.indexOf(filtroMes.value);
-	        const ano = Number(filtroAno.value || anoInicial || new Date().getFullYear());
-	        if (indiceMes >= 0) {{
-	          return {{ ano, mes: indiceMes + 1, nomeMes: filtroMes.value }};
-	        }}
-	      }}
-
-	      const candidatos = registros
-	        .map((registro) => {{
-	          const data = normalizarTexto(registro.data_base_dashboard || registro.data_finalizacao_dashboard || registro.data_criacao_dashboard);
-	          if (!data || data.length < 7) return null;
-	          return {{
-	            ano: Number(data.slice(0, 4)),
-	            mes: Number(data.slice(5, 7)),
-	          }};
-	        }})
-	        .filter(Boolean)
-	        .sort((a, b) => (a.ano - b.ano) || (a.mes - b.mes));
-
-	      if (!candidatos.length) return null;
-
-	      const ultimo = candidatos[candidatos.length - 1];
-	      return {{
-	        ano: ultimo.ano,
-	        mes: ultimo.mes,
-	        nomeMes: mesesOrdem[ultimo.mes - 1] || "",
-	      }};
+	    function obterIntervaloSelecionado() {{
+	      const inicio = filtroDataInicial.value || dataInicialPadrao;
+	      const fim = filtroDataFinal.value || dataFinalPadrao;
+	      if (!inicio || !fim) return null;
+	      return {{ inicio, fim }};
 	    }}
 
 	    function agruparResumoDiario(registros) {{
-	      const referencia = obterReferenciaGraficoDiario(registros);
-	      if (!referencia) {{
-	        return {{ labels: [], datasets: [], referencia: null }};
+	      const intervalo = obterIntervaloSelecionado();
+	      if (!intervalo) {{
+	        return {{ labels: [], datasets: [], intervalo: null }};
 	      }}
 
-	      const diasNoMes = new Date(referencia.ano, referencia.mes, 0).getDate();
-	      const labels = Array.from({{ length: diasNoMes }}, (_, i) => String(i + 1).padStart(2, "0"));
+	      const labels = [];
+	      const mapaIndices = new Map();
+	      const cursor = new Date(`${{intervalo.inicio}}T00:00:00`);
+	      const fim = new Date(`${{intervalo.fim}}T00:00:00`);
+	      while (cursor <= fim) {{
+	        const data = `${{cursor.getFullYear()}}-${{String(cursor.getMonth() + 1).padStart(2, "0")}}-${{String(cursor.getDate()).padStart(2, "0")}}`;
+	        mapaIndices.set(data, labels.length);
+	        labels.push(data.slice(8, 10) + "/" + data.slice(5, 7));
+	        cursor.setDate(cursor.getDate() + 1);
+	      }}
 	      const mapaMembros = new Map();
 
 	      registros.forEach((registro) => {{
-	        const data = normalizarTexto(registro.data_base_dashboard || registro.data_finalizacao_dashboard || registro.data_criacao_dashboard);
-	        const dia = obterDiaNumero(registro);
-	        if (!data || data.length < 10 || dia <= 0 || dia > diasNoMes) return;
-
-	        const ano = Number(data.slice(0, 4));
-	        const mes = Number(data.slice(5, 7));
-	        if (ano !== referencia.ano || mes !== referencia.mes) return;
+	        const data = obterDataBaseTexto(registro);
+	        if (!data || !mapaIndices.has(data)) return;
 
 	        const membro = obterUsuario(registro) || "Sem usuário";
-	        const indice = dia - 1;
+	        const indice = mapaIndices.get(data);
 	        if (!mapaMembros.has(membro)) {{
-	          mapaMembros.set(membro, Array.from({{ length: diasNoMes }}, () => 0));
+	          mapaMembros.set(membro, Array.from({{ length: labels.length }}, () => 0));
 	        }}
 	        mapaMembros.get(membro)[indice] += 1;
 	      }});
@@ -1367,7 +1507,7 @@ def gerar_html_dashboard(
 	          }};
 	        }});
 
-	      return {{ labels, datasets, referencia }};
+	      return {{ labels, datasets, intervalo }};
 	    }}
 
 	    function renderGraficoDiario(registros) {{
@@ -1379,21 +1519,22 @@ def gerar_html_dashboard(
 	      graficoDiario.data.datasets = resumo.datasets;
 	      graficoDiario.update();
 
-	      if (!resumo.referencia) {{
+	      if (!resumo.intervalo) {{
 	        graficoDiarioMeta.textContent = "Sem dados suficientes para montar a evolução diária.";
 	        return;
 	      }}
 
 	      const contextoGrupo = filtroGrupo.value ? ` do grupo ${{filtroGrupo.value}}` : "";
-	      graficoDiarioMeta.textContent = `Evolução diária por membro${{contextoGrupo}} em ${{resumo.referencia.nomeMes}}/${{resumo.referencia.ano}}, usando a data-base de encerramento da O.S.`;
+	      graficoDiarioMeta.textContent = `Evolução diária por membro${{contextoGrupo}} entre ${{resumo.intervalo.inicio}} e ${{resumo.intervalo.fim}}, usando a data-base de encerramento da O.S.`;
 	    }}
 
     function atualizarMetas(registrosFinalizados, totalDetalhes) {{
       const partes = [];
-      if (filtroAno.value) partes.push(`Ano: ${{filtroAno.value}}`);
-      if (filtroMes.value) partes.push(`Mês: ${{filtroMes.value}}`);
+      if (filtroDataInicial.value) partes.push(`Data inicial: ${{filtroDataInicial.value}}`);
+      if (filtroDataFinal.value) partes.push(`Data final: ${{filtroDataFinal.value}}`);
       if (filtroUsuario.value) partes.push(`Finalizado por: ${{filtroUsuario.value}}`);
       if (filtroGrupo.value) partes.push(`Grupo: ${{filtroGrupo.value}}`);
+      if (filtroPop.value) partes.push(`POP: ${{filtroPop.value}}`);
       if (filtroBusca.value.trim()) partes.push(`Busca: ${{filtroBusca.value.trim()}}`);
 
       const textoFiltro = partes.length ? partes.join(" | ") : "Todos";
@@ -1402,13 +1543,18 @@ def gerar_html_dashboard(
       detalheMeta.textContent = `Mostrando ${{totalDetalhes}} registro(s) após aplicar os filtros.`;
     }}
 
-    function aplicarFiltros() {{
-      const registros = filtrarDetalhes();
+	    function aplicarFiltros() {{
+	      if (filtroDataInicial.value && filtroDataFinal.value && filtroDataInicial.value > filtroDataFinal.value) {{
+	        filtroDataFinal.value = filtroDataInicial.value;
+	      }}
+	      salvarFiltros();
+	      const registros = filtrarDetalhes();
       const registrosFinalizados = registros.filter((registro) => ehStatusEncerrada(registro));
       const registrosBaseEncerramentos = filtrarBaseEncerramentos().filter((registro) => ehStatusEncerrada(registro));
       const registrosBaseRanking = filtrarBaseRanking().filter((registro) => ehStatusEncerrada(registro));
 	      renderStatusCards(registros);
 	      renderMotivoCards(registros);
+	      renderPopCards(registros);
 	      renderCardsEncerramentos(registrosBaseEncerramentos);
 	      renderTempoBacklog(registros, registrosFinalizados);
 	      renderRanking(registrosFinalizados, registrosBaseRanking);
@@ -1418,11 +1564,43 @@ def gerar_html_dashboard(
 	      atualizarMetas(registrosFinalizados, registros.length);
 	    }}
 
-    [filtroAno, filtroMes, filtroUsuario, filtroGrupo].forEach((select) => {{
+    function formatarDataInput(data) {{
+      const ano = data.getFullYear();
+      const mes = String(data.getMonth() + 1).padStart(2, "0");
+      const dia = String(data.getDate()).padStart(2, "0");
+      return `${{ano}}-${{mes}}-${{dia}}`;
+    }}
+
+    function aplicarAtalhoPeriodo(tipo) {{
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
+      let inicio = new Date(hoje);
+      let fim = new Date(hoje);
+
+      if (tipo === "ontem") {{
+        inicio.setDate(inicio.getDate() - 1);
+        fim = new Date(inicio);
+      }} else if (tipo === "7dias") {{
+        inicio.setDate(inicio.getDate() - 6);
+      }} else if (tipo === "30dias") {{
+        inicio.setDate(inicio.getDate() - 29);
+      }} else if (tipo === "mes-atual") {{
+        inicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+      }}
+
+      filtroDataInicial.value = formatarDataInput(inicio);
+      filtroDataFinal.value = formatarDataInput(fim);
+      aplicarFiltros();
+    }}
+
+    [filtroDataInicial, filtroDataFinal, filtroUsuario, filtroGrupo, filtroPop].forEach((select) => {{
       select.addEventListener("change", aplicarFiltros);
     }});
 
     filtroBusca.addEventListener("input", aplicarFiltros);
+    quickRangeButtons.forEach((button) => {{
+      button.addEventListener("click", () => aplicarAtalhoPeriodo(button.dataset.range));
+    }});
 
     function formatarTempo(totalSegundos) {{
       const minutos = Math.floor(totalSegundos / 60);
@@ -1438,6 +1616,7 @@ def gerar_html_dashboard(
         restante -= 1;
         if (restante <= 0) {{
           refreshCountdown.textContent = "00:00";
+          salvarFiltros();
           window.location.reload();
           return;
         }}
@@ -1447,10 +1626,12 @@ def gerar_html_dashboard(
 
     refreshNowButton.addEventListener("click", () => {{
       refreshCountdown.textContent = "00:00";
+      salvarFiltros();
       window.location.reload();
     }});
 
     popularFiltros();
+    restaurarFiltros();
     aplicarFiltros();
     iniciarAutoRefresh();
   </script>
