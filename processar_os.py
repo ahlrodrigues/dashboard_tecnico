@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import pandas as pd
 from typing import Dict, Any, List
 
@@ -102,6 +103,40 @@ def classificar_responsavel_encerramento(finalizador: Any, responsavel: Any) -> 
         return "Pelo responsável"
 
     return "Por outros"
+
+
+def extrair_auxiliares(valor: Any) -> List[str]:
+    if valor is None:
+        return []
+
+    if isinstance(valor, list):
+        return [normalizar_nome(item) for item in valor if normalizar_nome(item)]
+
+    texto = str(valor).strip()
+    if not texto or texto == "[]":
+        return []
+
+    try:
+        convertido = ast.literal_eval(texto)
+    except (ValueError, SyntaxError):
+        convertido = [texto]
+
+    if isinstance(convertido, list):
+        return [normalizar_nome(item) for item in convertido if normalizar_nome(item)]
+
+    return [normalizar_nome(convertido)] if normalizar_nome(convertido) else []
+
+
+def classificar_total_os_encerramento(finalizador: Any, responsavel: Any, tecnicos_auxiliares: Any) -> str:
+    finalizador_norm = normalizar_nome(finalizador)
+    responsavel_norm = normalizar_nome(responsavel)
+    auxiliares_norm = extrair_auxiliares(tecnicos_auxiliares)
+
+    equipe_responsavel = {nome for nome in [responsavel_norm, *auxiliares_norm] if nome}
+    if finalizador_norm and finalizador_norm in equipe_responsavel:
+        return "Na equipe responsável"
+
+    return "Fora da equipe responsável"
 
 
 def detectar_coluna(df: pd.DataFrame, candidatas: List[str]) -> str:
@@ -216,6 +251,14 @@ def preparar_dataframe(raw_data: List[Dict[str, Any]], config: Dict[str, Any]) -
         lambda row: classificar_responsavel_encerramento(
             finalizador=row.get("finalizado_por_dashboard"),
             responsavel=row.get("responsavel", ""),
+        ),
+        axis=1,
+    )
+    df["total_os_encerramento_dashboard"] = df.apply(
+        lambda row: classificar_total_os_encerramento(
+            finalizador=row.get("finalizado_por_dashboard"),
+            responsavel=row.get("responsavel", ""),
+            tecnicos_auxiliares=row.get("tecnicos_auxiliares", ""),
         ),
         axis=1,
     )

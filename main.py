@@ -8,7 +8,8 @@ from sgp_client import SGPClient
 from processar_os import preparar_dataframe, resumo_mensal, ranking_finalizadores
 from gerar_dashboard import gerar_html_dashboard
 
-STATUS_COLETA = [0, 1, 2, 3]
+STATUS_ABERTAS = [0, 2, 3]
+STATUS_ENCERRADAS = [1]
 
 
 MAPA_MES = {
@@ -47,16 +48,24 @@ def main() -> None:
     mes = config.get("dashboard", {}).get("mes_padrao", "Todos")
     refresh_seconds = int(config.get("dashboard", {}).get("atualizacao_segundos", 300))
 
-    # A coleta continua ampla por criacao para nao perder OS abertas; no dashboard,
-    # a data-base principal passa a ser o encerramento, com fallback para criacao.
+    # Para manter o dashboard coerente com a data-base:
+    # - OS encerradas sao coletadas pela data de finalizacao
+    # - OS abertas/em execucao/pendentes continuam pela data de criacao
     data_inicio, data_fim = montar_periodo(ano, "Todos")
 
     client = SGPClient(config)
-    raw_data = client.listar_ordens_servico_statuses(
-        statuses=STATUS_COLETA,
+    raw_abertas = client.listar_ordens_servico_statuses(
+        statuses=STATUS_ABERTAS,
         data_criacao_inicio=data_inicio,
         data_criacao_fim=data_fim,
     )
+    raw_encerradas = client.listar_ordens_servico_statuses(
+        statuses=STATUS_ENCERRADAS,
+        data_finalizacao_inicio=data_inicio,
+        data_finalizacao_fim=data_fim,
+    )
+
+    raw_data = raw_abertas + raw_encerradas
 
     df = preparar_dataframe(raw_data, config)
 

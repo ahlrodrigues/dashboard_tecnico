@@ -26,8 +26,10 @@ def _serializar_registros(df: pd.DataFrame, detalhe_cols: list[str]) -> list[dic
         "grupo_dashboard",
         "grupo_encerramento_dashboard",
         "responsavel_encerramento_dashboard",
+        "total_os_encerramento_dashboard",
         "contrato_status_dashboard",
         "finalizado_por_dashboard",
+        "tecnicos_auxiliares",
         "data_base_dashboard",
         "data_finalizacao_dashboard",
         "data_criacao_dashboard",
@@ -80,7 +82,7 @@ def gerar_html_dashboard(
 
     cards = {
         "aberta": int((detalhes_df["status_dashboard"] == "Aberta").sum()) if not detalhes_df.empty else 0,
-        "encerrada": int((detalhes_df["status_dashboard"] == "Encerrada").sum()) if not detalhes_df.empty else 0,
+        "encerrada": int(len(finalizadas_df)) if not finalizadas_df.empty else 0,
         "pendente": int((detalhes_df["status_dashboard"] == "Pendente").sum()) if not detalhes_df.empty else 0,
         "em_execucao": int((detalhes_df["status_dashboard"] == "Em execução").sum()) if not detalhes_df.empty else 0,
         "inviabilidade": int((detalhes_df["contrato_status_dashboard"].fillna("").astype(str).str.strip() == "Inviabilidade Técnica").sum())
@@ -276,12 +278,18 @@ def gerar_html_dashboard(
     }}
     .summary-card.primary {{
       background: linear-gradient(135deg, rgba(23, 98, 76, 0.16), rgba(255, 255, 255, 0.98));
+      grid-template-columns: 1fr;
+    }}
+    .summary-card.secondary {{
+      grid-template-columns: 1fr;
     }}
     .summary-card.tertiary {{
       background: linear-gradient(135deg, rgba(220, 239, 231, 0.92), rgba(255, 255, 255, 0.98));
       grid-column: 1 / -1;
       grid-template-columns: 1fr;
     }}
+    .summary-card.primary .summary-card-head,
+    .summary-card.secondary .summary-card-head,
     .summary-card.tertiary .summary-card-head {{
       padding-right: 0;
       margin-bottom: 2px;
@@ -334,6 +342,15 @@ def gerar_html_dashboard(
     .metric-grid.flow .metric-item {{
       flex: 0 1 calc((100% - 60px) / 6);
       min-width: 150px;
+    }}
+    .summary-card.primary .metric-grid,
+    .summary-card.secondary .metric-grid {{
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      width: 100%;
+      justify-content: stretch;
+      align-content: start;
+      align-items: stretch;
     }}
     .metric-item {{
       width: auto;
@@ -467,6 +484,10 @@ def gerar_html_dashboard(
 	      .cards-stack {{
 	        grid-template-columns: 1fr;
 	      }}
+	      .summary-card.primary .metric-grid,
+	      .summary-card.secondary .metric-grid {{
+	        grid-template-columns: repeat(2, minmax(0, 1fr));
+	      }}
 	      .grid-panels {{
 	        grid-template-columns: 1fr;
 	      }}
@@ -477,6 +498,10 @@ def gerar_html_dashboard(
 	      }}
 	      .metric-grid {{
 	        justify-content: flex-start;
+	      }}
+	      .summary-card.primary .metric-grid,
+	      .summary-card.secondary .metric-grid {{
+	        grid-template-columns: 1fr;
 	      }}
 	      .metric-grid.flow .metric-item {{
 	        flex-basis: 180px;
@@ -697,6 +722,20 @@ def gerar_html_dashboard(
 	      return normalizarTexto(registro.grupo_encerramento_dashboard);
 	    }}
 
+	    function obterGrupoFiltro(registro) {{
+	      const grupoStatusContrato = obterGrupo(registro);
+	      if (grupoStatusContrato === "Inviabilidade") {{
+	        return "Inviabilidade";
+	      }}
+
+	      if (ehStatusEncerrada(registro)) {{
+	        const grupoEncerramento = obterGrupoEncerramento(registro);
+	        if (grupoEncerramento) return grupoEncerramento;
+	      }}
+
+	      return grupoStatusContrato;
+	    }}
+
     function obterStatus(registro) {{
       return normalizarTexto(registro.status_dashboard || registro.status);
     }}
@@ -704,6 +743,37 @@ def gerar_html_dashboard(
     function obterMotivo(registro) {{
       return normalizarTexto(registro.motivo);
     }}
+
+	    function obterTecnicosAuxiliares(registro) {{
+	      const bruto = normalizarTexto(registro.tecnicos_auxiliares);
+	      if (!bruto || bruto === "[]") return [];
+
+	      const matches = [...bruto.matchAll(/'([^']+)'|"([^"]+)"/g)];
+	      if (matches.length) {{
+	        return matches
+	          .map((match) => normalizarTexto(match[1] || match[2] || ""))
+	          .filter(Boolean);
+	      }}
+
+	      return [bruto]
+	        .map((valor) => valor.replace(/^\\[|\\]$/g, ""))
+	        .map((valor) => normalizarTexto(valor))
+	        .filter(Boolean);
+	    }}
+
+	    function usuarioNaEquipeResponsavel(registro, usuario) {{
+	      const usuarioNorm = normalizarTexto(usuario);
+	      if (!usuarioNorm) return false;
+
+	      const responsavel = normalizarTexto(registro.responsavel);
+	      if (responsavel && responsavel.localeCompare(usuarioNorm, "pt-BR", {{ sensitivity: "base" }}) === 0) {{
+	        return true;
+	      }}
+
+	      return obterTecnicosAuxiliares(registro).some((auxiliar) =>
+	        auxiliar.localeCompare(usuarioNorm, "pt-BR", {{ sensitivity: "base" }}) === 0
+	      );
+	    }}
 
 	    function obterMesNumero(registro) {{
 	      return Number(registro.mes_num || 0);
@@ -774,7 +844,7 @@ def gerar_html_dashboard(
       const usuarios = [...new Set(detalhes.map(obterUsuario).filter(Boolean))].sort((a, b) =>
         a.localeCompare(b, "pt-BR", {{ sensitivity: "base" }})
       );
-      const grupos = [...new Set(detalhes.map(obterGrupo).filter(Boolean))].sort((a, b) =>
+      const grupos = [...new Set(detalhes.map(obterGrupoFiltro).filter(Boolean))].sort((a, b) =>
         a.localeCompare(b, "pt-BR", {{ sensitivity: "base" }})
       );
       const mesesDisponiveis = mesesOrdem.filter((mes) => detalhes.some((item) => obterMes(item) === mes));
@@ -799,7 +869,7 @@ def gerar_html_dashboard(
         if (filtroAno.value && obterAno(registro) !== filtroAno.value) return false;
         if (filtroMes.value && obterMes(registro) !== filtroMes.value) return false;
         if (filtroUsuario.value && obterUsuario(registro) !== filtroUsuario.value) return false;
-        if (filtroGrupo.value && obterGrupo(registro) !== filtroGrupo.value) return false;
+        if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (busca && !obterTextoBusca(registro).includes(busca)) return false;
         return true;
       }});
@@ -811,31 +881,58 @@ def gerar_html_dashboard(
       return detalhes.filter((registro) => {{
         if (filtroAno.value && obterAno(registro) !== filtroAno.value) return false;
         if (filtroUsuario.value && obterUsuario(registro) !== filtroUsuario.value) return false;
-        if (filtroGrupo.value && obterGrupo(registro) !== filtroGrupo.value) return false;
+        if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (busca && !obterTextoBusca(registro).includes(busca)) return false;
         return true;
       }});
     }}
+
+	    function filtrarBaseEncerramentos() {{
+	      const busca = normalizarTexto(filtroBusca.value).toLowerCase();
+
+	      return detalhes.filter((registro) => {{
+	        if (filtroAno.value && obterAno(registro) !== filtroAno.value) return false;
+	        if (filtroMes.value && obterMes(registro) !== filtroMes.value) return false;
+	        if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
+	        if (busca && !obterTextoBusca(registro).includes(busca)) return false;
+	        return true;
+	      }});
+	    }}
 
     function ehStatusEncerrada(registro) {{
       return obterStatus(registro) === "Encerrada";
     }}
 
 	    function calcularCardsEncerramentos(registros) {{
+	      let totalOs = 0;
 	      let peloResponsavel = 0;
 	      let porOutros = 0;
+	      const usuarioFiltro = normalizarTexto(filtroUsuario.value);
 
 	      registros.forEach((registro) => {{
 	        const finalizador = normalizarTexto(registro.finalizado_por_dashboard);
 	        const responsavel = normalizarTexto(registro.responsavel);
-	        if (finalizador && responsavel && finalizador.localeCompare(responsavel, "pt-BR", {{ sensitivity: "base" }}) === 0) {{
-	          peloResponsavel += 1;
+
+	        if (usuarioFiltro) {{
+	          if (!usuarioNaEquipeResponsavel(registro, usuarioFiltro)) return;
+	          totalOs += 1;
+	          if (finalizador && finalizador.localeCompare(usuarioFiltro, "pt-BR", {{ sensitivity: "base" }}) === 0) {{
+	            peloResponsavel += 1;
+	          }} else {{
+	            porOutros += 1;
+	          }}
 	        }} else {{
-	          porOutros += 1;
+	          totalOs += 1;
+	          if (finalizador && responsavel && finalizador.localeCompare(responsavel, "pt-BR", {{ sensitivity: "base" }}) === 0) {{
+	            peloResponsavel += 1;
+	          }} else {{
+	            porOutros += 1;
+	          }}
 	        }}
 	      }});
 
       return {{
+        totalOs,
         peloResponsavel,
         porOutros,
       }};
@@ -843,20 +940,17 @@ def gerar_html_dashboard(
 
     function renderStatusCards(registros) {{
       let aberta = 0;
-      let encerrada = 0;
       let pendente = 0;
       let emExecucao = 0;
 
       registros.forEach((registro) => {{
         const status = obterStatus(registro);
         if (status === "Aberta") aberta += 1;
-        else if (status === "Encerrada") encerrada += 1;
         else if (status === "Pendente") pendente += 1;
         else if (status === "Em execução") emExecucao += 1;
       }});
 
       document.getElementById("cardAberta").textContent = aberta;
-      document.getElementById("cardEncerrada").textContent = encerrada;
       document.getElementById("cardPendente").textContent = pendente;
       document.getElementById("cardEmExecucao").textContent = emExecucao;
     }}
@@ -911,6 +1005,7 @@ def gerar_html_dashboard(
 
     function renderCardsEncerramentos(registros) {{
       const cards = calcularCardsEncerramentos(registros);
+      document.getElementById("cardEncerrada").textContent = cards.totalOs;
       document.getElementById("cardPeloResponsavel").textContent = cards.peloResponsavel;
       document.getElementById("cardPorOutros").textContent = cards.porOutros;
     }}
@@ -998,7 +1093,7 @@ def gerar_html_dashboard(
 
       registros.forEach((registro) => {{
         const usuario = obterUsuario(registro) || "Sem usuário";
-        const grupo = obterGrupo(registro) || "Outros";
+        const grupo = obterGrupoFiltro(registro) || "Outros";
         const chave = `${{usuario}}|||${{grupo}}`;
         mapa.set(chave, (mapa.get(chave) || 0) + 1);
       }});
@@ -1038,13 +1133,13 @@ def gerar_html_dashboard(
 
       const atual = registrosBase.filter((registro) =>
         obterUsuario(registro) === usuario &&
-        obterGrupo(registro) === grupo &&
+        obterGrupoFiltro(registro) === grupo &&
         obterMesNumero(registro) === mesAtual
       ).length;
 
       const anterior = registrosBase.filter((registro) =>
         obterUsuario(registro) === usuario &&
-        obterGrupo(registro) === grupo &&
+        obterGrupoFiltro(registro) === grupo &&
         obterMesNumero(registro) === mesAnterior
       ).length;
 
@@ -1277,7 +1372,7 @@ def gerar_html_dashboard(
 
 	    function renderGraficoDiario(registros) {{
 	      const registrosBase = filtroGrupo.value
-	        ? registros.filter((registro) => obterGrupoEncerramento(registro) === filtroGrupo.value)
+	        ? registros.filter((registro) => obterGrupoFiltro(registro) === filtroGrupo.value)
 	        : registros;
 	      const resumo = agruparResumoDiario(registrosBase);
 	      graficoDiario.data.labels = resumo.labels;
@@ -1310,10 +1405,11 @@ def gerar_html_dashboard(
     function aplicarFiltros() {{
       const registros = filtrarDetalhes();
       const registrosFinalizados = registros.filter((registro) => ehStatusEncerrada(registro));
+      const registrosBaseEncerramentos = filtrarBaseEncerramentos().filter((registro) => ehStatusEncerrada(registro));
       const registrosBaseRanking = filtrarBaseRanking().filter((registro) => ehStatusEncerrada(registro));
 	      renderStatusCards(registros);
 	      renderMotivoCards(registros);
-	      renderCardsEncerramentos(registrosFinalizados);
+	      renderCardsEncerramentos(registrosBaseEncerramentos);
 	      renderTempoBacklog(registros, registrosFinalizados);
 	      renderRanking(registrosFinalizados, registrosBaseRanking);
 	      renderDetalhes(registros);
