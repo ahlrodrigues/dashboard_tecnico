@@ -119,16 +119,6 @@ def classificar_grupo_encerramento(
     return classificar_finalizador(finalizador, tecnicos, infra_keywords)
 
 
-def classificar_responsavel_encerramento(finalizador: Any, responsavel: Any) -> str:
-    finalizador_norm = normalizar_identificador_pessoa(finalizador)
-    responsavel_norm = normalizar_identificador_pessoa(responsavel)
-
-    if finalizador_norm and responsavel_norm and finalizador_norm == responsavel_norm:
-        return "Pelo responsável"
-
-    return "Por outros"
-
-
 def extrair_auxiliares(valor: Any) -> List[str]:
     if valor is None:
         return []
@@ -270,13 +260,6 @@ def preparar_dataframe(raw_data: List[Dict[str, Any]], config: Dict[str, Any]) -
             responsavel=row.get("responsavel", ""),
             tecnicos=tecnicos,
             infra_keywords=infra_keywords,
-        ),
-        axis=1,
-    )
-    df["responsavel_encerramento_dashboard"] = df.apply(
-        lambda row: classificar_responsavel_encerramento(
-            finalizador=row.get("finalizado_por_dashboard"),
-            responsavel=row.get("responsavel", ""),
         ),
         axis=1,
     )

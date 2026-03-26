@@ -40,8 +40,8 @@ def montar_periodo(ano: int, mes: str) -> tuple[str, str]:
     return f"{ano}-{faixa[0]}", f"{ano}-{faixa[1]}"
 
 
-def main() -> None:
-    base = Path(__file__).resolve().parent
+def gerar_arquivos_dashboard(base: Path | None = None) -> dict[str, Path]:
+    base = base or Path(__file__).resolve().parent
     config = json.loads((base / "config.json").read_text(encoding="utf-8"))
 
     ano = int(config.get("dashboard", {}).get("ano_padrao", 2026))
@@ -103,6 +103,16 @@ def main() -> None:
         output_html=str(dashboard_saida),
     )
 
+    return {
+        "dashboard": dashboard_saida,
+        "csv": csv_saida,
+    }
+
+
+def main() -> None:
+    saidas = gerar_arquivos_dashboard()
+    dashboard_saida = saidas["dashboard"]
+    csv_saida = saidas["csv"]
     print(f"Dashboard gerado em: {dashboard_saida}")
     print(f"CSV tratado gerado em: {csv_saida}")
 

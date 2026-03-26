@@ -26,7 +26,6 @@ def _serializar_registros(df: pd.DataFrame, detalhe_cols: list[str]) -> list[dic
         "mes_num",
         "grupo_dashboard",
         "grupo_encerramento_dashboard",
-        "responsavel_encerramento_dashboard",
         "total_os_encerramento_dashboard",
         "contrato_status_dashboard",
         "finalizado_por_dashboard",
@@ -92,10 +91,8 @@ def gerar_html_dashboard(
         if "contrato_status_dashboard" in detalhes_df.columns and not detalhes_df.empty else 0,
         "instalacoes": int((detalhes_df["motivo"].fillna("").astype(str).str.strip() == "Instalação de KIT").sum()) if "motivo" in detalhes_df.columns else 0,
         "remocoes": int((detalhes_df["motivo"].fillna("").astype(str).str.strip() == "Remoção de KIT").sum()) if "motivo" in detalhes_df.columns else 0,
-        "pelo_responsavel": int((finalizadas_df["responsavel_encerramento_dashboard"] == "Pelo responsável").sum())
-        if "responsavel_encerramento_dashboard" in finalizadas_df.columns and not finalizadas_df.empty else 0,
-        "por_outros": int((finalizadas_df["responsavel_encerramento_dashboard"] == "Por outros").sum())
-        if "responsavel_encerramento_dashboard" in finalizadas_df.columns and not finalizadas_df.empty else 0,
+        "por_outros": int(len(finalizadas_df) - (finalizadas_df["grupo_encerramento_dashboard"] == "Técnicos").sum())
+        if "grupo_encerramento_dashboard" in finalizadas_df.columns and not finalizadas_df.empty else 0,
     }
 
     detalhes_data = _serializar_registros(detalhes_df, detalhe_cols) if detalhe_cols else []
@@ -224,6 +221,107 @@ def gerar_html_dashboard(
     }}
     .refresh-badge button:active {{
       transform: translateY(0);
+    }}
+    .refresh-badge button[disabled] {{
+      opacity: 0.72;
+      cursor: progress;
+      box-shadow: none;
+    }}
+    .update-overlay {{
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(12, 38, 30, 0.46);
+      backdrop-filter: blur(8px);
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.24s ease, visibility 0.24s ease;
+      z-index: 40;
+    }}
+    .update-overlay.active {{
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }}
+    .update-dialog {{
+      width: min(460px, 100%);
+      padding: 28px 26px;
+      border-radius: 24px;
+      background: rgba(252, 253, 248, 0.98);
+      border: 1px solid rgba(23, 98, 76, 0.12);
+      box-shadow: 0 24px 64px rgba(23, 50, 41, 0.18);
+      text-align: center;
+    }}
+    .update-dialog h3 {{
+      margin: 0 0 10px;
+      font-size: 22px;
+      color: var(--text);
+    }}
+    .update-dialog p {{
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.5;
+      font-size: 14px;
+    }}
+    .update-pulse {{
+      width: 88px;
+      height: 88px;
+      margin: 0 auto 18px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      position: relative;
+      background:
+        radial-gradient(circle at center, rgba(23, 98, 76, 0.20), rgba(23, 98, 76, 0.06));
+    }}
+    .update-pulse::before,
+    .update-pulse::after {{
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 2px solid rgba(23, 98, 76, 0.18);
+      animation: refresh-wave 1.8s ease-out infinite;
+    }}
+    .update-pulse::after {{
+      animation-delay: 0.9s;
+    }}
+    .update-spinner {{
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: 4px solid rgba(23, 98, 76, 0.14);
+      border-top-color: var(--accent);
+      animation: refresh-spin 0.9s linear infinite;
+    }}
+    .update-status {{
+      margin-top: 14px;
+      min-height: 21px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent);
+    }}
+    .update-overlay.error .update-status {{
+      color: #a13a2a;
+    }}
+    @keyframes refresh-spin {{
+      to {{
+        transform: rotate(360deg);
+      }}
+    }}
+    @keyframes refresh-wave {{
+      0% {{
+        transform: scale(0.82);
+        opacity: 0.72;
+      }}
+      100% {{
+        transform: scale(1.34);
+        opacity: 0;
+      }}
     }}
     .toolbar {{
       display: grid;
@@ -530,8 +628,8 @@ def gerar_html_dashboard(
     th .sort-header {{
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      gap: 8px;
+      justify-content: flex-start;
+      gap: 3px;
       width: 100%;
       border: 0;
       background: transparent;
@@ -543,7 +641,7 @@ def gerar_html_dashboard(
       cursor: pointer;
     }}
     th .sort-header-label {{
-      flex: 1;
+      flex: 0 1 auto;
       min-width: 0;
     }}
     th .sort-indicator {{
@@ -632,6 +730,16 @@ def gerar_html_dashboard(
   </style>
 </head>
 <body>
+  <div class="update-overlay" id="updateOverlay" aria-live="polite" aria-hidden="true">
+    <div class="update-dialog">
+      <div class="update-pulse" aria-hidden="true">
+        <div class="update-spinner"></div>
+      </div>
+      <h3>Atualizando arquivos</h3>
+      <p id="updateOverlayMessage">Gerando um novo HTML e um novo CSV do dashboard. Isso pode levar alguns segundos.</p>
+      <div class="update-status" id="updateOverlayStatus">Conectando ao serviço de atualização...</div>
+    </div>
+  </div>
   <div class="wrap">
     <section class="hero">
       <div class="hero-head">
@@ -706,7 +814,6 @@ def gerar_html_dashboard(
 	        <div class="metric-grid cols-2">
 	          <div class="metric-item"><span class="metric-label">Total de O.S. encerradas</span><span class="metric-value" id="cardEncerrada">{cards['encerrada']}</span></div>
 	          <div class="metric-item"><span class="metric-label">Encerradas pelo técnico</span><span class="metric-value" id="cardEncerradaTecnicos">{cards['encerrada_tecnicos']}</span></div>
-	          <div class="metric-item"><span class="metric-label">Encerradas pelo responsável</span><span class="metric-value" id="cardPeloResponsavel">{cards['pelo_responsavel']}</span></div>
 	          <div class="metric-item"><span class="metric-label">Encerradas por outros</span><span class="metric-value" id="cardPorOutros">{cards['por_outros']}</span></div>
 	        </div>
 	      </div>
@@ -794,7 +901,7 @@ def gerar_html_dashboard(
 
 	    <div class="panel full">
 	      <h2 class="section-title" id="tituloReincidencia">Reincidência por cliente/contrato</h2>
-	      <div class="panel-meta" id="reincidenciaMeta">Mostrando as O.S. dos clientes/contratos com reincidência no período filtrado.</div>
+	      <div class="panel-meta" id="reincidenciaMeta">Mostrando as O.S. dos clientes/contratos com reincidência em janela móvel de 30 dias.</div>
       <div class="table-wrap">
         <table id="tabelaReincidencias">
           <thead id="reincidenciasHead">
@@ -828,6 +935,24 @@ def gerar_html_dashboard(
     const quickRangeButtons = Array.from(document.querySelectorAll("[data-range]"));
     const refreshCountdown = document.getElementById("refreshCountdown");
     const refreshNowButton = document.getElementById("refreshNowButton");
+    const updateOverlay = document.getElementById("updateOverlay");
+    const updateOverlayMessage = document.getElementById("updateOverlayMessage");
+    const updateOverlayStatus = document.getElementById("updateOverlayStatus");
+    const backendBaseUrl = (() => {{
+      if (window.location.protocol === "file:") {{
+        return "http://127.0.0.1:8765";
+      }}
+
+      if (window.location.port === "8765") {{
+        return "";
+      }}
+
+      const protocolo = window.location.protocol || "http:";
+      const host = window.location.hostname || "127.0.0.1";
+      return `${{protocolo}}//${{host}}:8765`;
+    }})();
+    const refreshApiUrl = `${{backendBaseUrl}}/api/refresh`;
+    const refreshStatusUrl = `${{backendBaseUrl}}/api/refresh-status`;
 	    const tempoBacklogBody = document.getElementById("tempoBacklogBody");
 		    const rankingBody = document.getElementById("rankingBody");
 		    const detalhesBody = document.getElementById("detalhesBody");
@@ -852,8 +977,12 @@ def gerar_html_dashboard(
 	    const movimentacoesGrid = document.getElementById("movimentacoesGrid");
 	    const popsGrid = document.getElementById("popsGrid");
     const storageKey = "dashboard_tecnico_filtros";
+    let atualizandoArquivos = false;
+    let pollingAtualizacaoId = null;
+    let restanteRefresh = refreshSeconds;
+    let intervaloRefreshId = null;
     let ordenacaoDetalhes = {{ col: "data_finalizacao_dashboard", dir: "desc" }};
-    let ordenacaoReincidencias = {{ col: "data_finalizacao_dashboard", dir: "desc" }};
+    let ordenacaoReincidencias = {{ col: "cliente", dir: "asc" }};
 
     function normalizarTexto(valor) {{
       return String(valor || "").trim();
@@ -1172,6 +1301,18 @@ def gerar_html_dashboard(
       }});
     }}
 
+    function filtrarBaseReincidencias() {{
+      const busca = normalizarTexto(filtroBusca.value).toLowerCase();
+
+      return detalhes.filter((registro) => {{
+        if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
+        if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
+        if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
+        if (busca && !obterTextoBusca(registro).includes(busca)) return false;
+        return true;
+      }});
+    }}
+
 	    function filtrarBaseEncerramentos() {{
 	      const busca = normalizarTexto(filtroBusca.value).toLowerCase();
 
@@ -1192,20 +1333,14 @@ def gerar_html_dashboard(
 	    function calcularCardsEncerramentos(registros) {{
 	      let totalOs = 0;
 	      let peloTecnico = 0;
-	      let peloResponsavel = 0;
 	      let porOutros = 0;
 
 	      registros.forEach((registro) => {{
-	        const responsavelEncerramento = normalizarTexto(registro.responsavel_encerramento_dashboard);
 	        totalOs += 1;
 
 	        if (obterGrupoEncerramento(registro) === "Técnicos") {{
 	          peloTecnico += 1;
-	        }}
-	        if (responsavelEncerramento === "Pelo responsável") {{
-	          peloResponsavel += 1;
-	        }}
-	        if (responsavelEncerramento === "Por outros") {{
+	        }} else {{
 	          porOutros += 1;
 	        }}
 	      }});
@@ -1213,7 +1348,6 @@ def gerar_html_dashboard(
       return {{
         totalOs,
         peloTecnico,
-        peloResponsavel,
         porOutros,
       }};
     }}
@@ -1325,7 +1459,6 @@ def gerar_html_dashboard(
       const cards = calcularCardsEncerramentos(registros);
       document.getElementById("cardEncerrada").textContent = cards.totalOs;
       document.getElementById("cardEncerradaTecnicos").textContent = cards.peloTecnico;
-      document.getElementById("cardPeloResponsavel").textContent = cards.peloResponsavel;
       document.getElementById("cardPorOutros").textContent = cards.porOutros;
     }}
 
@@ -1568,7 +1701,7 @@ def gerar_html_dashboard(
         const indicador = botao.querySelector(".sort-indicator");
         const cabecalho = botao.closest("th");
         if (!indicador || !cabecalho) return;
-        indicador.textContent = ativo ? (ordenacaoDetalhes.dir === "asc" ? "↑" : "↓") : "↕";
+        indicador.textContent = ativo ? (ordenacaoDetalhes.dir === "asc" ? "▲" : "▼") : "△";
         cabecalho.setAttribute("aria-sort", ativo ? (ordenacaoDetalhes.dir === "asc" ? "ascending" : "descending") : "none");
       }});
 
@@ -1577,7 +1710,7 @@ def gerar_html_dashboard(
         const indicador = botao.querySelector(".sort-indicator");
         const cabecalho = botao.closest("th");
         if (!indicador || !cabecalho) return;
-        indicador.textContent = ativo ? (ordenacaoReincidencias.dir === "asc" ? "↑" : "↓") : "↕";
+        indicador.textContent = ativo ? (ordenacaoReincidencias.dir === "asc" ? "▲" : "▼") : "△";
         cabecalho.setAttribute("aria-sort", ativo ? (ordenacaoReincidencias.dir === "asc" ? "ascending" : "descending") : "none");
       }});
     }}
@@ -1618,10 +1751,32 @@ def gerar_html_dashboard(
       }});
     }}
 
+    function obterIntervaloReincidencia30Dias() {{
+      const intervaloSelecionado = obterIntervaloSelecionado();
+      const fimTexto = intervaloSelecionado?.fim || dataFinalPadrao || dataMaxDisponivel || "";
+      if (!fimTexto) return null;
+
+      const fim = new Date(`${{fimTexto}}T00:00:00`);
+      if (Number.isNaN(fim.getTime())) return null;
+
+      const inicio = new Date(fim);
+      inicio.setDate(inicio.getDate() - 29);
+
+      return {{
+        inicio: formatarDataInput(inicio),
+        fim: formatarDataInput(fim),
+      }};
+    }}
+
     function obterChavesReincidentes(registros) {{
+      const intervaloReincidencia = obterIntervaloReincidencia30Dias();
       const mapa = new Map();
 
       registros.forEach((registro) => {{
+        const dataBase = obterDataBaseTexto(registro);
+        if (!intervaloReincidencia || !dataBase) return;
+        if (dataBase < intervaloReincidencia.inicio || dataBase > intervaloReincidencia.fim) return;
+
         const cliente = normalizarTexto(registro.cliente);
         const contrato = normalizarTexto(registro.contrato);
         if (!cliente && !contrato) return;
@@ -1651,6 +1806,7 @@ def gerar_html_dashboard(
     function renderReincidencias(registros) {{
       atualizarIndicadoresOrdenacao();
       const chavesReincidentes = obterChavesReincidentes(registros);
+      const intervaloReincidencia = obterIntervaloReincidencia30Dias();
       reincidenciasBody.innerHTML = "";
 
       if (!chavesReincidentes.size) {{
@@ -1660,6 +1816,10 @@ def gerar_html_dashboard(
 
       const linhas = registros
         .filter((registro) => {{
+          const dataBase = obterDataBaseTexto(registro);
+          if (!intervaloReincidencia || !dataBase) return false;
+          if (dataBase < intervaloReincidencia.inicio || dataBase > intervaloReincidencia.fim) return false;
+
           const cliente = normalizarTexto(registro.cliente);
           const contrato = normalizarTexto(registro.contrato);
           const chave = `${{cliente}}|||${{contrato}}`;
@@ -1869,7 +2029,11 @@ def gerar_html_dashboard(
       painelTempoMeta.textContent = `Tempo médio e backlog para o recorte: ${{textoFiltro}}.`;
       rankingMeta.textContent = `Ranking atualizado com ${{registrosFinalizados.length}} OS encerradas no recorte atual.`;
       detalheMeta.textContent = `Mostrando ${{totalDetalhes}} registro(s) após aplicar os filtros.`;
-      reincidenciaMeta.textContent = `Mostrando as O.S. reincidentes de cliente/contrato no recorte: ${{textoFiltro}}.`;
+      const intervaloReincidencia = obterIntervaloReincidencia30Dias();
+      const descricaoReincidencia = intervaloReincidencia
+        ? `janela de 30 dias entre ${{intervaloReincidencia.inicio}} e ${{intervaloReincidencia.fim}}`
+        : "janela de 30 dias indisponível";
+      reincidenciaMeta.textContent = `Mostrando as O.S. reincidentes de cliente/contrato na ${{descricaoReincidencia}}: ${{textoFiltro}}.`;
     }}
 
 	    function aplicarFiltros() {{
@@ -1879,6 +2043,7 @@ def gerar_html_dashboard(
       const registrosFinalizados = registros.filter((registro) => ehStatusEncerrada(registro));
       const registrosBaseEncerramentos = filtrarBaseEncerramentos().filter((registro) => ehStatusEncerrada(registro));
       const registrosBaseRanking = filtrarBaseRankingComparativo().filter((registro) => ehStatusEncerrada(registro));
+      const registrosBaseReincidencias = filtrarBaseReincidencias();
 	      renderStatusCards(registros);
 	      renderMotivoCards(registros);
 	      renderPopCards(registros);
@@ -1886,7 +2051,7 @@ def gerar_html_dashboard(
 	      renderTempoBacklog(registros, registrosFinalizados);
 	      renderRanking(registrosFinalizados, registrosBaseRanking);
 	      renderDetalhes(registros);
-	      renderReincidencias(registros);
+	      renderReincidencias(registrosBaseReincidencias);
 	      renderGrafico(registrosFinalizados);
 	      renderGraficoDiario(registrosFinalizados);
 	      atualizarMetas(registrosFinalizados, registros.length);
@@ -1939,26 +2104,136 @@ def gerar_html_dashboard(
       return `${{String(minutos).padStart(2, "0")}}:${{String(segundos).padStart(2, "0")}}`;
     }}
 
-    function iniciarAutoRefresh() {{
-      let restante = refreshSeconds;
-      refreshCountdown.textContent = formatarTempo(restante);
+    function atualizarVisibilidadeOverlay(ativo, mensagem = "", status = "", erro = false) {{
+      updateOverlay.classList.toggle("active", ativo);
+      updateOverlay.classList.toggle("error", Boolean(erro));
+      updateOverlay.setAttribute("aria-hidden", ativo ? "false" : "true");
+      if (mensagem) updateOverlayMessage.textContent = mensagem;
+      if (status) updateOverlayStatus.textContent = status;
+    }}
 
-      window.setInterval(() => {{
-        restante -= 1;
-        if (restante <= 0) {{
-          refreshCountdown.textContent = "00:00";
-          salvarFiltros();
-          window.location.reload();
+    function encerrarEstadoAtualizacao() {{
+      atualizandoArquivos = false;
+      refreshNowButton.disabled = false;
+      restanteRefresh = refreshSeconds;
+      refreshCountdown.textContent = formatarTempo(restanteRefresh);
+      if (pollingAtualizacaoId) {{
+        window.clearInterval(pollingAtualizacaoId);
+        pollingAtualizacaoId = null;
+      }}
+    }}
+
+    async function consultarStatusAtualizacao() {{
+      try {{
+        const resposta = await window.fetch(refreshStatusUrl, {{
+          method: "GET",
+          mode: "cors",
+          headers: {{
+            "Accept": "application/json",
+          }},
+        }});
+        const payload = await resposta.json().catch(() => ({{ running: false, ok: false, message: "Resposta inválida do servidor." }}));
+
+        if (payload.running) {{
+          updateOverlayStatus.textContent = payload.message || "Atualização em andamento...";
           return;
         }}
-        refreshCountdown.textContent = formatarTempo(restante);
+
+        if (payload.ok) {{
+          updateOverlayStatus.textContent = payload.message || "Arquivos atualizados com sucesso. Recarregando painel...";
+          encerrarEstadoAtualizacao();
+          window.setTimeout(() => {{
+            window.location.reload();
+          }}, 500);
+          return;
+        }}
+
+        throw new Error(payload.message || "Falha ao atualizar arquivos.");
+      }} catch (erro) {{
+        const mensagemErro = erro instanceof Error ? erro.message : "Falha ao consultar atualização.";
+        const dicaServidor = window.location.protocol === "file:"
+          ? "Inicie o servidor local com `./.venv/bin/python dashboard_server.py --host 127.0.0.1 --port 8765`."
+          : "Confirme se o servidor local do dashboard está em execução.";
+        atualizarVisibilidadeOverlay(
+          true,
+          `Não foi possível acompanhar a atualização. ${{dicaServidor}}`,
+          mensagemErro,
+          true,
+        );
+        encerrarEstadoAtualizacao();
+      }}
+    }}
+
+    function iniciarPollingAtualizacao() {{
+      if (pollingAtualizacaoId) {{
+        window.clearInterval(pollingAtualizacaoId);
+      }}
+      pollingAtualizacaoId = window.setInterval(() => {{
+        consultarStatusAtualizacao();
+      }}, 1500);
+      consultarStatusAtualizacao();
+    }}
+
+    async function executarAtualizacaoArquivos(origem) {{
+      if (atualizandoArquivos) return;
+
+      atualizandoArquivos = true;
+      refreshNowButton.disabled = true;
+      const mensagem = origem === "auto"
+        ? "A contagem chegou ao fim e o dashboard está executando a mesma rotina da atualização automática."
+        : "O dashboard está executando a mesma rotina automática para gerar um novo HTML e um novo CSV.";
+      atualizarVisibilidadeOverlay(true, mensagem, "Executando rotina automática de atualização...");
+      refreshCountdown.textContent = "atualizando";
+      salvarFiltros();
+
+      try {{
+        const resposta = await window.fetch(refreshApiUrl, {{
+          method: "POST",
+          mode: "cors",
+          headers: {{
+            "Accept": "application/json",
+          }},
+        }});
+        const payload = await resposta.json().catch(() => ({{ ok: false, message: "Resposta inválida do servidor." }}));
+
+        if (!resposta.ok || !payload.ok) {{
+          throw new Error(payload.message || "Não foi possível atualizar os arquivos.");
+        }}
+        updateOverlayStatus.textContent = payload.message || "Atualização iniciada. Acompanhando progresso...";
+        iniciarPollingAtualizacao();
+      }} catch (erro) {{
+        const mensagemErro = erro instanceof Error ? erro.message : "Falha ao atualizar arquivos.";
+        const dicaServidor = window.location.protocol === "file:"
+          ? "Inicie o servidor local com `./.venv/bin/python dashboard_server.py --host 127.0.0.1 --port 8765`."
+          : "Confirme se o servidor local do dashboard está em execução.";
+        atualizarVisibilidadeOverlay(
+          true,
+          `Não foi possível gerar os arquivos agora. ${{dicaServidor}}`,
+          mensagemErro,
+          true,
+        );
+        encerrarEstadoAtualizacao();
+      }}
+    }}
+
+    function iniciarAutoRefresh() {{
+      refreshCountdown.textContent = formatarTempo(restanteRefresh);
+
+      intervaloRefreshId = window.setInterval(() => {{
+        if (atualizandoArquivos) return;
+
+        restanteRefresh -= 1;
+        if (restanteRefresh <= 0) {{
+          refreshCountdown.textContent = "00:00";
+          executarAtualizacaoArquivos("auto");
+          return;
+        }}
+        refreshCountdown.textContent = formatarTempo(restanteRefresh);
       }}, 1000);
     }}
 
     refreshNowButton.addEventListener("click", () => {{
-      refreshCountdown.textContent = "00:00";
-      salvarFiltros();
-      window.location.reload();
+      executarAtualizacaoArquivos("manual");
     }});
     detalhesHead.addEventListener("click", (event) => {{
       const botao = event.target.closest(".sort-header");
