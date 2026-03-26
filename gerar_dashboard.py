@@ -84,6 +84,8 @@ def gerar_html_dashboard(
     cards = {
         "aberta": int((detalhes_df["status_dashboard"] == "Aberta").sum()) if not detalhes_df.empty else 0,
         "encerrada": int(len(finalizadas_df)) if not finalizadas_df.empty else 0,
+        "encerrada_tecnicos": int((finalizadas_df["grupo_encerramento_dashboard"] == "Técnicos").sum())
+        if "grupo_encerramento_dashboard" in finalizadas_df.columns and not finalizadas_df.empty else 0,
         "pendente": int((detalhes_df["status_dashboard"] == "Pendente").sum()) if not detalhes_df.empty else 0,
         "em_execucao": int((detalhes_df["status_dashboard"] == "Em execução").sum()) if not detalhes_df.empty else 0,
         "inviabilidade": int((detalhes_df["contrato_status_dashboard"].fillna("").astype(str).str.strip() == "Inviabilidade Técnica").sum())
@@ -106,10 +108,13 @@ def gerar_html_dashboard(
     else:
         data_inicial_padrao = ""
         data_final_padrao = ""
-    data_snapshot_atual = date.today().strftime("%Y-%m-%d")
+    data_snapshot_atual = data_final_padrao or date.today().strftime("%Y-%m-%d")
 
     titulo_periodo = "Encerramentos por data de encerramento; Status Operacional pelo backlog atual no dia filtrado"
-    header_cols = "".join(f"<th>{escape(detalhe_labels.get(col, col))}</th>" for col in detalhe_cols)
+    header_cols = "".join(
+        f'<th aria-sort="none"><button type="button" class="sort-header" data-col="{escape(col)}" data-label="{escape(detalhe_labels.get(col, col))}"><span class="sort-header-label">{escape(detalhe_labels.get(col, col))}</span><span class="sort-indicator" aria-hidden="true">↕</span></button></th>'
+        for col in detalhe_cols
+    )
 
     html = f"""<!doctype html>
 <html lang="pt-BR">
@@ -390,16 +395,13 @@ def gerar_html_dashboard(
     .summary-card.primary .metric-grid,
     .summary-card.secondary .metric-grid {{
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 10px;
       width: 100%;
       justify-content: stretch;
       align-content: start;
       align-items: stretch;
       align-self: end;
-    }}
-    .summary-card.secondary .metric-grid {{
-      grid-template-columns: repeat(4, minmax(0, 1fr));
     }}
     .metric-item {{
       width: auto;
@@ -524,6 +526,35 @@ def gerar_html_dashboard(
       top: 0;
       z-index: 1;
       background: #edf5f0;
+    }}
+    th .sort-header {{
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      width: 100%;
+      border: 0;
+      background: transparent;
+      padding: 0;
+      font: inherit;
+      font-weight: 700;
+      color: inherit;
+      text-align: left;
+      cursor: pointer;
+    }}
+    th .sort-header-label {{
+      flex: 1;
+      min-width: 0;
+    }}
+    th .sort-indicator {{
+      flex: none;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1;
+    }}
+    th[aria-sort="ascending"] .sort-indicator,
+    th[aria-sort="descending"] .sort-indicator {{
+      color: var(--accent);
     }}
     tbody tr:nth-child(even) {{
       background: rgba(220, 239, 231, 0.23);
@@ -670,10 +701,11 @@ def gerar_html_dashboard(
 	      <div class="summary-card primary">
 	        <div class="summary-card-head">
 	          <h3 id="tituloEncerramentos">Encerramentos</h3>
-	          <p class="caption">Visão consolidada das O.S. encerradas e da comparação entre responsável e finalizador.</p>
+	          <p class="caption">Visão consolidada das O.S. encerradas no recorte, com cortes por grupo técnico e por quem realizou o encerramento.</p>
 	        </div>
 	        <div class="metric-grid cols-2">
 	          <div class="metric-item"><span class="metric-label">Total de O.S. encerradas</span><span class="metric-value" id="cardEncerrada">{cards['encerrada']}</span></div>
+	          <div class="metric-item"><span class="metric-label">Encerradas pelo técnico</span><span class="metric-value" id="cardEncerradaTecnicos">{cards['encerrada_tecnicos']}</span></div>
 	          <div class="metric-item"><span class="metric-label">Encerradas pelo responsável</span><span class="metric-value" id="cardPeloResponsavel">{cards['pelo_responsavel']}</span></div>
 	          <div class="metric-item"><span class="metric-label">Encerradas por outros</span><span class="metric-value" id="cardPorOutros">{cards['por_outros']}</span></div>
 	        </div>
@@ -751,8 +783,8 @@ def gerar_html_dashboard(
 	      <h2 class="section-title" id="tituloDetalhamento">Detalhamento</h2>
 	      <div class="panel-meta" id="detalheMeta">Mostrando os registros filtrados.</div>
       <div class="table-wrap">
-        <table>
-          <thead>
+        <table id="tabelaDetalhes">
+          <thead id="detalhesHead">
             <tr>{header_cols}</tr>
           </thead>
           <tbody id="detalhesBody"></tbody>
@@ -764,8 +796,8 @@ def gerar_html_dashboard(
 	      <h2 class="section-title" id="tituloReincidencia">Reincidência por cliente/contrato</h2>
 	      <div class="panel-meta" id="reincidenciaMeta">Mostrando as O.S. dos clientes/contratos com reincidência no período filtrado.</div>
       <div class="table-wrap">
-        <table>
-          <thead>
+        <table id="tabelaReincidencias">
+          <thead id="reincidenciasHead">
             <tr>{header_cols}</tr>
           </thead>
           <tbody id="reincidenciasBody"></tbody>
@@ -815,9 +847,13 @@ def gerar_html_dashboard(
     const tituloGraficoDiario = document.getElementById("tituloGraficoDiario");
     const tituloDetalhamento = document.getElementById("tituloDetalhamento");
     const tituloReincidencia = document.getElementById("tituloReincidencia");
+    const detalhesHead = document.getElementById("detalhesHead");
+    const reincidenciasHead = document.getElementById("reincidenciasHead");
 	    const movimentacoesGrid = document.getElementById("movimentacoesGrid");
 	    const popsGrid = document.getElementById("popsGrid");
     const storageKey = "dashboard_tecnico_filtros";
+    let ordenacaoDetalhes = {{ col: "data_finalizacao_dashboard", dir: "desc" }};
+    let ordenacaoReincidencias = {{ col: "data_finalizacao_dashboard", dir: "desc" }};
 
     function normalizarTexto(valor) {{
       return String(valor || "").trim();
@@ -1141,6 +1177,7 @@ def gerar_html_dashboard(
 
 	      return detalhes.filter((registro) => {{
 	        if (!dataDentroDoIntervalo(registro)) return false;
+	        if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
 	        if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
 	        if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
 	        if (busca && !obterTextoBusca(registro).includes(busca)) return false;
@@ -1154,34 +1191,28 @@ def gerar_html_dashboard(
 
 	    function calcularCardsEncerramentos(registros) {{
 	      let totalOs = 0;
+	      let peloTecnico = 0;
 	      let peloResponsavel = 0;
 	      let porOutros = 0;
-	      const usuarioFiltro = normalizarTexto(filtroUsuario.value);
 
 	      registros.forEach((registro) => {{
 	        const finalizador = normalizarTexto(registro.finalizado_por_dashboard);
 	        const responsavel = normalizarTexto(registro.responsavel);
+	        totalOs += 1;
 
-	        if (usuarioFiltro) {{
-	          if (!usuarioNaEquipeResponsavel(registro, usuarioFiltro)) return;
-	          totalOs += 1;
-	          if (finalizador && finalizador.localeCompare(usuarioFiltro, "pt-BR", {{ sensitivity: "base" }}) === 0) {{
-	            peloResponsavel += 1;
-	          }} else {{
-	            porOutros += 1;
-	          }}
+	        if (obterGrupoEncerramento(registro) === "Técnicos") {{
+	          peloTecnico += 1;
+	        }}
+	        if (finalizador && responsavel && finalizador.localeCompare(responsavel, "pt-BR", {{ sensitivity: "base" }}) === 0) {{
+	          peloResponsavel += 1;
 	        }} else {{
-	          totalOs += 1;
-	          if (finalizador && responsavel && finalizador.localeCompare(responsavel, "pt-BR", {{ sensitivity: "base" }}) === 0) {{
-	            peloResponsavel += 1;
-	          }} else {{
-	            porOutros += 1;
-	          }}
+	          porOutros += 1;
 	        }}
 	      }});
 
       return {{
         totalOs,
+        peloTecnico,
         peloResponsavel,
         porOutros,
       }};
@@ -1293,6 +1324,7 @@ def gerar_html_dashboard(
     function renderCardsEncerramentos(registros) {{
       const cards = calcularCardsEncerramentos(registros);
       document.getElementById("cardEncerrada").textContent = cards.totalOs;
+      document.getElementById("cardEncerradaTecnicos").textContent = cards.peloTecnico;
       document.getElementById("cardPeloResponsavel").textContent = cards.peloResponsavel;
       document.getElementById("cardPorOutros").textContent = cards.porOutros;
     }}
@@ -1510,7 +1542,48 @@ def gerar_html_dashboard(
       tituloReincidencia.textContent = `Reincidência por cliente/contrato | ${{resumo}}`;
     }}
 
+    function obterValorOrdenacao(registro, coluna) {{
+      if (coluna === "grupo_dashboard") return obterGrupo(registro);
+      if (coluna === "data_finalizacao_dashboard") return normalizarTexto(registro.data_finalizacao_dashboard || "");
+      if (coluna === "finalizado_por_dashboard") return obterUsuario(registro);
+      return normalizarTexto(registro[coluna]);
+    }}
+
+    function compararRegistrosPorColuna(a, b, coluna) {{
+      const valorA = obterValorOrdenacao(a, coluna);
+      const valorB = obterValorOrdenacao(b, coluna);
+      const numeroA = Number(valorA);
+      const numeroB = Number(valorB);
+
+      if (valorA && valorB && !Number.isNaN(numeroA) && !Number.isNaN(numeroB)) {{
+        return numeroA - numeroB;
+      }}
+
+      return valorA.localeCompare(valorB, "pt-BR", {{ sensitivity: "base" }});
+    }}
+
+    function atualizarIndicadoresOrdenacao() {{
+      detalhesHead.querySelectorAll(".sort-header").forEach((botao) => {{
+        const ativo = botao.dataset.col === ordenacaoDetalhes.col;
+        const indicador = botao.querySelector(".sort-indicator");
+        const cabecalho = botao.closest("th");
+        if (!indicador || !cabecalho) return;
+        indicador.textContent = ativo ? (ordenacaoDetalhes.dir === "asc" ? "↑" : "↓") : "↕";
+        cabecalho.setAttribute("aria-sort", ativo ? (ordenacaoDetalhes.dir === "asc" ? "ascending" : "descending") : "none");
+      }});
+
+      reincidenciasHead.querySelectorAll(".sort-header").forEach((botao) => {{
+        const ativo = botao.dataset.col === ordenacaoReincidencias.col;
+        const indicador = botao.querySelector(".sort-indicator");
+        const cabecalho = botao.closest("th");
+        if (!indicador || !cabecalho) return;
+        indicador.textContent = ativo ? (ordenacaoReincidencias.dir === "asc" ? "↑" : "↓") : "↕";
+        cabecalho.setAttribute("aria-sort", ativo ? (ordenacaoReincidencias.dir === "asc" ? "ascending" : "descending") : "none");
+      }});
+    }}
+
     function renderDetalhes(registros) {{
+      atualizarIndicadoresOrdenacao();
       detalhesBody.innerHTML = "";
 
       if (!registros.length) {{
@@ -1518,7 +1591,13 @@ def gerar_html_dashboard(
         return;
       }}
 
-      registros.forEach((registro) => {{
+      const linhas = [...registros].sort((a, b) => {{
+        const comparacaoBase = compararRegistrosPorColuna(a, b, ordenacaoDetalhes.col)
+          || normalizarTexto(a.id || a.ordem_servico).localeCompare(normalizarTexto(b.id || b.ordem_servico), "pt-BR", {{ sensitivity: "base" }});
+        return ordenacaoDetalhes.dir === "asc" ? comparacaoBase : -comparacaoBase;
+      }});
+
+      linhas.forEach((registro) => {{
         const tr = document.createElement("tr");
         const linkSgp = obterLinkSgp(registro);
         if (linkSgp) {{
@@ -1570,6 +1649,7 @@ def gerar_html_dashboard(
     }}
 
     function renderReincidencias(registros) {{
+      atualizarIndicadoresOrdenacao();
       const chavesReincidentes = obterChavesReincidentes(registros);
       reincidenciasBody.innerHTML = "";
 
@@ -1592,9 +1672,11 @@ def gerar_html_dashboard(
           const contratoB = normalizarTexto(b.contrato);
           const dataA = obterDataBaseTexto(a);
           const dataB = obterDataBaseTexto(b);
-          return clienteA.localeCompare(clienteB, "pt-BR", {{ sensitivity: "base" }})
+          const comparacaoBase = compararRegistrosPorColuna(a, b, ordenacaoReincidencias.col)
+            || clienteA.localeCompare(clienteB, "pt-BR", {{ sensitivity: "base" }})
             || contratoA.localeCompare(contratoB, "pt-BR", {{ sensitivity: "base" }})
             || dataA.localeCompare(dataB, "pt-BR", {{ sensitivity: "base" }});
+          return ordenacaoReincidencias.dir === "asc" ? comparacaoBase : -comparacaoBase;
         }});
 
       linhas.forEach((registro) => {{
@@ -1877,6 +1959,26 @@ def gerar_html_dashboard(
       refreshCountdown.textContent = "00:00";
       salvarFiltros();
       window.location.reload();
+    }});
+    detalhesHead.addEventListener("click", (event) => {{
+      const botao = event.target.closest(".sort-header");
+      if (!botao) return;
+      const coluna = botao.dataset.col;
+      ordenacaoDetalhes = {{
+        col: coluna,
+        dir: ordenacaoDetalhes.col === coluna && ordenacaoDetalhes.dir === "asc" ? "desc" : "asc",
+      }};
+      renderDetalhes(filtrarDetalhes());
+    }});
+    reincidenciasHead.addEventListener("click", (event) => {{
+      const botao = event.target.closest(".sort-header");
+      if (!botao) return;
+      const coluna = botao.dataset.col;
+      ordenacaoReincidencias = {{
+        col: coluna,
+        dir: ordenacaoReincidencias.col === coluna && ordenacaoReincidencias.dir === "asc" ? "desc" : "asc",
+      }};
+      renderReincidencias(filtrarDetalhes());
     }});
 
     popularFiltros();
