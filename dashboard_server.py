@@ -42,6 +42,9 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
         if self.path.rstrip("/") == "/api/refresh-status":
             self._responder_json(HTTPStatus.OK, self.refresh_state.copy())
             return
+        if self.path.rstrip("/") == "/api/dashboard-data":
+            self._responder_dashboard_data()
+            return
         if self.path in {"/", "/index.html"}:
             self.path = "/dashboard_os_sgp.html"
         super().do_GET()
@@ -96,6 +99,32 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(corpo)
 
+    def _responder_dashboard_data(self) -> None:
+        payload_path = self.base_dir / "dashboard_data.json"
+        if not payload_path.exists():
+            self._responder_json(
+                HTTPStatus.NOT_FOUND,
+                {
+                    "ok": False,
+                    "message": f"Arquivo de dados não encontrado: {payload_path.name}",
+                },
+            )
+            return
+
+        try:
+            payload = json.loads(payload_path.read_text(encoding="utf-8"))
+        except Exception as exc:  # pragma: no cover - proteção de runtime
+            self._responder_json(
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+                {
+                    "ok": False,
+                    "message": f"Falha ao carregar os dados do dashboard: {exc}",
+                },
+            )
+            return
+
+        self._responder_json(HTTPStatus.OK, payload)
+
     def _executar_refresh_em_background(self) -> None:
         try:
             script_path = self.base_dir / "atualizar_dashboard.sh"
@@ -119,7 +148,7 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
                     "running": False,
                     "finished_at": time.time(),
                     "ok": True,
-                    "message": "Arquivos atualizados com o mesmo fluxo da rotina automática.",
+                    "message": "Dados e HTML atualizados com o mesmo fluxo da rotina automática.",
                 }
             )
         except Exception as exc:  # pragma: no cover - proteção de runtime

@@ -6,7 +6,7 @@ import pandas as pd
 
 from sgp_client import SGPClient
 from processar_os import preparar_dataframe, resumo_mensal, ranking_finalizadores
-from gerar_dashboard import gerar_html_dashboard
+from gerar_dashboard import gerar_html_dashboard, montar_payload_dashboard
 
 STATUS_ABERTAS = [0, 2, 3]
 STATUS_ENCERRADAS = [1]
@@ -104,13 +104,8 @@ def gerar_arquivos_dashboard(base: Path | None = None) -> dict[str, Path]:
     ranking = ranking_finalizadores(df_finalizadas)
     votos_df = carregar_votos_df()
 
-    csv_saida = base / "os_finalizadas_tratadas.csv"
     dashboard_saida = base / "dashboard_os_sgp.html"
-
-    if not df.empty:
-        df.to_csv(csv_saida, index=False, encoding="utf-8-sig")
-    else:
-        pd.DataFrame().to_csv(csv_saida, index=False, encoding="utf-8-sig")
+    dashboard_data_saida = base / "dashboard_data.json"
 
     gerar_html_dashboard(
         resumo_df=resumo,
@@ -124,19 +119,34 @@ def gerar_arquivos_dashboard(base: Path | None = None) -> dict[str, Path]:
         sgp_base_url=config["url_base"],
         output_html=str(dashboard_saida),
     )
+    payload = montar_payload_dashboard(
+        resumo_df=resumo,
+        ranking_df=ranking,
+        detalhes_df=df,
+        finalizadas_df=df_finalizadas,
+        votos_df=votos_df,
+        ano=ano,
+        mes_selecionado=mes,
+        refresh_seconds=refresh_seconds,
+        sgp_base_url=config["url_base"],
+    )
+    dashboard_data_saida.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
 
     return {
         "dashboard": dashboard_saida,
-        "csv": csv_saida,
+        "dashboard_data": dashboard_data_saida,
     }
 
 
 def main() -> None:
     saidas = gerar_arquivos_dashboard()
     dashboard_saida = saidas["dashboard"]
-    csv_saida = saidas["csv"]
+    dashboard_data_saida = saidas["dashboard_data"]
     print(f"Dashboard gerado em: {dashboard_saida}")
-    print(f"CSV tratado gerado em: {csv_saida}")
+    print(f"JSON de dados gerado em: {dashboard_data_saida}")
 
 
 if __name__ == "__main__":

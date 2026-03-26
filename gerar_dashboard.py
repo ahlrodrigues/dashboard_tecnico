@@ -64,7 +64,7 @@ def _serializar_votos(df: pd.DataFrame, votos_cols: list[str]) -> list[dict[str,
     return view[base_cols].fillna("").to_dict(orient="records")
 
 
-def gerar_html_dashboard(
+def montar_payload_dashboard(
     resumo_df: pd.DataFrame,
     ranking_df: pd.DataFrame,
     detalhes_df: pd.DataFrame,
@@ -74,8 +74,7 @@ def gerar_html_dashboard(
     mes_selecionado: str,
     refresh_seconds: int,
     sgp_base_url: str,
-    output_html: str,
-) -> None:
+) -> dict[str, object]:
     detalhe_cols: list[str] = []
     for cand in ["id", "ordem_servico", "cliente", "contrato", "pop", "motivo", "status"]:
         if cand in detalhes_df.columns:
@@ -125,7 +124,61 @@ def gerar_html_dashboard(
         data_final_padrao = ""
     data_snapshot_atual = data_final_padrao or date.today().strftime("%Y-%m-%d")
 
-    titulo_periodo = "Encerramentos por data de encerramento; Status Operacional pelo backlog atual no dia filtrado"
+    return {
+        "ano": ano,
+        "mes_selecionado": mes_selecionado,
+        "refresh_seconds": refresh_seconds,
+        "sgp_base_url": sgp_base_url.rstrip("/"),
+        "titulo_periodo": "Encerramentos por data de encerramento; Status Operacional pelo backlog atual no dia filtrado",
+        "detalhe_cols": detalhe_cols,
+        "detalhe_labels": detalhe_labels,
+        "cards": cards,
+        "detalhes_data": detalhes_data,
+        "votos_cols": votos_cols,
+        "votos_data": votos_data,
+        "meses_ordem": meses_ordem,
+        "data_inicial_padrao": data_inicial_padrao,
+        "data_final_padrao": data_final_padrao,
+        "data_snapshot_atual": data_snapshot_atual,
+        "ranking_cols": ranking_df.columns.tolist() if not ranking_df.empty else [],
+    }
+
+
+def gerar_html_dashboard(
+    resumo_df: pd.DataFrame,
+    ranking_df: pd.DataFrame,
+    detalhes_df: pd.DataFrame,
+    finalizadas_df: pd.DataFrame,
+    votos_df: pd.DataFrame,
+    ano: int,
+    mes_selecionado: str,
+    refresh_seconds: int,
+    sgp_base_url: str,
+    output_html: str,
+) -> None:
+    payload = montar_payload_dashboard(
+        resumo_df=resumo_df,
+        ranking_df=ranking_df,
+        detalhes_df=detalhes_df,
+        finalizadas_df=finalizadas_df,
+        votos_df=votos_df,
+        ano=ano,
+        mes_selecionado=mes_selecionado,
+        refresh_seconds=refresh_seconds,
+        sgp_base_url=sgp_base_url,
+    )
+    detalhe_cols = payload["detalhe_cols"]
+    detalhe_labels = payload["detalhe_labels"]
+    cards = payload["cards"]
+    detalhes_data = payload["detalhes_data"]
+    votos_cols = payload["votos_cols"]
+    votos_data = payload["votos_data"]
+    meses_ordem = payload["meses_ordem"]
+    refresh_seconds = payload["refresh_seconds"]
+    data_inicial_padrao = payload["data_inicial_padrao"]
+    data_final_padrao = payload["data_final_padrao"]
+    data_snapshot_atual = payload["data_snapshot_atual"]
+    titulo_periodo = payload["titulo_periodo"]
     header_cols = "".join(
         f'<th aria-sort="none"><button type="button" class="sort-header" data-col="{escape(col)}" data-label="{escape(detalhe_labels.get(col, col))}"><span class="sort-header-label">{escape(detalhe_labels.get(col, col))}</span><span class="sort-indicator" aria-hidden="true">△</span></button></th>'
         for col in detalhe_cols
@@ -774,7 +827,7 @@ def gerar_html_dashboard(
         <div class="update-spinner"></div>
       </div>
       <h3>Atualizando arquivos</h3>
-      <p id="updateOverlayMessage">Gerando um novo HTML e um novo CSV do dashboard. Isso pode levar alguns segundos.</p>
+      <p id="updateOverlayMessage">Atualizando o HTML e os dados do dashboard. Isso pode levar alguns segundos.</p>
       <div class="update-status" id="updateOverlayStatus">Conectando ao serviço de atualização...</div>
     </div>
   </div>
@@ -987,16 +1040,16 @@ def gerar_html_dashboard(
     const detalheCols = {json.dumps(detalhe_cols, ensure_ascii=False)};
     const votosCols = {json.dumps(votos_cols, ensure_ascii=False)};
     const mesesOrdem = {json.dumps(meses_ordem, ensure_ascii=False)};
-    const detalhes = {json.dumps(detalhes_data, ensure_ascii=False)};
-    const votosData = {json.dumps(votos_data, ensure_ascii=False)};
-    const dataInicialPadrao = "{data_inicial_padrao}";
-    const dataFinalPadrao = "{data_final_padrao}";
-    const dataSnapshotAtual = "{data_snapshot_atual}";
-    const datasDisponiveisOrdenadas = detalhes.map((registro) => obterDataFiltroTexto(registro)).filter(Boolean).sort();
-    const dataMinDisponivel = datasDisponiveisOrdenadas[0] || dataInicialPadrao || "";
-    const dataMaxDisponivel = datasDisponiveisOrdenadas[datasDisponiveisOrdenadas.length - 1] || dataFinalPadrao || dataMinDisponivel || "";
-    const refreshSeconds = {refresh_seconds};
-    const sgpBaseUrl = {json.dumps(sgp_base_url.rstrip("/"), ensure_ascii=False)};
+    let detalhes = {json.dumps(detalhes_data, ensure_ascii=False)};
+    let votosData = {json.dumps(votos_data, ensure_ascii=False)};
+    let dataInicialPadrao = "{data_inicial_padrao}";
+    let dataFinalPadrao = "{data_final_padrao}";
+    let dataSnapshotAtual = "{data_snapshot_atual}";
+    let datasDisponiveisOrdenadas = [];
+    let dataMinDisponivel = "";
+    let dataMaxDisponivel = "";
+    let refreshSeconds = {refresh_seconds};
+    let sgpBaseUrl = {json.dumps(sgp_base_url.rstrip("/"), ensure_ascii=False)};
     const filtroDataInicial = document.getElementById("filtroDataInicial");
     const filtroDataFinal = document.getElementById("filtroDataFinal");
     const filtroUsuario = document.getElementById("filtroUsuario");
@@ -1024,6 +1077,7 @@ def gerar_html_dashboard(
     }})();
     const refreshApiUrl = `${{backendBaseUrl}}/api/refresh`;
     const refreshStatusUrl = `${{backendBaseUrl}}/api/refresh-status`;
+    const dashboardDataUrl = `${{backendBaseUrl}}/api/dashboard-data`;
 		    const tempoBacklogBody = document.getElementById("tempoBacklogBody");
 		    const rankingBody = document.getElementById("rankingBody");
     const rankingVotosResumoBody = document.getElementById("rankingVotosResumoBody");
@@ -1072,6 +1126,48 @@ def gerar_html_dashboard(
 
     function normalizarTexto(valor) {{
       return String(valor || "").trim();
+    }}
+
+    function recalcularMetadadosBase() {{
+      datasDisponiveisOrdenadas = detalhes.map((registro) => obterDataFiltroTexto(registro)).filter(Boolean).sort();
+      dataMinDisponivel = datasDisponiveisOrdenadas[0] || dataInicialPadrao || "";
+      dataMaxDisponivel = datasDisponiveisOrdenadas[datasDisponiveisOrdenadas.length - 1] || dataFinalPadrao || dataMinDisponivel || "";
+      restanteRefresh = refreshSeconds;
+    }}
+
+    function aplicarPayloadDashboard(payload) {{
+      if (!payload || typeof payload !== "object") return;
+      detalhes = Array.isArray(payload.detalhes_data) ? payload.detalhes_data : [];
+      votosData = Array.isArray(payload.votos_data) ? payload.votos_data : [];
+      dataInicialPadrao = normalizarTexto(payload.data_inicial_padrao);
+      dataFinalPadrao = normalizarTexto(payload.data_final_padrao);
+      dataSnapshotAtual = normalizarTexto(payload.data_snapshot_atual) || dataSnapshotAtual;
+      refreshSeconds = Math.max(Number.parseInt(payload.refresh_seconds || refreshSeconds, 10) || refreshSeconds, 30);
+      sgpBaseUrl = normalizarTexto(payload.sgp_base_url) || sgpBaseUrl;
+      recalcularMetadadosBase();
+    }}
+
+    async function carregarDadosDashboardRemotos() {{
+      if (window.location.protocol !== "http:" && window.location.protocol !== "https:") {{
+        return false;
+      }}
+
+      try {{
+        const resposta = await window.fetch(dashboardDataUrl, {{
+          method: "GET",
+          mode: "cors",
+          headers: {{
+            "Accept": "application/json",
+          }},
+        }});
+        if (!resposta.ok) return false;
+        const payload = await resposta.json().catch(() => null);
+        if (!payload || payload.ok === false) return false;
+        aplicarPayloadDashboard(payload);
+        return true;
+      }} catch (_erro) {{
+        return false;
+      }}
     }}
 
     function normalizarChaveUsuario(valor) {{
@@ -1251,7 +1347,14 @@ def gerar_html_dashboard(
         .join(" ");
     }}
 
-    function deduplicarVotosPorIp(registros) {{
+    function obterChaveDuplicidadeVoto(registro) {{
+      const ip = normalizarTexto(registro.ip);
+      const data = obterDataVotoTexto(registro);
+      if (!ip || !data) return "";
+      return `${{ip}}|||${{data}}`;
+    }}
+
+    function analisarDuplicidadeVotos(registros) {{
       const linhasOrdenadas = [...registros].sort((a, b) => {{
         const comparacaoData = obterDataVotoTexto(a).localeCompare(obterDataVotoTexto(b), "pt-BR", {{ sensitivity: "base" }});
         if (comparacaoData !== 0) return comparacaoData;
@@ -1260,14 +1363,36 @@ def gerar_html_dashboard(
         return obterUsuarioVoto(a).localeCompare(obterUsuarioVoto(b), "pt-BR", {{ sensitivity: "base" }});
       }});
 
-      const ipsVistos = new Set();
-      return linhasOrdenadas.filter((registro) => {{
-        const ip = normalizarTexto(registro.ip);
-        if (!ip) return true;
-        if (ipsVistos.has(ip)) return false;
-        ipsVistos.add(ip);
+      const contagemPorChave = new Map();
+      linhasOrdenadas.forEach((registro) => {{
+        const chave = obterChaveDuplicidadeVoto(registro);
+        if (!chave) return;
+        contagemPorChave.set(chave, (contagemPorChave.get(chave) || 0) + 1);
+      }});
+
+      const chavesVistas = new Set();
+      const validos = linhasOrdenadas.filter((registro) => {{
+        const chave = obterChaveDuplicidadeVoto(registro);
+        if (!chave) return true;
+        if (chavesVistas.has(chave)) return false;
+        chavesVistas.add(chave);
         return true;
       }});
+
+      const chavesDuplicadas = new Set(
+        [...contagemPorChave.entries()]
+          .filter(([, total]) => total > 1)
+          .map(([chave]) => chave)
+      );
+
+      return {{
+        validos,
+        chavesDuplicadas,
+      }};
+    }}
+
+    function deduplicarVotosPorIpEData(registros) {{
+      return analisarDuplicidadeVotos(registros).validos;
     }}
 
     function formatarDataTitulo(data) {{
@@ -1847,7 +1972,7 @@ def gerar_html_dashboard(
 
     function renderRankingVotosResumo(registros) {{
       rankingVotosResumoBody.innerHTML = "";
-      const linhas = agruparRankingVotacao(deduplicarVotosPorIp(registros));
+      const linhas = agruparRankingVotacao(deduplicarVotosPorIpEData(registros));
 
       if (!linhas.length) {{
         rankingVotosResumoBody.innerHTML = '<tr><td colspan="2" class="empty">Nenhum voto encontrado para o recorte atual.</td></tr>';
@@ -1957,7 +2082,7 @@ def gerar_html_dashboard(
       rankingVotosBody.innerHTML = "";
 
       if (!votosCols.length) {{
-        rankingVotosBody.innerHTML = '<tr><td class="empty">Nenhuma coluna disponível no CSV de votos.</td></tr>';
+        rankingVotosBody.innerHTML = '<tr><td class="empty">Nenhuma coluna disponível na base de votos.</td></tr>';
         return;
       }}
 
@@ -1966,34 +2091,25 @@ def gerar_html_dashboard(
         return;
       }}
 
-      const linhas = [...registros].sort((a, b) => {{
+      const analiseDuplicidade = analisarDuplicidadeVotos(registros);
+      const linhas = [...analiseDuplicidade.validos].sort((a, b) => {{
         const comparacaoBase = compararRegistrosPorColunaGenerica(
           obterValorOrdenacaoVoto(a, ordenacaoRankingVotos.col),
           obterValorOrdenacaoVoto(b, ordenacaoRankingVotos.col),
         );
         return ordenacaoRankingVotos.dir === "asc" ? comparacaoBase : -comparacaoBase;
       }});
-      const ipsDuplicados = new Set(
-        [...linhas.reduce((mapa, registro) => {{
-          const ip = normalizarTexto(registro.ip);
-          if (!ip) return mapa;
-          mapa.set(ip, (mapa.get(ip) || 0) + 1);
-          return mapa;
-        }}, new Map()).entries()]
-          .filter(([, total]) => total > 1)
-          .map(([ip]) => ip)
-      );
 
       linhas.forEach((registro) => {{
         const tr = document.createElement("tr");
-        const possuiIpDuplicado = ipsDuplicados.has(normalizarTexto(registro.ip));
+        const possuiIpDuplicado = analiseDuplicidade.chavesDuplicadas.has(obterChaveDuplicidadeVoto(registro));
         if (possuiIpDuplicado) {{
           tr.classList.add("duplicate-ip-row");
         }}
         votosCols.forEach((coluna) => {{
           const td = document.createElement("td");
           td.textContent = normalizarTexto(registro[coluna]);
-          if (coluna === "ip" && possuiIpDuplicado) {{
+          if ((coluna === "ip" || coluna === "data") && possuiIpDuplicado) {{
             td.classList.add("duplicate-ip-cell");
           }}
           tr.appendChild(td);
@@ -2315,8 +2431,8 @@ def gerar_html_dashboard(
       atualizarTitulosPaineis();
       painelTempoMeta.textContent = `Tempo médio e backlog para o recorte: ${{textoFiltro}}.`;
       rankingMeta.textContent = `Ranking atualizado com ${{registrosFinalizados.length}} OS encerradas no recorte atual.`;
-      rankingVotosResumoMeta.textContent = `Ranking atualizado com ${{totalVotos}} voto(s) válido(s), considerando apenas 1 voto por IP no recorte atual.`;
-      rankingVotosMeta.textContent = `Tabela de votos atualizada com ${{totalVotos}} registro(s) no recorte atual, acompanhando data, usuário, grupo, POP e busca pelos técnicos do recorte.`;
+      rankingVotosResumoMeta.textContent = `Ranking atualizado com ${{totalVotos}} voto(s) válido(s), considerando apenas 1 voto por IP e data no recorte atual.`;
+      rankingVotosMeta.textContent = `Tabela de votos atualizada com ${{totalVotos}} registro(s) válidos no recorte atual, acompanhando data, usuário, grupo, POP e busca pelos técnicos do recorte.`;
       detalheMeta.textContent = `Mostrando ${{totalDetalhes}} registro(s) após aplicar os filtros.`;
       const intervaloReincidencia = obterIntervaloReincidencia30Dias();
       const descricaoReincidencia = intervaloReincidencia
@@ -2331,7 +2447,7 @@ def gerar_html_dashboard(
 	      const registros = filtrarDetalhes();
       const registrosFinalizados = registros.filter((registro) => ehStatusEncerrada(registro));
       const registrosVotos = filtrarVotosPorData();
-      const registrosVotosUnicos = deduplicarVotosPorIp(registrosVotos);
+      const registrosVotosUnicos = deduplicarVotosPorIpEData(registrosVotos);
       const registrosBaseEncerramentos = filtrarBaseEncerramentos().filter((registro) => ehStatusEncerrada(registro));
       const registrosBaseRanking = filtrarBaseRankingComparativo().filter((registro) => ehStatusEncerrada(registro));
       const registrosBaseReincidencias = filtrarBaseReincidencias();
@@ -2433,10 +2549,14 @@ def gerar_html_dashboard(
         }}
 
         if (payload.ok) {{
-          updateOverlayStatus.textContent = payload.message || "Arquivos atualizados com sucesso. Recarregando painel...";
+          updateOverlayStatus.textContent = payload.message || "Dados atualizados com sucesso. Reaplicando filtros...";
           encerrarEstadoAtualizacao();
           window.setTimeout(() => {{
-            window.location.reload();
+            carregarDadosDashboardRemotos().finally(() => {{
+              popularFiltros();
+              restaurarFiltros();
+              aplicarFiltros();
+            }});
           }}, 500);
           return;
         }}
@@ -2474,7 +2594,7 @@ def gerar_html_dashboard(
       refreshNowButton.disabled = true;
       const mensagem = origem === "auto"
         ? "A contagem chegou ao fim e o dashboard está executando a mesma rotina da atualização automática."
-        : "O dashboard está executando a mesma rotina automática para gerar um novo HTML e um novo CSV.";
+        : "O dashboard está executando a mesma rotina automática para atualizar os dados e o HTML.";
       atualizarVisibilidadeOverlay(true, mensagem, "Executando rotina automática de atualização...");
       refreshCountdown.textContent = "atualizando";
       salvarFiltros();
@@ -2559,10 +2679,13 @@ def gerar_html_dashboard(
       renderReincidencias(filtrarDetalhes());
     }});
 
-    popularFiltros();
-    restaurarFiltros();
-    aplicarFiltros();
-    iniciarAutoRefresh();
+    recalcularMetadadosBase();
+    carregarDadosDashboardRemotos().finally(() => {{
+      popularFiltros();
+      restaurarFiltros();
+      aplicarFiltros();
+      iniciarAutoRefresh();
+    }});
   </script>
 </body>
 </html>

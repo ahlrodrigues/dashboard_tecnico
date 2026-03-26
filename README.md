@@ -129,7 +129,11 @@ Isso cria uma entrada no `cron` para executar `main.py` no intervalo configurado
 ## Saídas geradas
 
 - `dashboard_os_sgp.html`
-- `os_finalizadas_tratadas.csv`
+- `dashboard_data.json`
+
+O HTML continua sendo gerado como snapshot para abertura direta e fallback local.
+Quando o servidor local `dashboard_server.py` está em execução, a página também pode buscar
+os dados atualizados em `/api/dashboard-data`, reduzindo a dependência do snapshot embutido.
 
 ## Atenção importante
 
