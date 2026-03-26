@@ -682,6 +682,17 @@ def gerar_html_dashboard(
     tbody tr:hover {{
       background: rgba(220, 239, 231, 0.40);
     }}
+    tbody tr.duplicate-ip-row:nth-child(even),
+    tbody tr.duplicate-ip-row {{
+      background: rgba(208, 74, 74, 0.10);
+    }}
+    tbody tr.duplicate-ip-row:hover {{
+      background: rgba(208, 74, 74, 0.16);
+    }}
+    td.duplicate-ip-cell {{
+      color: #a12b2b;
+      font-weight: 800;
+    }}
     .empty {{
       padding: 24px;
       text-align: center;
@@ -1018,6 +1029,13 @@ def gerar_html_dashboard(
 	    const movimentacoesGrid = document.getElementById("movimentacoesGrid");
 	    const popsGrid = document.getElementById("popsGrid");
     const storageKey = "dashboard_tecnico_filtros";
+    const aliasesUsuarios = {{
+      joaopaulo: "joaopaulo",
+      joaojaulo: "joaopaulo",
+      jpaulo: "joaopaulo",
+      luizcarlos: "luizcarlos",
+      lcarlos: "luizcarlos",
+    }};
     let atualizandoArquivos = false;
     let pollingAtualizacaoId = null;
     let restanteRefresh = refreshSeconds;
@@ -1028,6 +1046,21 @@ def gerar_html_dashboard(
 
     function normalizarTexto(valor) {{
       return String(valor || "").trim();
+    }}
+
+    function normalizarChaveUsuario(valor) {{
+      const base = normalizarTexto(valor)
+        .normalize("NFD")
+        .replace(/[̀-ͯ]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "");
+      return aliasesUsuarios[base] || base;
+    }}
+
+    function usuariosSaoEquivalentes(a, b) {{
+      const chaveA = normalizarChaveUsuario(a);
+      const chaveB = normalizarChaveUsuario(b);
+      return Boolean(chaveA) && chaveA === chaveB;
     }}
 
     function obterAno(registro) {{
@@ -1117,12 +1150,12 @@ def gerar_html_dashboard(
 	      if (!usuarioNorm) return false;
 
 	      const responsavel = normalizarTexto(registro.responsavel);
-	      if (responsavel && responsavel.localeCompare(usuarioNorm, "pt-BR", {{ sensitivity: "base" }}) === 0) {{
+	      if (usuariosSaoEquivalentes(responsavel, usuarioNorm)) {{
 	        return true;
 	      }}
 
 	      return obterTecnicosAuxiliares(registro).some((auxiliar) =>
-	        auxiliar.localeCompare(usuarioNorm, "pt-BR", {{ sensitivity: "base" }}) === 0
+	        usuariosSaoEquivalentes(auxiliar, usuarioNorm)
 	      );
 	    }}
 
@@ -1314,7 +1347,7 @@ def gerar_html_dashboard(
       const usuario = normalizarTexto(usuarioFiltro);
       if (!usuario) return true;
       if (ehStatusEncerrada(registro)) {{
-        return obterUsuario(registro) === usuario;
+        return usuariosSaoEquivalentes(obterUsuario(registro), usuario);
       }}
       return usuarioNaEquipeResponsavel(registro, usuario);
     }}
@@ -1370,7 +1403,7 @@ def gerar_html_dashboard(
 
         const usuario = obterUsuario(registro);
         if (usuario) {{
-          usuarios.add(usuario.toLowerCase());
+          usuarios.add(normalizarChaveUsuario(usuario));
         }}
       }});
 
@@ -1390,11 +1423,11 @@ def gerar_html_dashboard(
         if (filtroDataFinal.value && data > filtroDataFinal.value) return false;
 
         const tecnico = obterUsuarioVoto(registro);
-        if (usuarioFiltro && tecnico.localeCompare(usuarioFiltro, "pt-BR", {{ sensitivity: "base" }}) !== 0) return false;
+        if (usuarioFiltro && !usuariosSaoEquivalentes(tecnico, usuarioFiltro)) return false;
         if (busca && !obterTextoBuscaVoto(registro).includes(busca)) return false;
         if (restringirPorDetalhes) {{
           if (!tecnico) return false;
-          if (!usuariosPermitidos.has(tecnico.toLowerCase())) return false;
+          if (!usuariosPermitidos.has(normalizarChaveUsuario(tecnico))) return false;
         }}
 
         return true;
@@ -1855,12 +1888,29 @@ def gerar_html_dashboard(
         );
         return ordenacaoRankingVotos.dir === "asc" ? comparacaoBase : -comparacaoBase;
       }});
+      const ipsDuplicados = new Set(
+        [...linhas.reduce((mapa, registro) => {{
+          const ip = normalizarTexto(registro.ip);
+          if (!ip) return mapa;
+          mapa.set(ip, (mapa.get(ip) || 0) + 1);
+          return mapa;
+        }}, new Map()).entries()]
+          .filter(([, total]) => total > 1)
+          .map(([ip]) => ip)
+      );
 
       linhas.forEach((registro) => {{
         const tr = document.createElement("tr");
+        const possuiIpDuplicado = ipsDuplicados.has(normalizarTexto(registro.ip));
+        if (possuiIpDuplicado) {{
+          tr.classList.add("duplicate-ip-row");
+        }}
         votosCols.forEach((coluna) => {{
           const td = document.createElement("td");
           td.textContent = normalizarTexto(registro[coluna]);
+          if (coluna === "ip" && possuiIpDuplicado) {{
+            td.classList.add("duplicate-ip-cell");
+          }}
           tr.appendChild(td);
         }});
         rankingVotosBody.appendChild(tr);
