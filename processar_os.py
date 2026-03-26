@@ -60,15 +60,27 @@ def classificar_finalizador(nome: Any, tecnicos: List[str], infra_keywords: List
 
 def classificar_grupo(
     finalizador: Any,
+    responsavel: Any,
+    tecnicos_auxiliares: Any,
     contrato_status: Any,
     tecnicos: List[str],
     infra_keywords: List[str],
 ) -> str:
     nome_norm = normalizar_nome(finalizador)
+    responsavel_norm = normalizar_nome(responsavel)
+    auxiliares_norm = extrair_auxiliares(tecnicos_auxiliares)
     contrato_status_norm = normalizar_nome(contrato_status)
 
     if contrato_status_norm == normalizar_nome("Inviabilidade Técnica"):
         return "Inviabilidade"
+
+    nomes_operacionais = [valor for valor in [nome_norm, responsavel_norm, *auxiliares_norm] if valor]
+
+    if any(any(chave in valor for chave in infra_keywords) for valor in nomes_operacionais):
+        return "Infra"
+
+    if any(valor in tecnicos for valor in nomes_operacionais):
+        return "Técnicos"
 
     if any(chave in nome_norm for chave in infra_keywords):
         return "Infra"
@@ -232,6 +244,8 @@ def preparar_dataframe(raw_data: List[Dict[str, Any]], config: Dict[str, Any]) -
     df["grupo_dashboard"] = df.apply(
         lambda row: classificar_grupo(
             finalizador=row.get("finalizado_por_dashboard"),
+            responsavel=row.get("responsavel", ""),
+            tecnicos_auxiliares=row.get("tecnicos_auxiliares", ""),
             contrato_status=row.get("contrato_status_dashboard", ""),
             tecnicos=tecnicos,
             infra_keywords=infra_keywords,

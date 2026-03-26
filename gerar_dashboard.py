@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import date
 from html import escape
 from pathlib import Path
 import pandas as pd
@@ -73,7 +74,7 @@ def gerar_html_dashboard(
     detalhe_cols += [c for c in extra_cols if c in detalhes_df.columns and c not in detalhe_cols]
     detalhe_labels = {
         "data_finalizacao_dashboard": "Data finalizacao",
-        "data_base_dashboard": "Data base",
+        "data_base_dashboard": "Data base do recorte",
         "data_criacao_dashboard": "Criada em",
         "finalizado_por_dashboard": "Finalizado por",
         "grupo_dashboard": "Grupo",
@@ -105,8 +106,9 @@ def gerar_html_dashboard(
     else:
         data_inicial_padrao = ""
         data_final_padrao = ""
+    data_snapshot_atual = date.today().strftime("%Y-%m-%d")
 
-    titulo_periodo = "Base principal: data de encerramento"
+    titulo_periodo = "Encerramentos por data de encerramento; Status Operacional pelo backlog atual no dia filtrado"
     header_cols = "".join(f"<th>{escape(detalhe_labels.get(col, col))}</th>" for col in detalhe_cols)
 
     html = f"""<!doctype html>
@@ -309,9 +311,11 @@ def gerar_html_dashboard(
     .summary-card.primary {{
       background: linear-gradient(135deg, rgba(23, 98, 76, 0.16), rgba(255, 255, 255, 0.98));
       grid-template-columns: 1fr;
+      grid-template-rows: minmax(74px, auto) 1fr;
     }}
     .summary-card.secondary {{
       grid-template-columns: 1fr;
+      grid-template-rows: minmax(74px, auto) 1fr;
     }}
     .summary-card.tertiary {{
       background: linear-gradient(135deg, rgba(220, 239, 231, 0.92), rgba(255, 255, 255, 0.98));
@@ -329,6 +333,10 @@ def gerar_html_dashboard(
     .summary-card.quaternary .summary-card-head {{
       padding-right: 0;
       margin-bottom: 2px;
+    }}
+    .summary-card.primary .summary-card-head,
+    .summary-card.secondary .summary-card-head {{
+      min-height: 74px;
     }}
     .summary-card h3 {{
       margin: 0 0 6px;
@@ -383,10 +391,15 @@ def gerar_html_dashboard(
     .summary-card.secondary .metric-grid {{
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
       width: 100%;
       justify-content: stretch;
       align-content: start;
       align-items: stretch;
+      align-self: end;
+    }}
+    .summary-card.secondary .metric-grid {{
+      grid-template-columns: repeat(4, minmax(0, 1fr));
     }}
     .metric-item {{
       width: auto;
@@ -404,6 +417,14 @@ def gerar_html_dashboard(
       text-align: center;
       flex: 1 1 180px;
     }}
+    .summary-card.primary .metric-item,
+    .summary-card.secondary .metric-item {{
+      min-width: 0;
+      padding: 12px 10px 10px;
+      display: grid;
+      grid-template-rows: minmax(34px, auto) 1fr;
+      align-content: start;
+    }}
     .metric-item.compact {{
       min-height: 84px;
       padding: 12px 12px 10px;
@@ -416,11 +437,26 @@ def gerar_html_dashboard(
       color: var(--muted);
       white-space: nowrap;
     }}
+    .summary-card.primary .metric-label,
+    .summary-card.secondary .metric-label {{
+      white-space: normal;
+      overflow-wrap: anywhere;
+      font-size: 11px;
+      min-height: 34px;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }}
     .metric-value {{
       display: block;
       font-size: 32px;
       font-weight: 800;
       letter-spacing: -0.03em;
+    }}
+    .summary-card.primary .metric-value,
+    .summary-card.secondary .metric-value {{
+      font-size: 28px;
     }}
     .variation {{
       display: inline-flex;
@@ -590,7 +626,7 @@ def gerar_html_dashboard(
         <input id="filtroDataFinal" type="date"/>
       </div>
       <div class="filter-card">
-        <label for="filtroUsuario">Finalizado por</label>
+        <label for="filtroUsuario">Usuário</label>
         <select id="filtroUsuario"></select>
       </div>
       <div class="filter-card">
@@ -619,9 +655,21 @@ def gerar_html_dashboard(
     </section>
 
 	    <div class="cards-stack">
+	      <div class="summary-card secondary">
+	        <div class="summary-card-head">
+	          <h3 id="tituloStatusOperacional">Status Operacional</h3>
+	          <p class="caption">Backlog atual das ordens abertas, pendentes e em execucao no dia filtrado, para acompanhamento simultaneo da operacao.</p>
+	        </div>
+	        <div class="metric-grid cols-2">
+	          <div class="metric-item"><span class="metric-label">Total de O.S. do recorte</span><span class="metric-value" id="cardTotalStatus">{len(detalhes_data)}</span></div>
+	          <div class="metric-item"><span class="metric-label">Em aberto</span><span class="metric-value" id="cardAberta">{cards['aberta']}</span></div>
+	          <div class="metric-item"><span class="metric-label">Pendentes</span><span class="metric-value" id="cardPendente">{cards['pendente']}</span></div>
+	          <div class="metric-item"><span class="metric-label">Em execução</span><span class="metric-value" id="cardEmExecucao">{cards['em_execucao']}</span></div>
+	        </div>
+	      </div>
 	      <div class="summary-card primary">
 	        <div class="summary-card-head">
-	          <h3>Encerramentos</h3>
+	          <h3 id="tituloEncerramentos">Encerramentos</h3>
 	          <p class="caption">Visão consolidada das O.S. encerradas e da comparação entre responsável e finalizador.</p>
 	        </div>
 	        <div class="metric-grid cols-2">
@@ -630,20 +678,9 @@ def gerar_html_dashboard(
 	          <div class="metric-item"><span class="metric-label">Encerradas por outros</span><span class="metric-value" id="cardPorOutros">{cards['por_outros']}</span></div>
 	        </div>
 	      </div>
-	      <div class="summary-card secondary">
-	        <div class="summary-card-head">
-	          <h3>Status Operacional</h3>
-	          <p class="caption">Panorama das ordens ainda em andamento ou com impedimentos no período filtrado.</p>
-	        </div>
-	        <div class="metric-grid cols-2">
-	          <div class="metric-item"><span class="metric-label">Em aberto</span><span class="metric-value" id="cardAberta">{cards['aberta']}</span></div>
-	          <div class="metric-item"><span class="metric-label">Pendentes</span><span class="metric-value" id="cardPendente">{cards['pendente']}</span></div>
-	          <div class="metric-item"><span class="metric-label">Em execução</span><span class="metric-value" id="cardEmExecucao">{cards['em_execucao']}</span></div>
-	        </div>
-	      </div>
 	      <div class="summary-card tertiary">
 	        <div class="summary-card-head">
-	          <h3>Movimentações</h3>
+	          <h3 id="tituloMovimentacoes">Movimentações</h3>
 	          <p class="caption">Distribuição completa dos atendimentos por motivo no recorte filtrado.</p>
 	        </div>
 	        <div class="metric-grid flow scrollable" id="movimentacoesGrid">
@@ -654,7 +691,7 @@ def gerar_html_dashboard(
 	      </div>
 	      <div class="summary-card quaternary">
 	        <div class="summary-card-head">
-	          <h3>POPs</h3>
+	          <h3 id="tituloPops">POPs</h3>
 	          <p class="caption">Distribuição das O.S. por POP no recorte filtrado.</p>
 	        </div>
 	        <div class="metric-grid flow scrollable" id="popsGrid">
@@ -665,7 +702,7 @@ def gerar_html_dashboard(
 
 	    <div class="grid-panels">
 	      <div class="panel">
-	        <h2 class="section-title">Tempo médio e backlog</h2>
+	        <h2 class="section-title" id="tituloTempoBacklog">Tempo médio e backlog</h2>
 	        <div class="panel-meta" id="painelTempoMeta">Tempo médio e backlog no recorte atual.</div>
 	        <div class="table-wrap">
 	          <table>
@@ -681,7 +718,7 @@ def gerar_html_dashboard(
 	      </div>
 
       <div class="panel">
-        <h2 class="section-title">Ranking por finalizador</h2>
+        <h2 class="section-title" id="tituloRanking">Ranking por finalizador</h2>
         <div class="panel-meta" id="rankingMeta">Ranking atualizado pelos filtros da página.</div>
         <div class="table-wrap">
           <table>
@@ -700,18 +737,18 @@ def gerar_html_dashboard(
     </div>
 
 	    <div class="panel full">
-	      <h2 class="section-title">Gráfico mensal</h2>
+	      <h2 class="section-title" id="tituloGraficoMensal">Gráfico mensal</h2>
 	      <canvas id="graficoMensal"></canvas>
 	    </div>
 
 	    <div class="panel full">
-	      <h2 class="section-title">Evolução diária dos grupos</h2>
+	      <h2 class="section-title" id="tituloGraficoDiario">Evolução diária dos grupos</h2>
 	      <div class="panel-meta" id="graficoDiarioMeta">Mostrando a evolução diária por grupo no mês selecionado.</div>
 	      <canvas id="graficoDiario"></canvas>
 	    </div>
 
 	    <div class="panel full">
-	      <h2 class="section-title">Detalhamento</h2>
+	      <h2 class="section-title" id="tituloDetalhamento">Detalhamento</h2>
 	      <div class="panel-meta" id="detalheMeta">Mostrando os registros filtrados.</div>
       <div class="table-wrap">
         <table>
@@ -724,7 +761,7 @@ def gerar_html_dashboard(
     </div>
 
 	    <div class="panel full">
-	      <h2 class="section-title">Reincidência por cliente/contrato</h2>
+	      <h2 class="section-title" id="tituloReincidencia">Reincidência por cliente/contrato</h2>
 	      <div class="panel-meta" id="reincidenciaMeta">Mostrando as O.S. dos clientes/contratos com reincidência no período filtrado.</div>
       <div class="table-wrap">
         <table>
@@ -744,6 +781,10 @@ def gerar_html_dashboard(
     const detalhes = {json.dumps(detalhes_data, ensure_ascii=False)};
     const dataInicialPadrao = "{data_inicial_padrao}";
     const dataFinalPadrao = "{data_final_padrao}";
+    const dataSnapshotAtual = "{data_snapshot_atual}";
+    const datasDisponiveisOrdenadas = detalhes.map((registro) => obterDataFiltroTexto(registro)).filter(Boolean).sort();
+    const dataMinDisponivel = datasDisponiveisOrdenadas[0] || dataInicialPadrao || "";
+    const dataMaxDisponivel = datasDisponiveisOrdenadas[datasDisponiveisOrdenadas.length - 1] || dataFinalPadrao || dataMinDisponivel || "";
     const refreshSeconds = {refresh_seconds};
     const sgpBaseUrl = {json.dumps(sgp_base_url.rstrip("/"), ensure_ascii=False)};
     const filtroDataInicial = document.getElementById("filtroDataInicial");
@@ -764,6 +805,16 @@ def gerar_html_dashboard(
 	    const graficoDiarioMeta = document.getElementById("graficoDiarioMeta");
     const detalheMeta = document.getElementById("detalheMeta");
     const reincidenciaMeta = document.getElementById("reincidenciaMeta");
+    const tituloEncerramentos = document.getElementById("tituloEncerramentos");
+    const tituloStatusOperacional = document.getElementById("tituloStatusOperacional");
+    const tituloMovimentacoes = document.getElementById("tituloMovimentacoes");
+    const tituloPops = document.getElementById("tituloPops");
+    const tituloTempoBacklog = document.getElementById("tituloTempoBacklog");
+    const tituloRanking = document.getElementById("tituloRanking");
+    const tituloGraficoMensal = document.getElementById("tituloGraficoMensal");
+    const tituloGraficoDiario = document.getElementById("tituloGraficoDiario");
+    const tituloDetalhamento = document.getElementById("tituloDetalhamento");
+    const tituloReincidencia = document.getElementById("tituloReincidencia");
 	    const movimentacoesGrid = document.getElementById("movimentacoesGrid");
 	    const popsGrid = document.getElementById("popsGrid");
     const storageKey = "dashboard_tecnico_filtros";
@@ -811,6 +862,15 @@ def gerar_html_dashboard(
 	      if (ehStatusEncerrada(registro)) {{
 	        const grupoEncerramento = obterGrupoEncerramento(registro);
 	        if (grupoEncerramento) return grupoEncerramento;
+	      }}
+
+	      const responsavel = normalizarTexto(registro.responsavel).toLowerCase();
+	      const auxiliares = obterTecnicosAuxiliares(registro).map((valor) => valor.toLowerCase());
+	      if (responsavel.includes("infra") || auxiliares.some((valor) => valor.includes("infra"))) {{
+	        return "Infra";
+	      }}
+	      if (responsavel || auxiliares.length) {{
+	        return "Técnicos";
 	      }}
 
 	      return grupoStatusContrato;
@@ -880,6 +940,13 @@ def gerar_html_dashboard(
       return normalizarTexto(registro.data_base_dashboard || registro.data_finalizacao_dashboard || registro.data_criacao_dashboard);
     }}
 
+    function obterDataFiltroTexto(registro) {{
+      if (ehStatusEncerrada(registro)) {{
+        return obterDataBaseTexto(registro);
+      }}
+      return dataSnapshotAtual;
+    }}
+
 	    function obterDataCriacao(registro) {{
 	      const valor = normalizarTexto(registro.data_criacao_dashboard);
 	      if (!valor) return null;
@@ -898,6 +965,11 @@ def gerar_html_dashboard(
       return detalheCols
         .map((coluna) => normalizarTexto(registro[coluna]).toLowerCase())
         .join(" ");
+    }}
+
+    function formatarDataTitulo(data) {{
+      if (!data || data.length < 10) return data;
+      return `${{data.slice(8, 10)}}/${{data.slice(5, 7)}}/${{data.slice(0, 4)}}`;
     }}
 
     function obterLinkSgp(registro) {{
@@ -950,8 +1022,28 @@ def gerar_html_dashboard(
         filtroGrupo.value = estado.grupo || "";
         filtroPop.value = estado.pop || "";
         filtroBusca.value = estado.busca || "";
+        normalizarPeriodoSelecionado();
       }} catch (_erro) {{
         window.localStorage.removeItem(storageKey);
+      }}
+    }}
+
+    function limitarDataAoIntervalo(valor, fallback = "") {{
+      const data = normalizarTexto(valor);
+      if (!data) return fallback;
+      if (dataMinDisponivel && data < dataMinDisponivel) return dataMinDisponivel;
+      if (dataMaxDisponivel && data > dataMaxDisponivel) return dataMaxDisponivel;
+      return data;
+    }}
+
+    function normalizarPeriodoSelecionado() {{
+      const fallbackInicial = dataInicialPadrao || dataMinDisponivel || "";
+      const fallbackFinal = dataFinalPadrao || dataMaxDisponivel || fallbackInicial;
+      filtroDataInicial.value = limitarDataAoIntervalo(filtroDataInicial.value, fallbackInicial);
+      filtroDataFinal.value = limitarDataAoIntervalo(filtroDataFinal.value, fallbackFinal);
+
+      if (filtroDataInicial.value && filtroDataFinal.value && filtroDataInicial.value > filtroDataFinal.value) {{
+        filtroDataFinal.value = filtroDataInicial.value;
       }}
     }}
 
@@ -966,37 +1058,44 @@ def gerar_html_dashboard(
         a.localeCompare(b, "pt-BR", {{ sensitivity: "base" }})
       );
 
-      preencherSelect(filtroUsuario, usuarios, "Todos os finalizadores");
+      preencherSelect(filtroUsuario, usuarios, "Todos os usuários");
       preencherSelect(filtroGrupo, grupos, "Todos os grupos");
       preencherSelect(filtroPop, pops, "Todos os POPs");
 
-      const datasDisponiveis = detalhes.map(obterDataBaseTexto).filter(Boolean).sort();
-      const dataMin = datasDisponiveis[0] || dataInicialPadrao;
-      const dataMax = datasDisponiveis[datasDisponiveis.length - 1] || dataFinalPadrao;
-
-      if (dataMin) {{
-        filtroDataInicial.min = dataMin;
-        filtroDataFinal.min = dataMin;
+      if (dataMinDisponivel) {{
+        filtroDataInicial.min = dataMinDisponivel;
+        filtroDataFinal.min = dataMinDisponivel;
       }}
-      if (dataMax) {{
-        filtroDataInicial.max = dataMax;
-        filtroDataFinal.max = dataMax;
+      if (dataMaxDisponivel) {{
+        filtroDataInicial.max = dataMaxDisponivel;
+        filtroDataFinal.max = dataMaxDisponivel;
       }}
 
       if (!filtroDataInicial.value) {{
-        filtroDataInicial.value = dataInicialPadrao || dataMin || "";
+        filtroDataInicial.value = dataInicialPadrao || dataMinDisponivel || "";
       }}
       if (!filtroDataFinal.value) {{
-        filtroDataFinal.value = dataFinalPadrao || dataMax || "";
+        filtroDataFinal.value = dataFinalPadrao || dataMaxDisponivel || "";
       }}
+
+      normalizarPeriodoSelecionado();
     }}
 
     function dataDentroDoIntervalo(registro) {{
-      const data = obterDataBaseTexto(registro);
+      const data = obterDataFiltroTexto(registro);
       if (!data) return false;
       if (filtroDataInicial.value && data < filtroDataInicial.value) return false;
       if (filtroDataFinal.value && data > filtroDataFinal.value) return false;
       return true;
+    }}
+
+    function usuarioCorrespondeAoFiltro(registro, usuarioFiltro) {{
+      const usuario = normalizarTexto(usuarioFiltro);
+      if (!usuario) return true;
+      if (ehStatusEncerrada(registro)) {{
+        return obterUsuario(registro) === usuario;
+      }}
+      return usuarioNaEquipeResponsavel(registro, usuario);
     }}
 
     function filtrarDetalhes() {{
@@ -1004,7 +1103,7 @@ def gerar_html_dashboard(
 
       return detalhes.filter((registro) => {{
         if (!dataDentroDoIntervalo(registro)) return false;
-        if (filtroUsuario.value && obterUsuario(registro) !== filtroUsuario.value) return false;
+        if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
         if (busca && !obterTextoBusca(registro).includes(busca)) return false;
@@ -1017,7 +1116,19 @@ def gerar_html_dashboard(
 
       return detalhes.filter((registro) => {{
         if (!dataDentroDoIntervalo(registro)) return false;
-        if (filtroUsuario.value && obterUsuario(registro) !== filtroUsuario.value) return false;
+        if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
+        if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
+        if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
+        if (busca && !obterTextoBusca(registro).includes(busca)) return false;
+        return true;
+      }});
+    }}
+
+    function filtrarBaseRankingComparativo() {{
+      const busca = normalizarTexto(filtroBusca.value).toLowerCase();
+
+      return detalhes.filter((registro) => {{
+        if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
         if (busca && !obterTextoBusca(registro).includes(busca)) return false;
@@ -1088,6 +1199,7 @@ def gerar_html_dashboard(
         else if (status === "Em execução") emExecucao += 1;
       }});
 
+      document.getElementById("cardTotalStatus").textContent = registros.length;
       document.getElementById("cardAberta").textContent = aberta;
       document.getElementById("cardPendente").textContent = pendente;
       document.getElementById("cardEmExecucao").textContent = emExecucao;
@@ -1111,15 +1223,15 @@ def gerar_html_dashboard(
 	        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "pt-BR", {{ sensitivity: "base" }}));
 
 	      movimentacoesGrid.innerHTML = "";
+	      if (inviabilidade > 0) {{
+	        const cardInviabilidade = document.createElement("div");
+	        cardInviabilidade.className = "metric-item compact";
+	        cardInviabilidade.innerHTML = `<span class="metric-label">Inviabilidades</span><span class="metric-value">${{inviabilidade}}</span>`;
+	        movimentacoesGrid.appendChild(cardInviabilidade);
+	      }}
 
-	      const cardInviabilidade = document.createElement("div");
-	      cardInviabilidade.className = "metric-item compact";
-	      cardInviabilidade.innerHTML = `<span class="metric-label">Inviabilidades</span><span class="metric-value">${{inviabilidade}}</span>`;
-	      movimentacoesGrid.appendChild(cardInviabilidade);
-
-	      if (!itens.length) {{
+	      if (!itens.length && inviabilidade === 0) {{
 	        movimentacoesGrid.innerHTML = '<div class="metric-item compact"><span class="metric-label">Sem motivos no recorte</span><span class="metric-value">0</span></div>';
-	        movimentacoesGrid.prepend(cardInviabilidade);
 	        return;
 	      }}
 
@@ -1285,38 +1397,49 @@ def gerar_html_dashboard(
         .sort((a, b) => b.total - a.total || a.usuario.localeCompare(b.usuario, "pt-BR", {{ sensitivity: "base" }}));
     }}
 
-    function obterReferenciaMensalRanking(registros) {{
-      const referencias = registros
-        .map((registro) => obterDataBaseTexto(registro))
-        .filter((data) => data && data.length >= 7)
-        .map((data) => data.slice(0, 7))
-        .sort();
+    function deslocarMes(dataTexto, quantidadeMeses) {{
+      if (!dataTexto) return "";
+      const [ano, mes, dia] = dataTexto.split("-").map(Number);
+      const destino = new Date(ano, mes - 1 + quantidadeMeses, 1);
+      const ultimoDia = new Date(destino.getFullYear(), destino.getMonth() + 1, 0).getDate();
+      const diaAjustado = Math.min(dia, ultimoDia);
+      return `${{destino.getFullYear()}}-${{String(destino.getMonth() + 1).padStart(2, "0")}}-${{String(diaAjustado).padStart(2, "0")}}`;
+    }}
 
-      if (!referencias.length) return null;
+    function obterIntervaloComparativoAnterior() {{
+      const intervaloAtual = obterIntervaloSelecionado();
+      if (!intervaloAtual) return null;
+      return {{
+        inicio: deslocarMes(intervaloAtual.inicio, -1),
+        fim: deslocarMes(intervaloAtual.fim, -1),
+      }};
+    }}
 
-      return referencias[referencias.length - 1];
+    function dataDentroDoIntervaloPersonalizado(registro, intervalo) {{
+      if (!intervalo) return false;
+      const data = obterDataBaseTexto(registro);
+      if (!data) return false;
+      if (intervalo.inicio && data < intervalo.inicio) return false;
+      if (intervalo.fim && data > intervalo.fim) return false;
+      return true;
     }}
 
     function calcularVariacaoRanking(registrosAtuais, registrosBase, usuario, grupo) {{
-      const referenciaAtual = obterReferenciaMensalRanking(registrosAtuais);
-      if (!referenciaAtual) {{
+      const intervaloAnterior = obterIntervaloComparativoAnterior();
+      if (!intervaloAnterior) {{
         return {{ texto: "-", classe: "flat" }};
       }}
-
-      const [anoAtual, mesAtual] = referenciaAtual.split("-").map(Number);
-      const dataAnterior = new Date(anoAtual, mesAtual - 2, 1);
-      const referenciaAnterior = `${{dataAnterior.getFullYear()}}-${{String(dataAnterior.getMonth() + 1).padStart(2, "0")}}`;
 
       const atual = registrosBase.filter((registro) =>
         obterUsuario(registro) === usuario &&
         obterGrupoFiltro(registro) === grupo &&
-        obterDataBaseTexto(registro).startsWith(referenciaAtual)
+        dataDentroDoIntervalo(registro)
       ).length;
 
       const anterior = registrosBase.filter((registro) =>
         obterUsuario(registro) === usuario &&
         obterGrupoFiltro(registro) === grupo &&
-        obterDataBaseTexto(registro).startsWith(referenciaAnterior)
+        dataDentroDoIntervaloPersonalizado(registro, intervaloAnterior)
       ).length;
 
       if (anterior === 0 && atual === 0) {{
@@ -1357,6 +1480,34 @@ def gerar_html_dashboard(
         `;
         rankingBody.appendChild(tr);
       }});
+    }}
+
+    function obterResumoFiltrosTitulo() {{
+      const partes = [];
+      const inicio = formatarDataTitulo(filtroDataInicial.value || dataInicialPadrao || "");
+      const fim = formatarDataTitulo(filtroDataFinal.value || dataFinalPadrao || "");
+      if (inicio && fim) partes.push(`${{inicio}} a ${{fim}}`);
+      else if (inicio) partes.push(`a partir de ${{inicio}}`);
+      else if (fim) partes.push(`até ${{fim}}`);
+      if (filtroUsuario.value) partes.push(`Usuário: ${{filtroUsuario.value}}`);
+      if (filtroGrupo.value) partes.push(`Grupo: ${{filtroGrupo.value}}`);
+      if (filtroPop.value) partes.push(`POP: ${{filtroPop.value}}`);
+      if (filtroBusca.value.trim()) partes.push(`Busca: ${{filtroBusca.value.trim()}}`);
+      return partes.length ? partes.join(" | ") : "Todos os filtros";
+    }}
+
+    function atualizarTitulosPaineis() {{
+      const resumo = obterResumoFiltrosTitulo();
+      tituloEncerramentos.textContent = `Encerramentos | ${{resumo}}`;
+      tituloStatusOperacional.textContent = `Status Operacional | ${{resumo}}`;
+      tituloMovimentacoes.textContent = `Movimentações | ${{resumo}}`;
+      tituloPops.textContent = `POPs | ${{resumo}}`;
+      tituloTempoBacklog.textContent = `Tempo médio e backlog | ${{resumo}}`;
+      tituloRanking.textContent = `Ranking por finalizador | ${{resumo}}`;
+      tituloGraficoMensal.textContent = `Gráfico mensal | ${{resumo}}`;
+      tituloGraficoDiario.textContent = `Evolução diária dos grupos | ${{resumo}}`;
+      tituloDetalhamento.textContent = `Detalhamento | ${{resumo}}`;
+      tituloReincidencia.textContent = `Reincidência por cliente/contrato | ${{resumo}}`;
     }}
 
     function renderDetalhes(registros) {{
@@ -1626,12 +1777,13 @@ def gerar_html_dashboard(
       const partes = [];
       if (filtroDataInicial.value) partes.push(`Data inicial: ${{filtroDataInicial.value}}`);
       if (filtroDataFinal.value) partes.push(`Data final: ${{filtroDataFinal.value}}`);
-      if (filtroUsuario.value) partes.push(`Finalizado por: ${{filtroUsuario.value}}`);
+      if (filtroUsuario.value) partes.push(`Usuário: ${{filtroUsuario.value}}`);
       if (filtroGrupo.value) partes.push(`Grupo: ${{filtroGrupo.value}}`);
       if (filtroPop.value) partes.push(`POP: ${{filtroPop.value}}`);
       if (filtroBusca.value.trim()) partes.push(`Busca: ${{filtroBusca.value.trim()}}`);
 
       const textoFiltro = partes.length ? partes.join(" | ") : "Todos";
+      atualizarTitulosPaineis();
       painelTempoMeta.textContent = `Tempo médio e backlog para o recorte: ${{textoFiltro}}.`;
       rankingMeta.textContent = `Ranking atualizado com ${{registrosFinalizados.length}} OS encerradas no recorte atual.`;
       detalheMeta.textContent = `Mostrando ${{totalDetalhes}} registro(s) após aplicar os filtros.`;
@@ -1639,14 +1791,12 @@ def gerar_html_dashboard(
     }}
 
 	    function aplicarFiltros() {{
-	      if (filtroDataInicial.value && filtroDataFinal.value && filtroDataInicial.value > filtroDataFinal.value) {{
-	        filtroDataFinal.value = filtroDataInicial.value;
-	      }}
+	      normalizarPeriodoSelecionado();
 	      salvarFiltros();
 	      const registros = filtrarDetalhes();
       const registrosFinalizados = registros.filter((registro) => ehStatusEncerrada(registro));
       const registrosBaseEncerramentos = filtrarBaseEncerramentos().filter((registro) => ehStatusEncerrada(registro));
-      const registrosBaseRanking = filtrarBaseRanking().filter((registro) => ehStatusEncerrada(registro));
+      const registrosBaseRanking = filtrarBaseRankingComparativo().filter((registro) => ehStatusEncerrada(registro));
 	      renderStatusCards(registros);
 	      renderMotivoCards(registros);
 	      renderPopCards(registros);
@@ -1668,10 +1818,12 @@ def gerar_html_dashboard(
     }}
 
     function aplicarAtalhoPeriodo(tipo) {{
-      const hoje = new Date();
-      hoje.setHours(0, 0, 0, 0);
-      let inicio = new Date(hoje);
-      let fim = new Date(hoje);
+      const referencia = dataMaxDisponivel
+        ? new Date(`${{dataMaxDisponivel}}T00:00:00`)
+        : new Date();
+      referencia.setHours(0, 0, 0, 0);
+      let inicio = new Date(referencia);
+      let fim = new Date(referencia);
 
       if (tipo === "ontem") {{
         inicio.setDate(inicio.getDate() - 1);
@@ -1681,11 +1833,12 @@ def gerar_html_dashboard(
       }} else if (tipo === "30dias") {{
         inicio.setDate(inicio.getDate() - 29);
       }} else if (tipo === "mes-atual") {{
-        inicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+        inicio = new Date(referencia.getFullYear(), referencia.getMonth(), 1);
       }}
 
       filtroDataInicial.value = formatarDataInput(inicio);
       filtroDataFinal.value = formatarDataInput(fim);
+      normalizarPeriodoSelecionado();
       aplicarFiltros();
     }}
 
