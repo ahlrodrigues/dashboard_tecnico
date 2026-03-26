@@ -605,6 +605,11 @@ def gerar_html_dashboard(
       padding: 18px;
       overflow: hidden;
     }}
+    .panel-stack {{
+      display: grid;
+      gap: 18px;
+      align-content: start;
+    }}
     .section-title {{
       margin: 0 0 14px;
       font-size: 18px;
@@ -889,21 +894,39 @@ def gerar_html_dashboard(
 	        </div>
 	      </div>
 
-      <div class="panel">
-        <h2 class="section-title" id="tituloRanking">Ranking por finalizador</h2>
-        <div class="panel-meta" id="rankingMeta">Ranking atualizado pelos filtros da página.</div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Finalizado Por</th>
-                <th>Grupo</th>
-                <th>Total</th>
-                <th>Var. mes anterior</th>
-              </tr>
-            </thead>
-            <tbody id="rankingBody"></tbody>
-          </table>
+      <div class="panel-stack">
+        <div class="panel">
+          <h2 class="section-title" id="tituloRanking">Ranking por finalizador</h2>
+          <div class="panel-meta" id="rankingMeta">Ranking atualizado pelos filtros da página.</div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Finalizado Por</th>
+                  <th>Grupo</th>
+                  <th>Total</th>
+                  <th>Var. mes anterior</th>
+                </tr>
+              </thead>
+              <tbody id="rankingBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2 class="section-title" id="tituloRankingVotosResumo">Ranking de votação</h2>
+          <div class="panel-meta" id="rankingVotosResumoMeta">Total de votos únicos por IP no recorte atual.</div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Técnico</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody id="rankingVotosResumoBody"></tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
@@ -933,7 +956,7 @@ def gerar_html_dashboard(
     </div>
 
 	    <div class="panel full">
-	      <h2 class="section-title" id="tituloRankingVotos">Ranking de votos</h2>
+	      <h2 class="section-title" id="tituloRankingVotos">Detalhamento dos votos</h2>
 	      <div class="panel-meta" id="rankingVotosMeta">Tabela de votos atualizada pelo recorte de data da página.</div>
       <div class="table-wrap">
         <table id="tabelaRankingVotos">
@@ -1001,13 +1024,15 @@ def gerar_html_dashboard(
     }})();
     const refreshApiUrl = `${{backendBaseUrl}}/api/refresh`;
     const refreshStatusUrl = `${{backendBaseUrl}}/api/refresh-status`;
-	    const tempoBacklogBody = document.getElementById("tempoBacklogBody");
+		    const tempoBacklogBody = document.getElementById("tempoBacklogBody");
 		    const rankingBody = document.getElementById("rankingBody");
+    const rankingVotosResumoBody = document.getElementById("rankingVotosResumoBody");
     const rankingVotosBody = document.getElementById("rankingVotosBody");
 		    const detalhesBody = document.getElementById("detalhesBody");
     const reincidenciasBody = document.getElementById("reincidenciasBody");
 		    const painelTempoMeta = document.getElementById("painelTempoMeta");
 		    const rankingMeta = document.getElementById("rankingMeta");
+    const rankingVotosResumoMeta = document.getElementById("rankingVotosResumoMeta");
     const rankingVotosMeta = document.getElementById("rankingVotosMeta");
 	    const graficoDiarioMeta = document.getElementById("graficoDiarioMeta");
     const detalheMeta = document.getElementById("detalheMeta");
@@ -1018,6 +1043,7 @@ def gerar_html_dashboard(
     const tituloPops = document.getElementById("tituloPops");
     const tituloTempoBacklog = document.getElementById("tituloTempoBacklog");
     const tituloRanking = document.getElementById("tituloRanking");
+    const tituloRankingVotosResumo = document.getElementById("tituloRankingVotosResumo");
     const tituloRankingVotos = document.getElementById("tituloRankingVotos");
     const tituloGraficoMensal = document.getElementById("tituloGraficoMensal");
     const tituloGraficoDiario = document.getElementById("tituloGraficoDiario");
@@ -1195,6 +1221,10 @@ def gerar_html_dashboard(
       return normalizarTexto(registro.tecnico);
     }}
 
+    function obterHoraVotoTexto(registro) {{
+      return normalizarTexto(registro.hora);
+    }}
+
 	    function obterDataCriacao(registro) {{
 	      const valor = normalizarTexto(registro.data_criacao_dashboard);
 	      if (!valor) return null;
@@ -1219,6 +1249,25 @@ def gerar_html_dashboard(
       return votosCols
         .map((coluna) => normalizarTexto(registro[coluna]).toLowerCase())
         .join(" ");
+    }}
+
+    function deduplicarVotosPorIp(registros) {{
+      const linhasOrdenadas = [...registros].sort((a, b) => {{
+        const comparacaoData = obterDataVotoTexto(a).localeCompare(obterDataVotoTexto(b), "pt-BR", {{ sensitivity: "base" }});
+        if (comparacaoData !== 0) return comparacaoData;
+        const comparacaoHora = obterHoraVotoTexto(a).localeCompare(obterHoraVotoTexto(b), "pt-BR", {{ sensitivity: "base" }});
+        if (comparacaoHora !== 0) return comparacaoHora;
+        return obterUsuarioVoto(a).localeCompare(obterUsuarioVoto(b), "pt-BR", {{ sensitivity: "base" }});
+      }});
+
+      const ipsVistos = new Set();
+      return linhasOrdenadas.filter((registro) => {{
+        const ip = normalizarTexto(registro.ip);
+        if (!ip) return true;
+        if (ipsVistos.has(ip)) return false;
+        ipsVistos.add(ip);
+        return true;
+      }});
     }}
 
     function formatarDataTitulo(data) {{
@@ -1780,6 +1829,41 @@ def gerar_html_dashboard(
       }});
     }}
 
+    function agruparRankingVotacao(registros) {{
+      const mapa = new Map();
+
+      registros.forEach((registro) => {{
+        const tecnico = obterUsuarioVoto(registro) || "Sem técnico";
+        mapa.set(tecnico, (mapa.get(tecnico) || 0) + 1);
+      }});
+
+      return [...mapa.entries()]
+        .map(([tecnico, total]) => ({{
+          tecnico,
+          total,
+        }}))
+        .sort((a, b) => b.total - a.total || a.tecnico.localeCompare(b.tecnico, "pt-BR", {{ sensitivity: "base" }}));
+    }}
+
+    function renderRankingVotosResumo(registros) {{
+      rankingVotosResumoBody.innerHTML = "";
+      const linhas = agruparRankingVotacao(deduplicarVotosPorIp(registros));
+
+      if (!linhas.length) {{
+        rankingVotosResumoBody.innerHTML = '<tr><td colspan="2" class="empty">Nenhum voto encontrado para o recorte atual.</td></tr>';
+        return;
+      }}
+
+      linhas.forEach((linha) => {{
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${{linha.tecnico}}</td>
+          <td>${{linha.total}}</td>
+        `;
+        rankingVotosResumoBody.appendChild(tr);
+      }});
+    }}
+
     function obterResumoFiltrosTitulo() {{
       const partes = [];
       const inicio = formatarDataTitulo(filtroDataInicial.value || dataInicialPadrao || "");
@@ -1802,7 +1886,8 @@ def gerar_html_dashboard(
       tituloPops.textContent = `POPs | ${{resumo}}`;
       tituloTempoBacklog.textContent = `Tempo médio e backlog | ${{resumo}}`;
       tituloRanking.textContent = `Ranking por finalizador | ${{resumo}}`;
-      tituloRankingVotos.textContent = `Ranking de votos | ${{resumo}}`;
+      tituloRankingVotosResumo.textContent = `Ranking de votação | ${{resumo}}`;
+      tituloRankingVotos.textContent = `Detalhamento dos votos | ${{resumo}}`;
       tituloGraficoMensal.textContent = `Gráfico mensal | ${{resumo}}`;
       tituloGraficoDiario.textContent = `Evolução diária dos grupos | ${{resumo}}`;
       tituloDetalhamento.textContent = `Detalhamento | ${{resumo}}`;
@@ -2230,6 +2315,7 @@ def gerar_html_dashboard(
       atualizarTitulosPaineis();
       painelTempoMeta.textContent = `Tempo médio e backlog para o recorte: ${{textoFiltro}}.`;
       rankingMeta.textContent = `Ranking atualizado com ${{registrosFinalizados.length}} OS encerradas no recorte atual.`;
+      rankingVotosResumoMeta.textContent = `Ranking atualizado com ${{totalVotos}} voto(s) válido(s), considerando apenas 1 voto por IP no recorte atual.`;
       rankingVotosMeta.textContent = `Tabela de votos atualizada com ${{totalVotos}} registro(s) no recorte atual, acompanhando data, usuário, grupo, POP e busca pelos técnicos do recorte.`;
       detalheMeta.textContent = `Mostrando ${{totalDetalhes}} registro(s) após aplicar os filtros.`;
       const intervaloReincidencia = obterIntervaloReincidencia30Dias();
@@ -2245,6 +2331,7 @@ def gerar_html_dashboard(
 	      const registros = filtrarDetalhes();
       const registrosFinalizados = registros.filter((registro) => ehStatusEncerrada(registro));
       const registrosVotos = filtrarVotosPorData();
+      const registrosVotosUnicos = deduplicarVotosPorIp(registrosVotos);
       const registrosBaseEncerramentos = filtrarBaseEncerramentos().filter((registro) => ehStatusEncerrada(registro));
       const registrosBaseRanking = filtrarBaseRankingComparativo().filter((registro) => ehStatusEncerrada(registro));
       const registrosBaseReincidencias = filtrarBaseReincidencias();
@@ -2254,12 +2341,13 @@ def gerar_html_dashboard(
 	      renderCardsEncerramentos(registrosBaseEncerramentos);
 	      renderTempoBacklog(registros, registrosFinalizados);
 	      renderRanking(registrosFinalizados, registrosBaseRanking);
+	      renderRankingVotosResumo(registrosVotos);
 	      renderRankingVotos(registrosVotos);
 	      renderDetalhes(registros);
 	      renderReincidencias(registrosBaseReincidencias);
 	      renderGrafico(registrosFinalizados);
 	      renderGraficoDiario(registrosFinalizados);
-	      atualizarMetas(registrosFinalizados, registros.length, registrosVotos.length);
+	      atualizarMetas(registrosFinalizados, registros.length, registrosVotosUnicos.length);
 	    }}
 
     function formatarDataInput(data) {{
