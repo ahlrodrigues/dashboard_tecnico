@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import ast
+import re
+import unicodedata
 import pandas as pd
 from typing import Dict, Any, List
 
@@ -25,6 +27,16 @@ def normalizar_nome(valor: Any) -> str:
     return str(valor or "").strip().lower()
 
 
+def normalizar_identificador_pessoa(valor: Any) -> str:
+    texto = normalizar_nome(valor)
+    if not texto:
+        return ""
+
+    texto = unicodedata.normalize("NFKD", texto)
+    texto = "".join(caractere for caractere in texto if not unicodedata.combining(caractere))
+    return re.sub(r"[^a-z0-9]", "", texto)
+
+
 def normalizar_status(valor: Any, status_id: Any) -> str:
     texto = str(valor or "").strip()
     if texto:
@@ -44,7 +56,7 @@ def normalizar_status(valor: Any, status_id: Any) -> str:
 
 
 def classificar_finalizador(nome: Any, tecnicos: List[str], infra_keywords: List[str]) -> str:
-    nome_norm = normalizar_nome(nome)
+    nome_norm = normalizar_identificador_pessoa(nome)
 
     if not nome_norm:
         return "Outros"
@@ -66,8 +78,8 @@ def classificar_grupo(
     tecnicos: List[str],
     infra_keywords: List[str],
 ) -> str:
-    nome_norm = normalizar_nome(finalizador)
-    responsavel_norm = normalizar_nome(responsavel)
+    nome_norm = normalizar_identificador_pessoa(finalizador)
+    responsavel_norm = normalizar_identificador_pessoa(responsavel)
     auxiliares_norm = extrair_auxiliares(tecnicos_auxiliares)
     contrato_status_norm = normalizar_nome(contrato_status)
 
@@ -97,8 +109,8 @@ def classificar_grupo_encerramento(
     tecnicos: List[str],
     infra_keywords: List[str],
 ) -> str:
-    finalizador_norm = normalizar_nome(finalizador)
-    responsavel_norm = normalizar_nome(responsavel)
+    finalizador_norm = normalizar_identificador_pessoa(finalizador)
+    responsavel_norm = normalizar_identificador_pessoa(responsavel)
 
     # Regra de negocio: quando houver divergencia, "Finalizado Por" prevalece.
     if responsavel_norm and responsavel_norm != finalizador_norm:
@@ -108,8 +120,8 @@ def classificar_grupo_encerramento(
 
 
 def classificar_responsavel_encerramento(finalizador: Any, responsavel: Any) -> str:
-    finalizador_norm = normalizar_nome(finalizador)
-    responsavel_norm = normalizar_nome(responsavel)
+    finalizador_norm = normalizar_identificador_pessoa(finalizador)
+    responsavel_norm = normalizar_identificador_pessoa(responsavel)
 
     if finalizador_norm and responsavel_norm and finalizador_norm == responsavel_norm:
         return "Pelo responsável"
@@ -122,7 +134,7 @@ def extrair_auxiliares(valor: Any) -> List[str]:
         return []
 
     if isinstance(valor, list):
-        return [normalizar_nome(item) for item in valor if normalizar_nome(item)]
+        return [normalizar_identificador_pessoa(item) for item in valor if normalizar_identificador_pessoa(item)]
 
     texto = str(valor).strip()
     if not texto or texto == "[]":
@@ -134,14 +146,14 @@ def extrair_auxiliares(valor: Any) -> List[str]:
         convertido = [texto]
 
     if isinstance(convertido, list):
-        return [normalizar_nome(item) for item in convertido if normalizar_nome(item)]
+        return [normalizar_identificador_pessoa(item) for item in convertido if normalizar_identificador_pessoa(item)]
 
-    return [normalizar_nome(convertido)] if normalizar_nome(convertido) else []
+    return [normalizar_identificador_pessoa(convertido)] if normalizar_identificador_pessoa(convertido) else []
 
 
 def classificar_total_os_encerramento(finalizador: Any, responsavel: Any, tecnicos_auxiliares: Any) -> str:
-    finalizador_norm = normalizar_nome(finalizador)
-    responsavel_norm = normalizar_nome(responsavel)
+    finalizador_norm = normalizar_identificador_pessoa(finalizador)
+    responsavel_norm = normalizar_identificador_pessoa(responsavel)
     auxiliares_norm = extrair_auxiliares(tecnicos_auxiliares)
 
     equipe_responsavel = {nome for nome in [responsavel_norm, *auxiliares_norm] if nome}
@@ -216,8 +228,8 @@ def preparar_dataframe(raw_data: List[Dict[str, Any]], config: Dict[str, Any]) -
     except KeyError:
         col_contrato_status = None
 
-    tecnicos = [normalizar_nome(x) for x in config["classificacao"].get("tecnicos", [])]
-    infra_keywords = [normalizar_nome(x) for x in config["classificacao"].get("infra_keywords", [])]
+    tecnicos = [normalizar_identificador_pessoa(x) for x in config["classificacao"].get("tecnicos", [])]
+    infra_keywords = [normalizar_identificador_pessoa(x) for x in config["classificacao"].get("infra_keywords", [])]
 
     df["finalizado_por_dashboard"] = df[col_finalizado].astype(str).str.strip()
     df["data_finalizacao_dashboard"] = pd.to_datetime(df[col_data_finalizacao], errors="coerce")

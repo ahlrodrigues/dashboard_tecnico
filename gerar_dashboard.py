@@ -1196,16 +1196,16 @@ def gerar_html_dashboard(
 	      let porOutros = 0;
 
 	      registros.forEach((registro) => {{
-	        const finalizador = normalizarTexto(registro.finalizado_por_dashboard);
-	        const responsavel = normalizarTexto(registro.responsavel);
+	        const responsavelEncerramento = normalizarTexto(registro.responsavel_encerramento_dashboard);
 	        totalOs += 1;
 
 	        if (obterGrupoEncerramento(registro) === "Técnicos") {{
 	          peloTecnico += 1;
 	        }}
-	        if (finalizador && responsavel && finalizador.localeCompare(responsavel, "pt-BR", {{ sensitivity: "base" }}) === 0) {{
+	        if (responsavelEncerramento === "Pelo responsável") {{
 	          peloResponsavel += 1;
-	        }} else {{
+	        }}
+	        if (responsavelEncerramento === "Por outros") {{
 	          porOutros += 1;
 	        }}
 	      }});
