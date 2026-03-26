@@ -10,6 +10,7 @@ from gerar_dashboard import gerar_html_dashboard
 
 STATUS_ABERTAS = [0, 2, 3]
 STATUS_ENCERRADAS = [1]
+VOTOS_CSV_URL = "https://net4you.com.br/votos_data.csv"
 
 
 MAPA_MES = {
@@ -38,6 +39,25 @@ def montar_periodo(ano: int, mes: str) -> tuple[str, str]:
         raise ValueError(f"Mês inválido: {mes}")
 
     return f"{ano}-{faixa[0]}", f"{ano}-{faixa[1]}"
+
+
+def carregar_votos_df() -> pd.DataFrame:
+    try:
+        df = pd.read_csv(VOTOS_CSV_URL)
+    except Exception:
+        return pd.DataFrame()
+
+    if df.empty:
+        return df
+
+    df = df.copy()
+    df.columns = [str(col).strip() for col in df.columns]
+    if "data" in df.columns:
+        df["data_voto_dashboard"] = pd.to_datetime(df["data"], format="%d/%m/%Y", errors="coerce")
+    else:
+        df["data_voto_dashboard"] = pd.NaT
+
+    return df
 
 
 def gerar_arquivos_dashboard(base: Path | None = None) -> dict[str, Path]:
@@ -82,6 +102,7 @@ def gerar_arquivos_dashboard(base: Path | None = None) -> dict[str, Path]:
 
     resumo = resumo_mensal(df_finalizadas)
     ranking = ranking_finalizadores(df_finalizadas)
+    votos_df = carregar_votos_df()
 
     csv_saida = base / "os_finalizadas_tratadas.csv"
     dashboard_saida = base / "dashboard_os_sgp.html"
@@ -96,6 +117,7 @@ def gerar_arquivos_dashboard(base: Path | None = None) -> dict[str, Path]:
         ranking_df=ranking,
         detalhes_df=df,
         finalizadas_df=df_finalizadas,
+        votos_df=votos_df,
         ano=ano,
         mes_selecionado=mes,
         refresh_seconds=refresh_seconds,

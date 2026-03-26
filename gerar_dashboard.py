@@ -49,11 +49,27 @@ def _serializar_registros(df: pd.DataFrame, detalhe_cols: list[str]) -> list[dic
     return registros
 
 
+def _serializar_votos(df: pd.DataFrame, votos_cols: list[str]) -> list[dict[str, str | int | float | None]]:
+    if df.empty or not votos_cols:
+        return []
+
+    view = df.copy()
+    if "data_voto_dashboard" in view.columns:
+        view["data_voto_dashboard"] = view["data_voto_dashboard"].dt.strftime("%Y-%m-%d")
+
+    base_cols = list(votos_cols)
+    if "data_voto_dashboard" in view.columns and "data_voto_dashboard" not in base_cols:
+        base_cols.append("data_voto_dashboard")
+
+    return view[base_cols].fillna("").to_dict(orient="records")
+
+
 def gerar_html_dashboard(
     resumo_df: pd.DataFrame,
     ranking_df: pd.DataFrame,
     detalhes_df: pd.DataFrame,
     finalizadas_df: pd.DataFrame,
+    votos_df: pd.DataFrame,
     ano: int,
     mes_selecionado: str,
     refresh_seconds: int,
@@ -96,6 +112,8 @@ def gerar_html_dashboard(
     }
 
     detalhes_data = _serializar_registros(detalhes_df, detalhe_cols) if detalhe_cols else []
+    votos_cols = [col for col in votos_df.columns.tolist() if col != "data_voto_dashboard"] if not votos_df.empty else []
+    votos_data = _serializar_votos(votos_df, votos_cols)
     meses_ordem = resumo_df["mes_nome"].tolist()
     refresh_seconds = max(int(refresh_seconds), 30)
 
@@ -109,8 +127,12 @@ def gerar_html_dashboard(
 
     titulo_periodo = "Encerramentos por data de encerramento; Status Operacional pelo backlog atual no dia filtrado"
     header_cols = "".join(
-        f'<th aria-sort="none"><button type="button" class="sort-header" data-col="{escape(col)}" data-label="{escape(detalhe_labels.get(col, col))}"><span class="sort-header-label">{escape(detalhe_labels.get(col, col))}</span><span class="sort-indicator" aria-hidden="true">↕</span></button></th>'
+        f'<th aria-sort="none"><button type="button" class="sort-header" data-col="{escape(col)}" data-label="{escape(detalhe_labels.get(col, col))}"><span class="sort-header-label">{escape(detalhe_labels.get(col, col))}</span><span class="sort-indicator" aria-hidden="true">△</span></button></th>'
         for col in detalhe_cols
+    )
+    votos_header_cols = "".join(
+        f'<th aria-sort="none"><button type="button" class="sort-header" data-col="{escape(col)}"><span class="sort-header-label">{escape(col)}</span><span class="sort-indicator" aria-hidden="true">△</span></button></th>'
+        for col in votos_cols
     )
 
     html = f"""<!doctype html>
@@ -900,6 +922,19 @@ def gerar_html_dashboard(
     </div>
 
 	    <div class="panel full">
+	      <h2 class="section-title" id="tituloRankingVotos">Ranking de votos</h2>
+	      <div class="panel-meta" id="rankingVotosMeta">Tabela de votos atualizada pelo recorte de data da página.</div>
+      <div class="table-wrap">
+        <table id="tabelaRankingVotos">
+          <thead id="rankingVotosHead">
+            <tr>{votos_header_cols}</tr>
+          </thead>
+          <tbody id="rankingVotosBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+	    <div class="panel full">
 	      <h2 class="section-title" id="tituloReincidencia">Reincidência por cliente/contrato</h2>
 	      <div class="panel-meta" id="reincidenciaMeta">Mostrando as O.S. dos clientes/contratos com reincidência em janela móvel de 30 dias.</div>
       <div class="table-wrap">
@@ -916,8 +951,10 @@ def gerar_html_dashboard(
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script>
     const detalheCols = {json.dumps(detalhe_cols, ensure_ascii=False)};
+    const votosCols = {json.dumps(votos_cols, ensure_ascii=False)};
     const mesesOrdem = {json.dumps(meses_ordem, ensure_ascii=False)};
     const detalhes = {json.dumps(detalhes_data, ensure_ascii=False)};
+    const votosData = {json.dumps(votos_data, ensure_ascii=False)};
     const dataInicialPadrao = "{data_inicial_padrao}";
     const dataFinalPadrao = "{data_final_padrao}";
     const dataSnapshotAtual = "{data_snapshot_atual}";
@@ -955,10 +992,12 @@ def gerar_html_dashboard(
     const refreshStatusUrl = `${{backendBaseUrl}}/api/refresh-status`;
 	    const tempoBacklogBody = document.getElementById("tempoBacklogBody");
 		    const rankingBody = document.getElementById("rankingBody");
+    const rankingVotosBody = document.getElementById("rankingVotosBody");
 		    const detalhesBody = document.getElementById("detalhesBody");
     const reincidenciasBody = document.getElementById("reincidenciasBody");
 		    const painelTempoMeta = document.getElementById("painelTempoMeta");
 		    const rankingMeta = document.getElementById("rankingMeta");
+    const rankingVotosMeta = document.getElementById("rankingVotosMeta");
 	    const graficoDiarioMeta = document.getElementById("graficoDiarioMeta");
     const detalheMeta = document.getElementById("detalheMeta");
     const reincidenciaMeta = document.getElementById("reincidenciaMeta");
@@ -968,11 +1007,13 @@ def gerar_html_dashboard(
     const tituloPops = document.getElementById("tituloPops");
     const tituloTempoBacklog = document.getElementById("tituloTempoBacklog");
     const tituloRanking = document.getElementById("tituloRanking");
+    const tituloRankingVotos = document.getElementById("tituloRankingVotos");
     const tituloGraficoMensal = document.getElementById("tituloGraficoMensal");
     const tituloGraficoDiario = document.getElementById("tituloGraficoDiario");
     const tituloDetalhamento = document.getElementById("tituloDetalhamento");
     const tituloReincidencia = document.getElementById("tituloReincidencia");
     const detalhesHead = document.getElementById("detalhesHead");
+    const rankingVotosHead = document.getElementById("rankingVotosHead");
     const reincidenciasHead = document.getElementById("reincidenciasHead");
 	    const movimentacoesGrid = document.getElementById("movimentacoesGrid");
 	    const popsGrid = document.getElementById("popsGrid");
@@ -982,6 +1023,7 @@ def gerar_html_dashboard(
     let restanteRefresh = refreshSeconds;
     let intervaloRefreshId = null;
     let ordenacaoDetalhes = {{ col: "data_finalizacao_dashboard", dir: "desc" }};
+    let ordenacaoRankingVotos = {{ col: votosCols[0] || "data", dir: "asc" }};
     let ordenacaoReincidencias = {{ col: "cliente", dir: "asc" }};
 
     function normalizarTexto(valor) {{
@@ -1112,6 +1154,14 @@ def gerar_html_dashboard(
       return dataSnapshotAtual;
     }}
 
+    function obterDataVotoTexto(registro) {{
+      return normalizarTexto(registro.data_voto_dashboard || "");
+    }}
+
+    function obterUsuarioVoto(registro) {{
+      return normalizarTexto(registro.tecnico);
+    }}
+
 	    function obterDataCriacao(registro) {{
 	      const valor = normalizarTexto(registro.data_criacao_dashboard);
 	      if (!valor) return null;
@@ -1128,6 +1178,12 @@ def gerar_html_dashboard(
 
     function obterTextoBusca(registro) {{
       return detalheCols
+        .map((coluna) => normalizarTexto(registro[coluna]).toLowerCase())
+        .join(" ");
+    }}
+
+    function obterTextoBuscaVoto(registro) {{
+      return votosCols
         .map((coluna) => normalizarTexto(registro[coluna]).toLowerCase())
         .join(" ");
     }}
@@ -1297,6 +1353,50 @@ def gerar_html_dashboard(
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
         if (busca && !obterTextoBusca(registro).includes(busca)) return false;
+        return true;
+      }});
+    }}
+
+    function obterUsuariosPermitidosParaVotos() {{
+      const busca = normalizarTexto(filtroBusca.value).toLowerCase();
+      const usuarios = new Set();
+
+      detalhes.forEach((registro) => {{
+        if (!dataDentroDoIntervalo(registro)) return;
+        if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
+        if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return;
+        if (filtroPop.value && obterPop(registro) !== filtroPop.value) return;
+        if (busca && !obterTextoBusca(registro).includes(busca)) return;
+
+        const usuario = obterUsuario(registro);
+        if (usuario) {{
+          usuarios.add(usuario.toLowerCase());
+        }}
+      }});
+
+      return usuarios;
+    }}
+
+    function filtrarVotosPorData() {{
+      const busca = normalizarTexto(filtroBusca.value).toLowerCase();
+      const usuarioFiltro = normalizarTexto(filtroUsuario.value);
+      const usuariosPermitidos = obterUsuariosPermitidosParaVotos();
+      const restringirPorDetalhes = Boolean(filtroUsuario.value || filtroGrupo.value || filtroPop.value || busca);
+
+      return votosData.filter((registro) => {{
+        const data = obterDataVotoTexto(registro);
+        if (!data) return false;
+        if (filtroDataInicial.value && data < filtroDataInicial.value) return false;
+        if (filtroDataFinal.value && data > filtroDataFinal.value) return false;
+
+        const tecnico = obterUsuarioVoto(registro);
+        if (usuarioFiltro && tecnico.localeCompare(usuarioFiltro, "pt-BR", {{ sensitivity: "base" }}) !== 0) return false;
+        if (busca && !obterTextoBuscaVoto(registro).includes(busca)) return false;
+        if (restringirPorDetalhes) {{
+          if (!tecnico) return false;
+          if (!usuariosPermitidos.has(tecnico.toLowerCase())) return false;
+        }}
+
         return true;
       }});
     }}
@@ -1669,6 +1769,7 @@ def gerar_html_dashboard(
       tituloPops.textContent = `POPs | ${{resumo}}`;
       tituloTempoBacklog.textContent = `Tempo médio e backlog | ${{resumo}}`;
       tituloRanking.textContent = `Ranking por finalizador | ${{resumo}}`;
+      tituloRankingVotos.textContent = `Ranking de votos | ${{resumo}}`;
       tituloGraficoMensal.textContent = `Gráfico mensal | ${{resumo}}`;
       tituloGraficoDiario.textContent = `Evolução diária dos grupos | ${{resumo}}`;
       tituloDetalhamento.textContent = `Detalhamento | ${{resumo}}`;
@@ -1682,9 +1783,18 @@ def gerar_html_dashboard(
       return normalizarTexto(registro[coluna]);
     }}
 
+    function obterValorOrdenacaoVoto(registro, coluna) {{
+      if (coluna === "data") return obterDataVotoTexto(registro);
+      return normalizarTexto(registro[coluna]);
+    }}
+
     function compararRegistrosPorColuna(a, b, coluna) {{
       const valorA = obterValorOrdenacao(a, coluna);
       const valorB = obterValorOrdenacao(b, coluna);
+      return compararRegistrosPorColunaGenerica(valorA, valorB);
+    }}
+
+    function compararRegistrosPorColunaGenerica(valorA, valorB) {{
       const numeroA = Number(valorA);
       const numeroB = Number(valorB);
 
@@ -1705,6 +1815,15 @@ def gerar_html_dashboard(
         cabecalho.setAttribute("aria-sort", ativo ? (ordenacaoDetalhes.dir === "asc" ? "ascending" : "descending") : "none");
       }});
 
+      rankingVotosHead.querySelectorAll(".sort-header").forEach((botao) => {{
+        const ativo = botao.dataset.col === ordenacaoRankingVotos.col;
+        const indicador = botao.querySelector(".sort-indicator");
+        const cabecalho = botao.closest("th");
+        if (!indicador || !cabecalho) return;
+        indicador.textContent = ativo ? (ordenacaoRankingVotos.dir === "asc" ? "▲" : "▼") : "△";
+        cabecalho.setAttribute("aria-sort", ativo ? (ordenacaoRankingVotos.dir === "asc" ? "ascending" : "descending") : "none");
+      }});
+
       reincidenciasHead.querySelectorAll(".sort-header").forEach((botao) => {{
         const ativo = botao.dataset.col === ordenacaoReincidencias.col;
         const indicador = botao.querySelector(".sort-indicator");
@@ -1712,6 +1831,39 @@ def gerar_html_dashboard(
         if (!indicador || !cabecalho) return;
         indicador.textContent = ativo ? (ordenacaoReincidencias.dir === "asc" ? "▲" : "▼") : "△";
         cabecalho.setAttribute("aria-sort", ativo ? (ordenacaoReincidencias.dir === "asc" ? "ascending" : "descending") : "none");
+      }});
+    }}
+
+    function renderRankingVotos(registros) {{
+      atualizarIndicadoresOrdenacao();
+      rankingVotosBody.innerHTML = "";
+
+      if (!votosCols.length) {{
+        rankingVotosBody.innerHTML = '<tr><td class="empty">Nenhuma coluna disponível no CSV de votos.</td></tr>';
+        return;
+      }}
+
+      if (!registros.length) {{
+        rankingVotosBody.innerHTML = `<tr><td colspan="${len(votos_cols) if votos_cols else 1}" class="empty">Nenhum voto encontrado para o recorte atual.</td></tr>`;
+        return;
+      }}
+
+      const linhas = [...registros].sort((a, b) => {{
+        const comparacaoBase = compararRegistrosPorColunaGenerica(
+          obterValorOrdenacaoVoto(a, ordenacaoRankingVotos.col),
+          obterValorOrdenacaoVoto(b, ordenacaoRankingVotos.col),
+        );
+        return ordenacaoRankingVotos.dir === "asc" ? comparacaoBase : -comparacaoBase;
+      }});
+
+      linhas.forEach((registro) => {{
+        const tr = document.createElement("tr");
+        votosCols.forEach((coluna) => {{
+          const td = document.createElement("td");
+          td.textContent = normalizarTexto(registro[coluna]);
+          tr.appendChild(td);
+        }});
+        rankingVotosBody.appendChild(tr);
       }});
     }}
 
@@ -2015,7 +2167,7 @@ def gerar_html_dashboard(
 	      graficoDiarioMeta.textContent = `Evolução diária por membro${{contextoGrupo}} entre ${{resumo.intervalo.inicio}} e ${{resumo.intervalo.fim}}, usando a data-base de encerramento da O.S.`;
 	    }}
 
-    function atualizarMetas(registrosFinalizados, totalDetalhes) {{
+    function atualizarMetas(registrosFinalizados, totalDetalhes, totalVotos) {{
       const partes = [];
       if (filtroDataInicial.value) partes.push(`Data inicial: ${{filtroDataInicial.value}}`);
       if (filtroDataFinal.value) partes.push(`Data final: ${{filtroDataFinal.value}}`);
@@ -2028,6 +2180,7 @@ def gerar_html_dashboard(
       atualizarTitulosPaineis();
       painelTempoMeta.textContent = `Tempo médio e backlog para o recorte: ${{textoFiltro}}.`;
       rankingMeta.textContent = `Ranking atualizado com ${{registrosFinalizados.length}} OS encerradas no recorte atual.`;
+      rankingVotosMeta.textContent = `Tabela de votos atualizada com ${{totalVotos}} registro(s) no recorte atual, acompanhando data, usuário, grupo, POP e busca pelos técnicos do recorte.`;
       detalheMeta.textContent = `Mostrando ${{totalDetalhes}} registro(s) após aplicar os filtros.`;
       const intervaloReincidencia = obterIntervaloReincidencia30Dias();
       const descricaoReincidencia = intervaloReincidencia
@@ -2041,6 +2194,7 @@ def gerar_html_dashboard(
 	      salvarFiltros();
 	      const registros = filtrarDetalhes();
       const registrosFinalizados = registros.filter((registro) => ehStatusEncerrada(registro));
+      const registrosVotos = filtrarVotosPorData();
       const registrosBaseEncerramentos = filtrarBaseEncerramentos().filter((registro) => ehStatusEncerrada(registro));
       const registrosBaseRanking = filtrarBaseRankingComparativo().filter((registro) => ehStatusEncerrada(registro));
       const registrosBaseReincidencias = filtrarBaseReincidencias();
@@ -2050,11 +2204,12 @@ def gerar_html_dashboard(
 	      renderCardsEncerramentos(registrosBaseEncerramentos);
 	      renderTempoBacklog(registros, registrosFinalizados);
 	      renderRanking(registrosFinalizados, registrosBaseRanking);
+	      renderRankingVotos(registrosVotos);
 	      renderDetalhes(registros);
 	      renderReincidencias(registrosBaseReincidencias);
 	      renderGrafico(registrosFinalizados);
 	      renderGraficoDiario(registrosFinalizados);
-	      atualizarMetas(registrosFinalizados, registros.length);
+	      atualizarMetas(registrosFinalizados, registros.length, registrosVotos.length);
 	    }}
 
     function formatarDataInput(data) {{
@@ -2244,6 +2399,16 @@ def gerar_html_dashboard(
         dir: ordenacaoDetalhes.col === coluna && ordenacaoDetalhes.dir === "asc" ? "desc" : "asc",
       }};
       renderDetalhes(filtrarDetalhes());
+    }});
+    rankingVotosHead.addEventListener("click", (event) => {{
+      const botao = event.target.closest(".sort-header");
+      if (!botao) return;
+      const coluna = botao.dataset.col;
+      ordenacaoRankingVotos = {{
+        col: coluna,
+        dir: ordenacaoRankingVotos.col === coluna && ordenacaoRankingVotos.dir === "asc" ? "desc" : "asc",
+      }};
+      renderRankingVotos(filtrarVotosPorData());
     }});
     reincidenciasHead.addEventListener("click", (event) => {{
       const botao = event.target.closest(".sort-header");
