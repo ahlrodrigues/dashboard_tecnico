@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SERVICE_NAME="dashboard-tecnico.service"
+SERVICE_NAME="${DASHBOARD_SERVICE_NAME:-dashboard-tecnico.service}"
 SERVICE_PATH="/etc/systemd/system/${SERVICE_NAME}"
 BASE_DIR="${DASHBOARD_BASE_DIR:-/var/www/html/dashboard_tecnico-main}"
 PYTHON_BIN="${DASHBOARD_PYTHON_BIN:-${BASE_DIR}/.venv/bin/python}"
@@ -10,6 +10,7 @@ HOST="${DASHBOARD_SERVER_HOST:-0.0.0.0}"
 PORT="${DASHBOARD_SERVER_PORT:-8765}"
 LOG_FILE="${DASHBOARD_LOG_FILE:-${BASE_DIR}/dashboard_server.log}"
 SERVICE_USER="${DASHBOARD_SERVICE_USER:-root}"
+SERVICE_DESCRIPTION="${DASHBOARD_SERVICE_DESCRIPTION:-Dashboard Tecnico Server}"
 
 if [[ "${EUID}" -ne 0 ]]; then
   echo "Execute este script como root." >&2
@@ -28,7 +29,7 @@ fi
 
 cat > "${SERVICE_PATH}" <<EOF
 [Unit]
-Description=Dashboard Tecnico Server
+Description=${SERVICE_DESCRIPTION}
 After=network.target
 
 [Service]

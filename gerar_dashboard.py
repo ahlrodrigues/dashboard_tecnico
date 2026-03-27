@@ -1067,13 +1067,7 @@ def gerar_html_dashboard(
         return "http://127.0.0.1:8765";
       }}
 
-      if (window.location.port === "8765") {{
-        return "";
-      }}
-
-      const protocolo = window.location.protocol || "http:";
-      const host = window.location.hostname || "127.0.0.1";
-      return `${{protocolo}}//${{host}}:8765`;
+      return window.location.origin || "";
     }})();
     const refreshApiUrl = `${{backendBaseUrl}}/api/refresh`;
     const refreshStatusUrl = `${{backendBaseUrl}}/api/refresh-status`;
@@ -2556,6 +2550,9 @@ def gerar_html_dashboard(
               popularFiltros();
               restaurarFiltros();
               aplicarFiltros();
+              window.setTimeout(() => {{
+                atualizarVisibilidadeOverlay(false);
+              }}, 600);
             }});
           }}, 500);
           return;

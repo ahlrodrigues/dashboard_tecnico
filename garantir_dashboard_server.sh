@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BASE_DIR="/var/www/html/dashboard_tecnico-main"
+BASE_DIR="${DASHBOARD_BASE_DIR:-/var/www/html/dashboard_tecnico-main}"
 cd "$BASE_DIR"
 
 HOST="${DASHBOARD_SERVER_HOST:-0.0.0.0}"
 PORT="${DASHBOARD_SERVER_PORT:-8765}"
 CHECK_HOST="${DASHBOARD_SERVER_CHECK_HOST:-127.0.0.1}"
-PYTHON_BIN="$BASE_DIR/.venv/bin/python"
-SERVER_SCRIPT="$BASE_DIR/dashboard_server.py"
-LOG_FILE="$BASE_DIR/dashboard_server.log"
+PYTHON_BIN="${DASHBOARD_PYTHON_BIN:-$BASE_DIR/.venv/bin/python}"
+SERVER_SCRIPT="${DASHBOARD_SERVER_SCRIPT:-$BASE_DIR/dashboard_server.py}"
+LOG_FILE="${DASHBOARD_LOG_FILE:-$BASE_DIR/dashboard_server.log}"
 
 if [[ ! -x "$PYTHON_BIN" ]]; then
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] Python do ambiente virtual não encontrado em $PYTHON_BIN" >&2
