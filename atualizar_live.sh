@@ -7,6 +7,7 @@ cd "$BASE_DIR"
 BRANCH="${1:-feature/dashboard-live-api}"
 PYTHON_BIN="$BASE_DIR/.venv/bin/python"
 LOG_FILE="$BASE_DIR/atualizar_live.log"
+VERSION_LABEL="$("$PYTHON_BIN" -c 'from version import VERSION; print(VERSION)' 2>/dev/null || echo "desconhecida")"
 
 {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] Iniciando deploy da branch $BRANCH"
@@ -27,5 +28,5 @@ LOG_FILE="$BASE_DIR/atualizar_live.log"
   git pull --ff-only origin "$BRANCH"
   "$PYTHON_BIN" main.py --rebuild-html
 
-  echo "[$(date '+%Y-%m-%d %H:%M:%S')] Deploy concluido em $(git rev-parse --short HEAD)"
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] Deploy concluido na versao ${VERSION_LABEL} em $(git rev-parse --short HEAD)"
 } | tee -a "$LOG_FILE"

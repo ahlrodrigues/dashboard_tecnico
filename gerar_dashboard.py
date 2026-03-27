@@ -260,24 +260,30 @@ def gerar_html_dashboard(
       font-size: clamp(28px, 4vw, 42px);
       line-height: 1.05;
     }}
+    .hero-meta-inline {{
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-left: 10px;
+      vertical-align: super;
+      white-space: nowrap;
+    }}
     .hero-version {{
       font-size: 0.36em;
       font-weight: 700;
       letter-spacing: 0.12em;
       opacity: 0.82;
-      vertical-align: super;
-      margin-left: 10px;
-      white-space: nowrap;
+      vertical-align: baseline;
     }}
     .hero-meta-links {{
       display: inline-flex;
       align-items: center;
-      margin-left: 10px;
-      vertical-align: middle;
+      vertical-align: baseline;
     }}
     .hero-meta-links a {{
       color: rgba(247, 255, 251, 0.88);
-      font-size: 13px;
+      font-size: 0.36em;
+      font-weight: 700;
       text-decoration: underline;
       text-underline-offset: 2px;
     }}
@@ -872,7 +878,7 @@ def gerar_html_dashboard(
     <section class="hero">
       <div class="hero-head">
         <div class="hero-titles">
-          <h1>{escape(titulo_dashboard_base)}<span class="hero-version">{escape(VERSAO_DASHBOARD)}</span><span class="hero-meta-links"><a href="CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></span></h1>
+          <h1>{escape(titulo_dashboard_base)}<span class="hero-meta-inline"><span class="hero-version">{escape(VERSAO_DASHBOARD)}</span><span class="hero-meta-links"><a href="CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></span></span></h1>
         </div>
         <div class="refresh-badge">
           <strong>Atualiza em</strong>
