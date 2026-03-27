@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Dashboard de OS SGP - V2.3.7 (3514a72)</title>
+  <title>Dashboard de OS SGP - V2.4.0 (81b185b)</title>
   <style>
     :root {
       --bg: #eef3f1;
@@ -672,7 +672,7 @@
     <section class="hero">
       <div class="hero-head">
         <div class="hero-titles">
-          <h1>Dashboard de OS SGP<span class="hero-meta-inline"><span class="hero-version">V2.3.7 (3514a72)</span><span class="hero-meta-links"><a href="CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></span></span></h1>
+          <h1>Dashboard de OS SGP<span class="hero-meta-inline"><span class="hero-version">V2.4.0 (81b185b)</span><span class="hero-meta-links"><a href="CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></span></span></h1>
         </div>
         <div class="refresh-badge">
           <strong>Atualiza em</strong>
@@ -724,12 +724,12 @@
 	      <div class="summary-card secondary">
 	        <div class="summary-card-head">
 	          <h3 id="tituloStatusOperacional">Status Operacional</h3>
-	          <p class="caption">Backlog atual das ordens abertas, pendentes e em execucao no dia filtrado, para acompanhamento simultaneo da operacao.</p>
+	          <p class="caption">Backlog atual das ordens abertas, pendentes e em execucao no snapshot do dia filtrado.</p>
 	        </div>
 	        <div class="metric-grid cols-2">
 	          <div class="metric-item"><span class="metric-label">Total de O.S. do recorte</span><span class="metric-value" id="cardTotalStatus">4567</span></div>
 	          <div class="metric-item"><span class="metric-label">Em aberto</span><span class="metric-value" id="cardAberta">39</span></div>
-	          <div class="metric-item"><span class="metric-label">Pendentes</span><span class="metric-value" id="cardPendente">16</span></div>
+	          <div class="metric-item"><span class="metric-label">Pendentes</span><span class="metric-value" id="cardPendente">15</span></div>
 	          <div class="metric-item"><span class="metric-label">Em execução</span><span class="metric-value" id="cardEmExecucao">0</span></div>
 	        </div>
 	      </div>
@@ -739,15 +739,15 @@
 	          <p class="caption">Visão consolidada das O.S. encerradas no recorte, com cortes por grupo técnico e por quem realizou o encerramento.</p>
 	        </div>
 	        <div class="metric-grid cols-2">
-	          <div class="metric-item"><span class="metric-label">Total de O.S. encerradas</span><span class="metric-value" id="cardEncerrada">4512</span></div>
-	          <div class="metric-item"><span class="metric-label">Encerradas pelo técnico</span><span class="metric-value" id="cardEncerradaTecnicos">2258</span></div>
+	          <div class="metric-item"><span class="metric-label">Total de O.S. encerradas</span><span class="metric-value" id="cardEncerrada">4513</span></div>
+	          <div class="metric-item"><span class="metric-label">Encerradas pelo técnico</span><span class="metric-value" id="cardEncerradaTecnicos">2259</span></div>
 	          <div class="metric-item"><span class="metric-label">Encerradas por outros</span><span class="metric-value" id="cardPorOutros">2254</span></div>
 	        </div>
 	      </div>
 	      <div class="summary-card tertiary">
 	        <div class="summary-card-head">
 	          <h3 id="tituloMovimentacoes">Movimentações</h3>
-	          <p class="caption">Distribuição completa dos atendimentos por motivo no recorte filtrado.</p>
+	          <p class="caption">Distribuicao das O.S. encerradas por motivo no recorte filtrado.</p>
 	        </div>
 	        <div class="metric-grid flow scrollable" id="movimentacoesGrid">
 	          <div class="metric-item compact"><span class="metric-label">Inviabilidades</span><span class="metric-value" id="cardInviabilidade">34</span></div>
@@ -758,7 +758,7 @@
 	      <div class="summary-card quaternary">
 	        <div class="summary-card-head">
 	          <h3 id="tituloPops">POPs</h3>
-	          <p class="caption">Distribuição das O.S. por POP no recorte filtrado.</p>
+	          <p class="caption">Distribuicao das O.S. encerradas por POP no recorte filtrado.</p>
 	        </div>
 	        <div class="metric-grid flow scrollable" id="popsGrid">
 	          <div class="metric-item compact"><span class="metric-label">Sem POPs no recorte</span><span class="metric-value">0</span></div>
@@ -768,7 +768,7 @@
 
 	    <div class="panel full">
 	      <h2 class="section-title" id="tituloDetalhamentoPops">Detalhamento por POP</h2>
-	      <div class="panel-meta" id="detalhamentoPopsMeta">Mostrando as O.S. do recorte filtradas por POP.</div>
+	      <div class="panel-meta" id="detalhamentoPopsMeta">Mostrando as O.S. encerradas do recorte filtradas por POP.</div>
       <div class="table-wrap">
         <table id="tabelaDetalhamentoPops">
           <thead>
@@ -1430,11 +1430,40 @@
       });
     }
 
+    function filtrarBaseOperacional() {
+      const busca = normalizarTexto(filtroBusca.value).toLowerCase();
+
+      return detalhes.filter((registro) => {
+        if (!dataDentroDoIntervalo(registro)) return false;
+        if (ehStatusEncerrada(registro)) return false;
+        if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
+        if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
+        if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
+        if (busca && !obterTextoBusca(registro).includes(busca)) return false;
+        return true;
+      });
+    }
+
+    function filtrarBaseAnalitica() {
+      const busca = normalizarTexto(filtroBusca.value).toLowerCase();
+
+      return detalhes.filter((registro) => {
+        if (!dataDentroDoIntervalo(registro)) return false;
+        if (!ehStatusEncerrada(registro)) return false;
+        if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
+        if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
+        if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
+        if (busca && !obterTextoBusca(registro).includes(busca)) return false;
+        return true;
+      });
+    }
+
     function filtrarBaseRanking() {
       const busca = normalizarTexto(filtroBusca.value).toLowerCase();
 
       return detalhes.filter((registro) => {
         if (!dataDentroDoIntervalo(registro)) return false;
+        if (!ehStatusEncerrada(registro)) return false;
         if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
@@ -1447,6 +1476,7 @@
       const busca = normalizarTexto(filtroBusca.value).toLowerCase();
 
       return detalhes.filter((registro) => {
+        if (!ehStatusEncerrada(registro)) return false;
         if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
@@ -1618,6 +1648,8 @@
       const busca = normalizarTexto(filtroBusca.value).toLowerCase();
 
       return detalhes.filter((registro) => {
+        if (!dataDentroDoIntervalo(registro)) return false;
+        if (!ehStatusEncerrada(registro)) return false;
         if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
@@ -1631,16 +1663,7 @@
     }
 
 	    function filtrarBaseEncerramentos() {
-	      const busca = normalizarTexto(filtroBusca.value).toLowerCase();
-
-	      return detalhes.filter((registro) => {
-	        if (!dataDentroDoIntervalo(registro)) return false;
-	        if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
-	        if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
-	        if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
-	        if (busca && !obterTextoBusca(registro).includes(busca)) return false;
-	        return true;
-	      });
+	      return filtrarBaseAnalitica();
 	    }
 
     function ehStatusEncerrada(registro) {
@@ -2478,11 +2501,11 @@
       const textoFiltro = partes.length ? partes.join(" | ") : "Todos";
       atualizarTitulosPaineis();
       painelTempoMeta.textContent = `Tempo médio e backlog para o recorte: ${textoFiltro}.`;
-      detalhamentoPopsMeta.textContent = `Tabela de POPs com ${totalDetalhamentoPops} O.S. no recorte atual, considerando os filtros aplicados na página.`;
+      detalhamentoPopsMeta.textContent = `Tabela de POPs com ${totalDetalhamentoPops} O.S. encerradas no recorte atual, considerando os filtros aplicados na página.`;
       rankingMeta.textContent = `Ranking atualizado com ${registrosFinalizados.length} OS encerradas no recorte atual.`;
       rankingVotosResumoMeta.textContent = `Ranking atualizado com ${totalVotosValidos} voto(s) válido(s), considerando apenas 1 voto por IP e data no recorte atual.`;
       rankingVotosMeta.textContent = `Tabela de votos atualizada com ${totalVotosDetalhamento} registro(s) do recorte atual; duplicidades por IP e data ficam destacadas em vermelho.`;
-      detalheMeta.textContent = `Mostrando ${totalDetalhes} registro(s) após aplicar os filtros.`;
+      detalheMeta.textContent = `Mostrando ${totalDetalhes} O.S. encerrada(s) após aplicar os filtros.`;
       const intervaloReincidencia = obterIntervaloReincidencia30Dias();
       const descricaoReincidencia = intervaloReincidencia
         ? `janela de 30 dias entre ${intervaloReincidencia.inicio} e ${intervaloReincidencia.fim}`
@@ -2494,27 +2517,29 @@
 	      normalizarPeriodoSelecionado();
 	      salvarFiltros();
 	      const registros = filtrarDetalhes();
-      const registrosDetalhamentoPops = filtrarDetalhamentoPops(registros);
-      const registrosFinalizados = registros.filter((registro) => ehStatusEncerrada(registro));
+      const registrosOperacionais = filtrarBaseOperacional();
+      const registrosAnaliticos = filtrarBaseAnalitica();
+      const registrosDetalhamentoPops = filtrarDetalhamentoPops(registrosAnaliticos);
+      const registrosFinalizados = registrosAnaliticos;
       const registrosVotos = filtrarVotosPorData();
       const registrosVotosUnicos = deduplicarVotosPorIpEData(registrosVotos);
-      const registrosBaseEncerramentos = filtrarBaseEncerramentos().filter((registro) => ehStatusEncerrada(registro));
-      const registrosBaseRanking = filtrarBaseRankingComparativo().filter((registro) => ehStatusEncerrada(registro));
+      const registrosBaseEncerramentos = filtrarBaseEncerramentos();
+      const registrosBaseRanking = filtrarBaseRankingComparativo();
       const registrosBaseReincidencias = filtrarBaseReincidencias();
-	      renderStatusCards(registros);
-	      renderMotivoCards(registros);
-	      renderPopCards(registros);
+	      renderStatusCards(registrosOperacionais);
+	      renderMotivoCards(registrosAnaliticos);
+	      renderPopCards(registrosAnaliticos);
 	      renderDetalhamentoPops(registrosDetalhamentoPops);
 	      renderCardsEncerramentos(registrosBaseEncerramentos);
-	      renderTempoBacklog(registros, registrosFinalizados);
+	      renderTempoBacklog(registrosOperacionais, registrosFinalizados);
 	      renderRanking(registrosFinalizados, registrosBaseRanking);
 	      renderRankingVotosResumo(registrosVotos);
 	      renderRankingVotos(registrosVotos);
-	      renderDetalhes(registros);
+	      renderDetalhes(registrosAnaliticos);
 	      renderReincidencias(registrosBaseReincidencias);
 	      renderGrafico(registrosFinalizados);
 	      renderGraficoDiario(registrosFinalizados);
-	      atualizarMetas(registrosFinalizados, registros.length, registrosVotosUnicos.length, registrosVotos.length, registrosDetalhamentoPops.length);
+	      atualizarMetas(registrosFinalizados, registrosAnaliticos.length, registrosVotosUnicos.length, registrosVotos.length, registrosDetalhamentoPops.length);
 	    }
 
     function formatarDataInput(data) {
@@ -2705,7 +2730,7 @@
         col: coluna,
         dir: ordenacaoDetalhes.col === coluna && ordenacaoDetalhes.dir === "asc" ? "desc" : "asc",
       };
-      renderDetalhes(filtrarDetalhes());
+      renderDetalhes(filtrarBaseAnalitica());
     });
     rankingVotosHead.addEventListener("click", (event) => {
       const botao = event.target.closest(".sort-header");
@@ -2725,7 +2750,7 @@
         col: coluna,
         dir: ordenacaoReincidencias.col === coluna && ordenacaoReincidencias.dir === "asc" ? "desc" : "asc",
       };
-      renderReincidencias(filtrarDetalhes());
+      renderReincidencias(filtrarBaseReincidencias());
     });
 
     recalcularMetadadosBase();

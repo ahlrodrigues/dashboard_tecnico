@@ -930,7 +930,7 @@ def gerar_html_dashboard(
 	      <div class="summary-card secondary">
 	        <div class="summary-card-head">
 	          <h3 id="tituloStatusOperacional">Status Operacional</h3>
-	          <p class="caption">Backlog atual das ordens abertas, pendentes e em execucao no dia filtrado, para acompanhamento simultaneo da operacao.</p>
+	          <p class="caption">Backlog atual das ordens abertas, pendentes e em execucao no snapshot do dia filtrado.</p>
 	        </div>
 	        <div class="metric-grid cols-2">
 	          <div class="metric-item"><span class="metric-label">Total de O.S. do recorte</span><span class="metric-value" id="cardTotalStatus">{len(detalhes_data)}</span></div>
@@ -953,7 +953,7 @@ def gerar_html_dashboard(
 	      <div class="summary-card tertiary">
 	        <div class="summary-card-head">
 	          <h3 id="tituloMovimentacoes">Movimentações</h3>
-	          <p class="caption">Distribuição completa dos atendimentos por motivo no recorte filtrado.</p>
+	          <p class="caption">Distribuicao das O.S. encerradas por motivo no recorte filtrado.</p>
 	        </div>
 	        <div class="metric-grid flow scrollable" id="movimentacoesGrid">
 	          <div class="metric-item compact"><span class="metric-label">Inviabilidades</span><span class="metric-value" id="cardInviabilidade">{cards['inviabilidade']}</span></div>
@@ -964,7 +964,7 @@ def gerar_html_dashboard(
 	      <div class="summary-card quaternary">
 	        <div class="summary-card-head">
 	          <h3 id="tituloPops">POPs</h3>
-	          <p class="caption">Distribuição das O.S. por POP no recorte filtrado.</p>
+	          <p class="caption">Distribuicao das O.S. encerradas por POP no recorte filtrado.</p>
 	        </div>
 	        <div class="metric-grid flow scrollable" id="popsGrid">
 	          <div class="metric-item compact"><span class="metric-label">Sem POPs no recorte</span><span class="metric-value">0</span></div>
@@ -974,7 +974,7 @@ def gerar_html_dashboard(
 
 	    <div class="panel full">
 	      <h2 class="section-title" id="tituloDetalhamentoPops">Detalhamento por POP</h2>
-	      <div class="panel-meta" id="detalhamentoPopsMeta">Mostrando as O.S. do recorte filtradas por POP.</div>
+	      <div class="panel-meta" id="detalhamentoPopsMeta">Mostrando as O.S. encerradas do recorte filtradas por POP.</div>
       <div class="table-wrap">
         <table id="tabelaDetalhamentoPops">
           <thead>
@@ -1636,11 +1636,40 @@ def gerar_html_dashboard(
       }});
     }}
 
+    function filtrarBaseOperacional() {{
+      const busca = normalizarTexto(filtroBusca.value).toLowerCase();
+
+      return detalhes.filter((registro) => {{
+        if (!dataDentroDoIntervalo(registro)) return false;
+        if (ehStatusEncerrada(registro)) return false;
+        if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
+        if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
+        if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
+        if (busca && !obterTextoBusca(registro).includes(busca)) return false;
+        return true;
+      }});
+    }}
+
+    function filtrarBaseAnalitica() {{
+      const busca = normalizarTexto(filtroBusca.value).toLowerCase();
+
+      return detalhes.filter((registro) => {{
+        if (!dataDentroDoIntervalo(registro)) return false;
+        if (!ehStatusEncerrada(registro)) return false;
+        if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
+        if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
+        if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
+        if (busca && !obterTextoBusca(registro).includes(busca)) return false;
+        return true;
+      }});
+    }}
+
     function filtrarBaseRanking() {{
       const busca = normalizarTexto(filtroBusca.value).toLowerCase();
 
       return detalhes.filter((registro) => {{
         if (!dataDentroDoIntervalo(registro)) return false;
+        if (!ehStatusEncerrada(registro)) return false;
         if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
@@ -1653,6 +1682,7 @@ def gerar_html_dashboard(
       const busca = normalizarTexto(filtroBusca.value).toLowerCase();
 
       return detalhes.filter((registro) => {{
+        if (!ehStatusEncerrada(registro)) return false;
         if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
@@ -1824,6 +1854,8 @@ def gerar_html_dashboard(
       const busca = normalizarTexto(filtroBusca.value).toLowerCase();
 
       return detalhes.filter((registro) => {{
+        if (!dataDentroDoIntervalo(registro)) return false;
+        if (!ehStatusEncerrada(registro)) return false;
         if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
@@ -1837,16 +1869,7 @@ def gerar_html_dashboard(
     }}
 
 	    function filtrarBaseEncerramentos() {{
-	      const busca = normalizarTexto(filtroBusca.value).toLowerCase();
-
-	      return detalhes.filter((registro) => {{
-	        if (!dataDentroDoIntervalo(registro)) return false;
-	        if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
-	        if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
-	        if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
-	        if (busca && !obterTextoBusca(registro).includes(busca)) return false;
-	        return true;
-	      }});
+	      return filtrarBaseAnalitica();
 	    }}
 
     function ehStatusEncerrada(registro) {{
@@ -2684,11 +2707,11 @@ def gerar_html_dashboard(
       const textoFiltro = partes.length ? partes.join(" | ") : "Todos";
       atualizarTitulosPaineis();
       painelTempoMeta.textContent = `Tempo médio e backlog para o recorte: ${{textoFiltro}}.`;
-      detalhamentoPopsMeta.textContent = `Tabela de POPs com ${{totalDetalhamentoPops}} O.S. no recorte atual, considerando os filtros aplicados na página.`;
+      detalhamentoPopsMeta.textContent = `Tabela de POPs com ${{totalDetalhamentoPops}} O.S. encerradas no recorte atual, considerando os filtros aplicados na página.`;
       rankingMeta.textContent = `Ranking atualizado com ${{registrosFinalizados.length}} OS encerradas no recorte atual.`;
       rankingVotosResumoMeta.textContent = `Ranking atualizado com ${{totalVotosValidos}} voto(s) válido(s), considerando apenas 1 voto por IP e data no recorte atual.`;
       rankingVotosMeta.textContent = `Tabela de votos atualizada com ${{totalVotosDetalhamento}} registro(s) do recorte atual; duplicidades por IP e data ficam destacadas em vermelho.`;
-      detalheMeta.textContent = `Mostrando ${{totalDetalhes}} registro(s) após aplicar os filtros.`;
+      detalheMeta.textContent = `Mostrando ${{totalDetalhes}} O.S. encerrada(s) após aplicar os filtros.`;
       const intervaloReincidencia = obterIntervaloReincidencia30Dias();
       const descricaoReincidencia = intervaloReincidencia
         ? `janela de 30 dias entre ${{intervaloReincidencia.inicio}} e ${{intervaloReincidencia.fim}}`
@@ -2700,27 +2723,29 @@ def gerar_html_dashboard(
 	      normalizarPeriodoSelecionado();
 	      salvarFiltros();
 	      const registros = filtrarDetalhes();
-      const registrosDetalhamentoPops = filtrarDetalhamentoPops(registros);
-      const registrosFinalizados = registros.filter((registro) => ehStatusEncerrada(registro));
+      const registrosOperacionais = filtrarBaseOperacional();
+      const registrosAnaliticos = filtrarBaseAnalitica();
+      const registrosDetalhamentoPops = filtrarDetalhamentoPops(registrosAnaliticos);
+      const registrosFinalizados = registrosAnaliticos;
       const registrosVotos = filtrarVotosPorData();
       const registrosVotosUnicos = deduplicarVotosPorIpEData(registrosVotos);
-      const registrosBaseEncerramentos = filtrarBaseEncerramentos().filter((registro) => ehStatusEncerrada(registro));
-      const registrosBaseRanking = filtrarBaseRankingComparativo().filter((registro) => ehStatusEncerrada(registro));
+      const registrosBaseEncerramentos = filtrarBaseEncerramentos();
+      const registrosBaseRanking = filtrarBaseRankingComparativo();
       const registrosBaseReincidencias = filtrarBaseReincidencias();
-	      renderStatusCards(registros);
-	      renderMotivoCards(registros);
-	      renderPopCards(registros);
+	      renderStatusCards(registrosOperacionais);
+	      renderMotivoCards(registrosAnaliticos);
+	      renderPopCards(registrosAnaliticos);
 	      renderDetalhamentoPops(registrosDetalhamentoPops);
 	      renderCardsEncerramentos(registrosBaseEncerramentos);
-	      renderTempoBacklog(registros, registrosFinalizados);
+	      renderTempoBacklog(registrosOperacionais, registrosFinalizados);
 	      renderRanking(registrosFinalizados, registrosBaseRanking);
 	      renderRankingVotosResumo(registrosVotos);
 	      renderRankingVotos(registrosVotos);
-	      renderDetalhes(registros);
+	      renderDetalhes(registrosAnaliticos);
 	      renderReincidencias(registrosBaseReincidencias);
 	      renderGrafico(registrosFinalizados);
 	      renderGraficoDiario(registrosFinalizados);
-	      atualizarMetas(registrosFinalizados, registros.length, registrosVotosUnicos.length, registrosVotos.length, registrosDetalhamentoPops.length);
+	      atualizarMetas(registrosFinalizados, registrosAnaliticos.length, registrosVotosUnicos.length, registrosVotos.length, registrosDetalhamentoPops.length);
 	    }}
 
     function formatarDataInput(data) {{
@@ -2911,7 +2936,7 @@ def gerar_html_dashboard(
         col: coluna,
         dir: ordenacaoDetalhes.col === coluna && ordenacaoDetalhes.dir === "asc" ? "desc" : "asc",
       }};
-      renderDetalhes(filtrarDetalhes());
+      renderDetalhes(filtrarBaseAnalitica());
     }});
     rankingVotosHead.addEventListener("click", (event) => {{
       const botao = event.target.closest(".sort-header");
@@ -2931,7 +2956,7 @@ def gerar_html_dashboard(
         col: coluna,
         dir: ordenacaoReincidencias.col === coluna && ordenacaoReincidencias.dir === "asc" ? "desc" : "asc",
       }};
-      renderReincidencias(filtrarDetalhes());
+      renderReincidencias(filtrarBaseReincidencias());
     }});
 
     recalcularMetadadosBase();
