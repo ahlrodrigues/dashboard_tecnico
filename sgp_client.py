@@ -124,3 +124,31 @@ class SGPClient:
             )
 
         return resultados
+
+    def listar_tecnicos(self) -> List[Dict[str, Any]]:
+        endpoint = f"{self.url_base}/api/ura/tecnicos/"
+        response = requests.post(
+            endpoint,
+            data=self._build_base_payload(),
+            auth=self._build_auth(),
+            timeout=60,
+        )
+        response.raise_for_status()
+
+        data = response.json()
+        if isinstance(data, list):
+            return data
+
+        if isinstance(data, dict):
+            tecnicos = (
+                data.get("data")
+                or data.get("results")
+                or data.get("tecnicos")
+                or data.get("tecnico")
+                or data.get("response")
+                or []
+            )
+            if isinstance(tecnicos, list):
+                return tecnicos
+
+        raise ValueError("Formato inesperado no retorno da API de técnicos.")

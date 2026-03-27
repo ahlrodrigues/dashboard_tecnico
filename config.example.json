@@ -10,6 +10,8 @@
     "token": "SEU_TOKEN"
   },
   "classificacao": {
+    "usar_api_tecnicos": true,
+    "tecnicos_cache_segundos": 21600,
     "tecnicos": [
       "cabral",
       "eriki",

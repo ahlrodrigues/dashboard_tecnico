@@ -17,6 +17,7 @@ VOTOS_CSV_URL = "https://net4you.com.br/votos_data.csv"
 CACHE_DIR_NAME = ".cache"
 OS_CACHE_FILENAME = "dashboard_os_cache.json"
 VOTOS_CACHE_FILENAME = "dashboard_votos_cache.json"
+TECNICOS_CACHE_FILENAME = "dashboard_tecnicos_cache.json"
 
 
 MAPA_MES = {
@@ -235,6 +236,79 @@ def _carregar_ou_atualizar_votos_df(base: Path, refresh_targets: set[str], cache
     return votos_df
 
 
+def _identificadores_tecnico(registro: object) -> list[str]:
+    if not isinstance(registro, dict):
+        return []
+
+    identificadores: list[str] = []
+    for campo in ("username", "nome", "name", "login"):
+        valor = str(registro.get(campo, "")).strip()
+        if valor:
+            identificadores.append(valor)
+    return identificadores
+
+
+def _carregar_tecnicos_cache(base: Path) -> list[dict[str, object]]:
+    payload = _ler_json(_caminho_cache(base, TECNICOS_CACHE_FILENAME))
+    if not payload:
+        return []
+    registros = payload.get("tecnicos", [])
+    return registros if isinstance(registros, list) else []
+
+
+def _cache_tecnicos_valido(base: Path, max_age_seconds: int) -> bool:
+    payload = _ler_json(_caminho_cache(base, TECNICOS_CACHE_FILENAME))
+    if not payload:
+        return False
+    updated_at = str(payload.get("updated_at", "")).strip()
+    if not updated_at:
+        return False
+    try:
+        atualizado_em = datetime.fromisoformat(updated_at)
+    except ValueError:
+        return False
+    return (datetime.now() - atualizado_em).total_seconds() <= max_age_seconds
+
+
+def _salvar_tecnicos_cache(base: Path, tecnicos: list[dict[str, object]]) -> None:
+    _escrever_json(
+        _caminho_cache(base, TECNICOS_CACHE_FILENAME),
+        {
+            "schema_version": 1,
+            "updated_at": _agora_iso(),
+            "tecnicos": tecnicos,
+        },
+    )
+
+
+def _resolver_tecnicos_classificacao(base: Path, config: dict[str, object]) -> dict[str, object]:
+    classificacao = dict(config.get("classificacao", {}) or {})
+    tecnicos_manuais = classificacao.get("tecnicos", [])
+    tecnicos_resolvidos = [str(item).strip() for item in tecnicos_manuais if str(item).strip()]
+
+    usar_api = bool(classificacao.get("usar_api_tecnicos", False))
+    cache_segundos = int(classificacao.get("tecnicos_cache_segundos", 21600))
+    client = SGPClient(config)
+
+    if usar_api:
+        tecnicos_api: list[dict[str, object]] = []
+        try:
+            if _cache_tecnicos_valido(base, max(cache_segundos, 60)):
+                tecnicos_api = _carregar_tecnicos_cache(base)
+            else:
+                tecnicos_api = client.listar_tecnicos()
+                _salvar_tecnicos_cache(base, tecnicos_api)
+        except Exception:
+            tecnicos_api = _carregar_tecnicos_cache(base)
+
+        for tecnico in tecnicos_api:
+            tecnicos_resolvidos.extend(_identificadores_tecnico(tecnico))
+
+    classificacao["tecnicos"] = list(dict.fromkeys(tecnicos_resolvidos))
+    config["classificacao"] = classificacao
+    return config
+
+
 def _buscar_os_periodo(client: SGPClient, data_inicio: str, data_fim: str) -> list[dict[str, object]]:
     raw_abertas = client.listar_ordens_servico_statuses(
         statuses=STATUS_ABERTAS,
@@ -303,6 +377,7 @@ def gerar_arquivos_dashboard(
     base = base or Path(__file__).resolve().parent
     refresh_targets = refresh_targets or {"all"}
     config = json.loads((base / "config.json").read_text(encoding="utf-8"))
+    config = _resolver_tecnicos_classificacao(base, config)
 
     ano = int(config.get("dashboard", {}).get("ano_padrao", 2026))
     mes = config.get("dashboard", {}).get("mes_padrao", "Todos")

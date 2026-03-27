@@ -68,12 +68,20 @@ Você pode usar:
 ### 3. Classificação manual
 ```json
 "classificacao": {
+  "usar_api_tecnicos": true,
+  "tecnicos_cache_segundos": 21600,
   "tecnicos": ["joao", "cabral", "eriki"],
   "infra_keywords": ["infra", "infraestrutura"]
 }
 ```
 
-Tudo que aparecer em `finalizado por` e não estiver nas listas acima será classificado como `Outros`.
+Quando `usar_api_tecnicos` está como `true`, o dashboard consulta `POST /api/ura/tecnicos/` no SGP e usa essa lista como fonte principal dos técnicos.
+
+`tecnicos_cache_segundos` controla por quanto tempo a lista vinda da API pode ser reaproveitada em cache local.
+
+`tecnicos` continua existindo como fallback e complemento manual para nomes que precisem ser forçados.
+
+Tudo que aparecer em `finalizado por` e não estiver nas listas resolvidas acima será classificado como `Outros`.
 
 ### 4. Filtro inicial do dashboard
 ```json

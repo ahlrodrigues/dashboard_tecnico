@@ -190,9 +190,16 @@ def gerar_html_dashboard(
         f'<th aria-sort="none"><button type="button" class="sort-header" data-col="{escape(col)}" data-label="{escape(detalhe_labels.get(col, col))}"><span class="sort-header-label">{escape(detalhe_labels.get(col, col))}</span><span class="sort-indicator" aria-hidden="true">△</span></button></th>'
         for col in detalhe_cols
     )
+    votos_display_labels = {
+        **{col: col for col in votos_cols},
+        "auxiliares_dupla_dashboard": "auxiliares_no_dia",
+        "papel_dupla_dashboard": "papel_no_dia",
+        "responsavel_dupla_dashboard": "consolidado_para",
+    }
+    votos_display_cols = votos_cols + ["auxiliares_dupla_dashboard", "papel_dupla_dashboard", "responsavel_dupla_dashboard"]
     votos_header_cols = "".join(
-        f'<th aria-sort="none"><button type="button" class="sort-header" data-col="{escape(col)}"><span class="sort-header-label">{escape(col)}</span><span class="sort-indicator" aria-hidden="true">△</span></button></th>'
-        for col in votos_cols
+        f'<th aria-sort="none"><button type="button" class="sort-header" data-col="{escape(col)}"><span class="sort-header-label">{escape(votos_display_labels.get(col, col))}</span><span class="sort-indicator" aria-hidden="true">△</span></button></th>'
+        for col in votos_display_cols
     )
 
     html = f"""<!doctype html>
@@ -1055,6 +1062,8 @@ def gerar_html_dashboard(
   <script>
     const detalheCols = {json.dumps(detalhe_cols, ensure_ascii=False)};
     const votosCols = {json.dumps(votos_cols, ensure_ascii=False)};
+    const votosDisplayCols = {json.dumps(votos_display_cols, ensure_ascii=False)};
+    const votosDisplayLabels = {json.dumps(votos_display_labels, ensure_ascii=False)};
     const mesesOrdem = {json.dumps(meses_ordem, ensure_ascii=False)};
     let detalhes = {json.dumps(dados_embutidos, ensure_ascii=False)};
     let votosData = {json.dumps(votos_embutidos, ensure_ascii=False)};
@@ -1126,6 +1135,24 @@ def gerar_html_dashboard(
       luizcarlos: "luizcarlos",
       lcarlos: "luizcarlos",
     }};
+    const rotulosCanonicosUsuarios = {{
+      joaopaulo: "JOAO PAULO",
+      luizcarlos: "LUIZ CARLOS",
+      luizhenrique: "LUIZ HENRIQUE",
+      ivison: "IVISON",
+      allan: "Allan",
+      charles: "Charles",
+      everaldo: "Everaldo",
+      valdeir: "Valdeir",
+      franklin: "Franklin",
+      robson: "Robson",
+      micael: "MICAEL",
+      francivaldo: "FRANCIVALDO",
+      wilton: "WILTON",
+      talis: "TALIS",
+      eriki: "ERIKI",
+      cabral: "CABRAL",
+    }};
     let atualizandoArquivos = false;
     let pollingAtualizacaoId = null;
     let restanteRefresh = refreshSeconds;
@@ -1193,6 +1220,23 @@ def gerar_html_dashboard(
       const chaveA = normalizarChaveUsuario(a);
       const chaveB = normalizarChaveUsuario(b);
       return Boolean(chaveA) && chaveA === chaveB;
+    }}
+
+    function formatarNomeUsuarioExibicao(valor) {{
+      const texto = normalizarTexto(valor);
+      const chave = normalizarChaveUsuario(texto);
+      if (!texto) return "";
+      if (chave && rotulosCanonicosUsuarios[chave]) {{
+        return rotulosCanonicosUsuarios[chave];
+      }}
+      if (texto === texto.toLowerCase()) {{
+        return texto
+          .split(" ")
+          .filter(Boolean)
+          .map((parte) => parte.charAt(0).toUpperCase() + parte.slice(1))
+          .join(" ");
+      }}
+      return texto;
     }}
 
     function obterAno(registro) {{
@@ -1327,6 +1371,10 @@ def gerar_html_dashboard(
       return normalizarTexto(registro.tecnico);
     }}
 
+    function obterUsuarioVotoConsolidado(registro) {{
+      return normalizarTexto(registro.responsavel_dupla_dashboard || registro.tecnico);
+    }}
+
     function obterHoraVotoTexto(registro) {{
       return normalizarTexto(registro.hora);
     }}
@@ -1352,8 +1400,12 @@ def gerar_html_dashboard(
     }}
 
     function obterTextoBuscaVoto(registro) {{
-      return votosCols
-        .map((coluna) => normalizarTexto(registro[coluna]).toLowerCase())
+      return [
+        ...votosCols.map((coluna) => normalizarTexto(registro[coluna]).toLowerCase()),
+        normalizarTexto(registro.papel_dupla_dashboard).toLowerCase(),
+        normalizarTexto(registro.responsavel_dupla_dashboard).toLowerCase(),
+      ]
+        .filter(Boolean)
         .join(" ");
     }}
 
@@ -1397,6 +1449,7 @@ def gerar_html_dashboard(
 
       return {{
         validos,
+        registrosValidos: new Set(validos),
         chavesDuplicadas,
       }};
     }}
@@ -1586,12 +1639,124 @@ def gerar_html_dashboard(
         if (busca && !obterTextoBusca(registro).includes(busca)) return;
 
         const usuario = obterUsuario(registro);
-        if (usuario) {{
-          usuarios.add(normalizarChaveUsuario(usuario));
-        }}
+        const responsavel = normalizarTexto(registro.responsavel);
+        if (usuario) usuarios.add(normalizarChaveUsuario(usuario));
+        if (responsavel) usuarios.add(normalizarChaveUsuario(responsavel));
+        obterTecnicosAuxiliares(registro).forEach((auxiliar) => {{
+          usuarios.add(normalizarChaveUsuario(auxiliar));
+        }});
       }});
 
       return usuarios;
+    }}
+
+    function construirMapaRotulosUsuarios(registros) {{
+      const contagem = new Map();
+
+      function registrar(nome) {{
+        const rotulo = normalizarTexto(nome);
+        const chave = normalizarChaveUsuario(rotulo);
+        if (!rotulo || !chave) return;
+        if (!contagem.has(chave)) {{
+          contagem.set(chave, new Map());
+        }}
+        const mapaRotulos = contagem.get(chave);
+        mapaRotulos.set(rotulo, (mapaRotulos.get(rotulo) || 0) + 1);
+      }}
+
+      registros.forEach((registro) => {{
+        registrar(registro.responsavel);
+        registrar(registro.finalizado_por_dashboard);
+        obterTecnicosAuxiliares(registro).forEach(registrar);
+      }});
+
+      const rotulos = new Map();
+      contagem.forEach((mapaRotulos, chave) => {{
+        const escolhido = [...mapaRotulos.entries()]
+          .sort((a, b) => b[1] - a[1] || b[0].length - a[0].length || a[0].localeCompare(b[0], "pt-BR", {{ sensitivity: "base" }}))[0];
+        if (escolhido) {{
+          rotulos.set(chave, escolhido[0]);
+        }}
+      }});
+      return rotulos;
+    }}
+
+    function normalizarRotuloUsuario(valor, mapaRotulos) {{
+      const texto = normalizarTexto(valor);
+      const chave = normalizarChaveUsuario(texto);
+      if (!chave) return texto;
+      return formatarNomeUsuarioExibicao(mapaRotulos?.get(chave) || texto);
+    }}
+
+    function construirMapaDuplasPorDia() {{
+      const mapaAuxiliar = new Map();
+      const mapaResponsavel = new Map();
+      const mapaAuxiliaresPorResponsavel = new Map();
+      const registros = filtrarDetalhes();
+      const mapaRotulos = construirMapaRotulosUsuarios(registros);
+
+      registros.forEach((registro) => {{
+        const data = obterDataBaseTexto(registro);
+        const responsavel = normalizarRotuloUsuario(registro.responsavel, mapaRotulos);
+        if (!data || !responsavel) return;
+
+        mapaResponsavel.set(`${{data}}|||${{normalizarChaveUsuario(responsavel)}}`, responsavel);
+        const chaveResponsavelDia = `${{data}}|||${{normalizarChaveUsuario(responsavel)}}`;
+        if (!mapaAuxiliaresPorResponsavel.has(chaveResponsavelDia)) {{
+          mapaAuxiliaresPorResponsavel.set(chaveResponsavelDia, new Set());
+        }}
+        obterTecnicosAuxiliares(registro).forEach((auxiliar) => {{
+          const auxiliarNormalizado = normalizarRotuloUsuario(auxiliar, mapaRotulos);
+          const chave = `${{data}}|||${{normalizarChaveUsuario(auxiliarNormalizado)}}`;
+          mapaAuxiliaresPorResponsavel.get(chaveResponsavelDia).add(auxiliarNormalizado);
+          const atual = mapaAuxiliar.get(chave);
+          if (atual) {{
+            atual.total += 1;
+            return;
+          }}
+          mapaAuxiliar.set(chave, {{
+            auxiliar: auxiliarNormalizado,
+            responsavel,
+            total: 1,
+          }});
+        }});
+      }});
+
+      return {{
+        mapaAuxiliar,
+        mapaResponsavel,
+        mapaAuxiliaresPorResponsavel,
+        mapaRotulos,
+      }};
+    }}
+
+    function enriquecerVotoComDupla(registro, mapaDuplas) {{
+      const voto = {{ ...registro }};
+      const data = obterDataVotoTexto(voto);
+      const tecnico = normalizarRotuloUsuario(obterUsuarioVoto(voto), mapaDuplas.mapaRotulos);
+      const chaveTecnico = normalizarChaveUsuario(tecnico);
+      const mapeamentoAuxiliar = mapaDuplas.mapaAuxiliar.get(`${{data}}|||${{chaveTecnico}}`);
+      const responsavelNoDia = mapaDuplas.mapaResponsavel.get(`${{data}}|||${{chaveTecnico}}`);
+
+      voto.tecnico = tecnico;
+      voto.auxiliares_dupla_dashboard = "";
+      voto.papel_dupla_dashboard = "";
+      voto.responsavel_dupla_dashboard = tecnico;
+
+      if (mapeamentoAuxiliar && mapeamentoAuxiliar.responsavel) {{
+        voto.papel_dupla_dashboard = "Auxiliar";
+        voto.responsavel_dupla_dashboard = mapeamentoAuxiliar.responsavel;
+      }} else if (responsavelNoDia) {{
+        voto.papel_dupla_dashboard = "Responsável";
+        voto.responsavel_dupla_dashboard = responsavelNoDia;
+      }}
+
+      const chaveResponsavelDia = `${{data}}|||${{normalizarChaveUsuario(voto.responsavel_dupla_dashboard)}}`;
+      const auxiliares = [...(mapaDuplas.mapaAuxiliaresPorResponsavel.get(chaveResponsavelDia) || [])]
+        .sort((a, b) => a.localeCompare(b, "pt-BR", {{ sensitivity: "base" }}));
+      voto.auxiliares_dupla_dashboard = auxiliares.join(", ");
+
+      return voto;
     }}
 
     function filtrarVotosPorData() {{
@@ -1599,22 +1764,25 @@ def gerar_html_dashboard(
       const usuarioFiltro = normalizarTexto(filtroUsuario.value);
       const usuariosPermitidos = obterUsuariosPermitidosParaVotos();
       const restringirPorDetalhes = Boolean(filtroUsuario.value || filtroGrupo.value || filtroPop.value || busca);
+      const mapaDuplas = construirMapaDuplasPorDia();
 
-      return votosData.filter((registro) => {{
+      return votosData.flatMap((registro) => {{
         const data = obterDataVotoTexto(registro);
-        if (!data) return false;
-        if (filtroDataInicial.value && data < filtroDataInicial.value) return false;
-        if (filtroDataFinal.value && data > filtroDataFinal.value) return false;
+        if (!data) return [];
+        if (filtroDataInicial.value && data < filtroDataInicial.value) return [];
+        if (filtroDataFinal.value && data > filtroDataFinal.value) return [];
 
-        const tecnico = obterUsuarioVoto(registro);
-        if (usuarioFiltro && !usuariosSaoEquivalentes(tecnico, usuarioFiltro)) return false;
-        if (busca && !obterTextoBuscaVoto(registro).includes(busca)) return false;
+        const voto = enriquecerVotoComDupla(registro, mapaDuplas);
+        const tecnico = obterUsuarioVoto(voto);
+        const tecnicoConsolidado = obterUsuarioVotoConsolidado(voto);
+        if (usuarioFiltro && !usuariosSaoEquivalentes(tecnico, usuarioFiltro) && !usuariosSaoEquivalentes(tecnicoConsolidado, usuarioFiltro)) return [];
+        if (busca && !obterTextoBuscaVoto(voto).includes(busca)) return [];
         if (restringirPorDetalhes) {{
-          if (!tecnico) return false;
-          if (!usuariosPermitidos.has(normalizarChaveUsuario(tecnico))) return false;
+          if (!tecnico) return [];
+          if (!usuariosPermitidos.has(normalizarChaveUsuario(tecnico)) && !usuariosPermitidos.has(normalizarChaveUsuario(tecnicoConsolidado))) return [];
         }}
 
-        return true;
+        return [voto];
       }});
     }}
 
@@ -1968,7 +2136,7 @@ def gerar_html_dashboard(
       const mapa = new Map();
 
       registros.forEach((registro) => {{
-        const tecnico = obterUsuarioVoto(registro) || "Sem técnico";
+        const tecnico = obterUsuarioVotoConsolidado(registro) || "Sem técnico";
         mapa.set(tecnico, (mapa.get(tecnico) || 0) + 1);
       }});
 
@@ -2038,6 +2206,7 @@ def gerar_html_dashboard(
 
     function obterValorOrdenacaoVoto(registro, coluna) {{
       if (coluna === "data") return obterDataVotoTexto(registro);
+      if (coluna === "responsavel_dupla_dashboard") return obterUsuarioVotoConsolidado(registro);
       return normalizarTexto(registro[coluna]);
     }}
 
@@ -2091,13 +2260,13 @@ def gerar_html_dashboard(
       atualizarIndicadoresOrdenacao();
       rankingVotosBody.innerHTML = "";
 
-      if (!votosCols.length) {{
+      if (!votosDisplayCols.length) {{
         rankingVotosBody.innerHTML = '<tr><td class="empty">Nenhuma coluna disponível na base de votos.</td></tr>';
         return;
       }}
 
       if (!registros.length) {{
-        rankingVotosBody.innerHTML = `<tr><td colspan="${len(votos_cols) if votos_cols else 1}" class="empty">Nenhum voto encontrado para o recorte atual.</td></tr>`;
+        rankingVotosBody.innerHTML = `<tr><td colspan="${len(votos_display_cols) if votos_display_cols else 1}" class="empty">Nenhum voto encontrado para o recorte atual.</td></tr>`;
         return;
       }}
 
@@ -2116,9 +2285,12 @@ def gerar_html_dashboard(
         if (possuiDuplicidadeIpData) {{
           tr.classList.add("duplicate-vote-row");
         }}
-        votosCols.forEach((coluna) => {{
+        votosDisplayCols.forEach((coluna) => {{
           const td = document.createElement("td");
-          td.textContent = normalizarTexto(registro[coluna]);
+          const valor = coluna === "responsavel_dupla_dashboard"
+            ? (analiseDuplicidade.registrosValidos.has(registro) ? obterUsuarioVotoConsolidado(registro) : "-")
+            : normalizarTexto(registro[coluna]);
+          td.textContent = valor;
           if ((coluna === "ip" || coluna === "data") && possuiDuplicidadeIpData) {{
             td.classList.add("duplicate-vote-cell");
           }}
