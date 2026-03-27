@@ -23,6 +23,7 @@ LOG_FILE="$BASE_DIR/atualizar_live.log"
 
   git fetch origin
   git checkout "$BRANCH"
+  git restore dashboard_os_sgp.html
   git pull --ff-only origin "$BRANCH"
   "$PYTHON_BIN" main.py --rebuild-html
 

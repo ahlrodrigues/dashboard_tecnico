@@ -297,6 +297,7 @@ chmod +x atualizar_live.sh
 O script `atualizar_live.sh`:
 - faz `git fetch`
 - garante checkout da branch `feature/dashboard-live-api` por padrão
+- limpa o `dashboard_os_sgp.html` gerado localmente antes do pull, para evitar bloqueio de merge
 - executa `git pull --ff-only`
 - roda `main.py --rebuild-html` para regenerar o shell HTML e o JSON com a versão/commit atuais
 - grava log em `atualizar_live.log`
