@@ -6,11 +6,20 @@ __pycache__/
 
 # Local config with credentials
 config.json
+.env
+.env.*
+*.secret
+*.secrets
+*.key
+*.pem
 
 # Generated artifacts and operational data
 dashboard_os_sgp.html
 dashboard_data.json
 .cache/
+*.log
+*.sqlite3
+*.db
 # Legacy artifact from the old snapshot flow
 os_finalizadas_tratadas.csv
 atualizar_dashboard.log

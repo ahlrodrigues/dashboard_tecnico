@@ -151,6 +151,25 @@ Regra sugerida:
 - `minor`: nova funcionalidade
 - `major`: mudança grande ou quebra de compatibilidade
 
+## Release automatizado
+
+Para automatizar bump de versão, commit, regeneração do HTML com o hash correto e push opcional, use:
+
+```bash
+chmod +x release_dashboard.sh
+./release_dashboard.sh patch
+./release_dashboard.sh patch --push
+./release_dashboard.sh minor --message "Add daily POP detail panel"
+```
+
+Comportamento do script:
+- sobe a versão semântica em `version.py`
+- gera uma mensagem de commit automaticamente com base nos arquivos alterados
+- faz o commit
+- executa `main.py` depois do commit para embutir o hash correto no HTML
+- faz `git commit --amend --no-edit` para incluir o HTML regenerado no mesmo commit
+- faz `push` apenas quando `--push` for informado
+
 ## Automação da atualização
 
 Para atualizar o dashboard automaticamente no servidor ou máquina onde esse projeto roda:
@@ -241,6 +260,21 @@ Isso deve gerar:
 
 - `dashboard_os_sgp.html`
 - `dashboard_data.json`
+
+Para simplificar as próximas atualizações do servidor, você também pode usar:
+
+```bash
+cd /var/www/html/dashboard_tecnico-live
+chmod +x atualizar_live.sh
+./atualizar_live.sh
+```
+
+O script `atualizar_live.sh`:
+- faz `git fetch`
+- garante checkout da branch `feature/dashboard-live-api` por padrão
+- executa `git pull --ff-only`
+- roda `main.py` para regenerar o dashboard
+- grava log em `atualizar_live.log`
 
 ### 5. Teste manualmente a nova versão em outra porta
 
