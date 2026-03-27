@@ -183,6 +183,7 @@ def gerar_html_dashboard(
     data_snapshot_atual = payload["data_snapshot_atual"]
     titulo_periodo = payload["titulo_periodo"]
     titulo_dashboard = f"Dashboard de OS SGP - {VERSAO_DASHBOARD}"
+    titulo_dashboard_base = "Dashboard de OS SGP"
     dados_embutidos = detalhes_data if embutir_dados else []
     votos_embutidos = votos_data if embutir_dados else []
     header_cols = "".join(
@@ -249,6 +250,15 @@ def gerar_html_dashboard(
       margin: 0 0 8px;
       font-size: clamp(28px, 4vw, 42px);
       line-height: 1.05;
+    }}
+    .hero-version {{
+      font-size: 0.36em;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      opacity: 0.82;
+      vertical-align: super;
+      margin-left: 10px;
+      white-space: nowrap;
     }}
     .hero p {{
       margin: 0;
@@ -746,14 +756,14 @@ def gerar_html_dashboard(
     tbody tr:hover {{
       background: rgba(220, 239, 231, 0.40);
     }}
-    tbody tr.duplicate-ip-row:nth-child(even),
-    tbody tr.duplicate-ip-row {{
+    tbody tr.duplicate-vote-row:nth-child(even),
+    tbody tr.duplicate-vote-row {{
       background: rgba(208, 74, 74, 0.10);
     }}
-    tbody tr.duplicate-ip-row:hover {{
+    tbody tr.duplicate-vote-row:hover {{
       background: rgba(208, 74, 74, 0.16);
     }}
-    td.duplicate-ip-cell {{
+    td.duplicate-vote-cell {{
       color: #a12b2b;
       font-weight: 800;
     }}
@@ -841,7 +851,7 @@ def gerar_html_dashboard(
     <section class="hero">
       <div class="hero-head">
         <div class="hero-titles">
-          <h1>{escape(titulo_dashboard)}</h1>
+          <h1>{escape(titulo_dashboard_base)}<span class="hero-version">{escape(VERSAO_DASHBOARD)}</span></h1>
           <p>{escape(titulo_periodo)}</p>
         </div>
         <div class="refresh-badge">
@@ -974,7 +984,7 @@ def gerar_html_dashboard(
 
         <div class="panel">
           <h2 class="section-title" id="tituloRankingVotosResumo">Ranking de votação</h2>
-          <div class="panel-meta" id="rankingVotosResumoMeta">Total de votos únicos por IP no recorte atual.</div>
+          <div class="panel-meta" id="rankingVotosResumoMeta">Total de votos únicos por IP e data no recorte atual.</div>
           <div class="table-wrap">
             <table>
               <thead>
@@ -2092,7 +2102,7 @@ def gerar_html_dashboard(
       }}
 
       const analiseDuplicidade = analisarDuplicidadeVotos(registros);
-      const linhas = [...analiseDuplicidade.validos].sort((a, b) => {{
+      const linhas = [...registros].sort((a, b) => {{
         const comparacaoBase = compararRegistrosPorColunaGenerica(
           obterValorOrdenacaoVoto(a, ordenacaoRankingVotos.col),
           obterValorOrdenacaoVoto(b, ordenacaoRankingVotos.col),
@@ -2102,15 +2112,15 @@ def gerar_html_dashboard(
 
       linhas.forEach((registro) => {{
         const tr = document.createElement("tr");
-        const possuiIpDuplicado = analiseDuplicidade.chavesDuplicadas.has(obterChaveDuplicidadeVoto(registro));
-        if (possuiIpDuplicado) {{
-          tr.classList.add("duplicate-ip-row");
+        const possuiDuplicidadeIpData = analiseDuplicidade.chavesDuplicadas.has(obterChaveDuplicidadeVoto(registro));
+        if (possuiDuplicidadeIpData) {{
+          tr.classList.add("duplicate-vote-row");
         }}
         votosCols.forEach((coluna) => {{
           const td = document.createElement("td");
           td.textContent = normalizarTexto(registro[coluna]);
-          if ((coluna === "ip" || coluna === "data") && possuiIpDuplicado) {{
-            td.classList.add("duplicate-ip-cell");
+          if ((coluna === "ip" || coluna === "data") && possuiDuplicidadeIpData) {{
+            td.classList.add("duplicate-vote-cell");
           }}
           tr.appendChild(td);
         }});
@@ -2418,7 +2428,7 @@ def gerar_html_dashboard(
 	      graficoDiarioMeta.textContent = `Evolução diária por membro${{contextoGrupo}} entre ${{resumo.intervalo.inicio}} e ${{resumo.intervalo.fim}}, usando a data-base de encerramento da O.S.`;
 	    }}
 
-    function atualizarMetas(registrosFinalizados, totalDetalhes, totalVotos) {{
+    function atualizarMetas(registrosFinalizados, totalDetalhes, totalVotosValidos, totalVotosDetalhamento) {{
       const partes = [];
       if (filtroDataInicial.value) partes.push(`Data inicial: ${{filtroDataInicial.value}}`);
       if (filtroDataFinal.value) partes.push(`Data final: ${{filtroDataFinal.value}}`);
@@ -2431,8 +2441,8 @@ def gerar_html_dashboard(
       atualizarTitulosPaineis();
       painelTempoMeta.textContent = `Tempo médio e backlog para o recorte: ${{textoFiltro}}.`;
       rankingMeta.textContent = `Ranking atualizado com ${{registrosFinalizados.length}} OS encerradas no recorte atual.`;
-      rankingVotosResumoMeta.textContent = `Ranking atualizado com ${{totalVotos}} voto(s) válido(s), considerando apenas 1 voto por IP e data no recorte atual.`;
-      rankingVotosMeta.textContent = `Tabela de votos atualizada com ${{totalVotos}} registro(s) válidos no recorte atual, acompanhando data, usuário, grupo, POP e busca pelos técnicos do recorte.`;
+      rankingVotosResumoMeta.textContent = `Ranking atualizado com ${{totalVotosValidos}} voto(s) válido(s), considerando apenas 1 voto por IP e data no recorte atual.`;
+      rankingVotosMeta.textContent = `Tabela de votos atualizada com ${{totalVotosDetalhamento}} registro(s) do recorte atual; duplicidades por IP e data ficam destacadas em vermelho.`;
       detalheMeta.textContent = `Mostrando ${{totalDetalhes}} registro(s) após aplicar os filtros.`;
       const intervaloReincidencia = obterIntervaloReincidencia30Dias();
       const descricaoReincidencia = intervaloReincidencia
@@ -2463,7 +2473,7 @@ def gerar_html_dashboard(
 	      renderReincidencias(registrosBaseReincidencias);
 	      renderGrafico(registrosFinalizados);
 	      renderGraficoDiario(registrosFinalizados);
-	      atualizarMetas(registrosFinalizados, registros.length, registrosVotosUnicos.length);
+	      atualizarMetas(registrosFinalizados, registros.length, registrosVotosUnicos.length, registrosVotos.length);
 	    }}
 
     function formatarDataInput(data) {{
