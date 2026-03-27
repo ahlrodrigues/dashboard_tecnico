@@ -1,6 +1,31 @@
 # Dashboard de OS Finalizadas - SGP
 
-Projeto base para gerar um dashboard HTML com dados de OS finalizadas via API do SGP.
+## Contatos
+
+Autor: Antonio Henrique (Fela)
+
+E-mail: ahlr_2000@yahoo.com
+
+fosstodon.org: @AHLR_2000
+
+Telegram: @Antonio_Henrique_Fela
+
+Matrix: @antonio_pu2ysh:matrix.org
+
+Grupo Slackshowbr no Telegram
+
+Bugs, Agradecimentos, Críticas "construtivas", mande um e-mail, ficarei Grato!
+
+## Nota
+
+Os scripts deste diretório estão disponíveis na esperança que possam ser úteis, mas SEM NENHUMA
+GARANTIA DE FUNCIONAMENTO, SEM NENHUMA GARANTIA DE ADEQUAÇÃO A QUALQUER MERCADO, SEM NENHUMA
+GARANTIA DE APLICAÇÃO EM PARTICULAR e NENHUM SUPORTE TÉCNICO.
+
+Ah! alguns scripts podem sumir inesperadamente por ação de forças estranhas
+independente da nossa vontade.
+
+# Projeto base para gerar um dashboard HTML com dados de OS finalizadas via API do SGP.
 
 ## O que este projeto faz
 
@@ -402,3 +427,12 @@ Quando você tiver um exemplo real do JSON retornado pela API, vale ajustar:
 - nomes exatos das colunas
 - colunas detalhadas que devem aparecer na tabela final
 - filtros extras como POP e motivo
+
+## GNU General Public License:
+
+Estes scripts/programas são softwares livres, você pode redistribuí-los e/ou modifica-los dentro dos
+termos da Licença Pública Geral GNU:
+
+> [General Public License](https://pt.wikipedia.org/wiki/GNU_General_Public_License)
+>
+>Fundação do Software Livre (FSF) Inc. 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
