@@ -269,6 +269,15 @@ def gerar_html_dashboard(
       margin-left: 10px;
       white-space: nowrap;
     }}
+    .hero-meta-links {{
+      margin: 6px 0 0;
+    }}
+    .hero-meta-links a {{
+      color: rgba(247, 255, 251, 0.88);
+      font-size: 13px;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }}
     .hero p {{
       margin: 0;
       color: rgba(247, 255, 251, 0.78);
@@ -861,6 +870,7 @@ def gerar_html_dashboard(
       <div class="hero-head">
         <div class="hero-titles">
           <h1>{escape(titulo_dashboard_base)}<span class="hero-version">{escape(VERSAO_DASHBOARD)}</span></h1>
+          <div class="hero-meta-links"><a href="CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></div>
           <p>{escape(titulo_periodo)}</p>
         </div>
         <div class="refresh-badge">
