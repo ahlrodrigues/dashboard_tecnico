@@ -378,7 +378,8 @@ def gerar_arquivos_dashboard(
     force_full_os: bool = False,
 ) -> dict[str, Path]:
     base = base or Path(__file__).resolve().parent
-    refresh_targets = refresh_targets or {"all"}
+    if refresh_targets is None:
+        refresh_targets = {"all"}
     config = json.loads((base / "config.json").read_text(encoding="utf-8"))
     config = _resolver_tecnicos_classificacao(base, config)
 

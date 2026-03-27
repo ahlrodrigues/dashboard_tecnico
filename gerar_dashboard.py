@@ -256,7 +256,7 @@ def gerar_html_dashboard(
       min-width: 0;
     }}
     .hero h1 {{
-      margin: 0 0 8px;
+      margin: 0;
       font-size: clamp(28px, 4vw, 42px);
       line-height: 1.05;
     }}
@@ -270,7 +270,10 @@ def gerar_html_dashboard(
       white-space: nowrap;
     }}
     .hero-meta-links {{
-      margin: 6px 0 0;
+      display: inline-flex;
+      align-items: center;
+      margin-left: 10px;
+      vertical-align: middle;
     }}
     .hero-meta-links a {{
       color: rgba(247, 255, 251, 0.88);
@@ -869,9 +872,7 @@ def gerar_html_dashboard(
     <section class="hero">
       <div class="hero-head">
         <div class="hero-titles">
-          <h1>{escape(titulo_dashboard_base)}<span class="hero-version">{escape(VERSAO_DASHBOARD)}</span></h1>
-          <div class="hero-meta-links"><a href="CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></div>
-          <p>{escape(titulo_periodo)}</p>
+          <h1>{escape(titulo_dashboard_base)}<span class="hero-version">{escape(VERSAO_DASHBOARD)}</span><span class="hero-meta-links"><a href="CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></span></h1>
         </div>
         <div class="refresh-badge">
           <strong>Atualiza em</strong>
