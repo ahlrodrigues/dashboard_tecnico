@@ -6,7 +6,9 @@ from html import escape
 from pathlib import Path
 import pandas as pd
 
-VERSAO_DASHBOARD = "V2.0.0"
+from version import VERSION, get_dashboard_version_label
+
+VERSAO_DASHBOARD = get_dashboard_version_label()
 
 
 def _serializar_registros(df: pd.DataFrame, detalhe_cols: list[str]) -> list[dict[str, str | int | float | None]]:

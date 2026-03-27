@@ -129,6 +129,28 @@ pip install requests pandas
 python main.py
 ```
 
+## Versão semântica
+
+A versão exibida no dashboard fica centralizada em `version.py`.
+
+Para atualizar a versão antes de um commit de deploy:
+
+```bash
+./.venv/bin/python bump_version.py patch
+```
+
+Ou:
+
+```bash
+./.venv/bin/python bump_version.py minor
+./.venv/bin/python bump_version.py major
+```
+
+Regra sugerida:
+- `patch`: correções e ajustes pequenos
+- `minor`: nova funcionalidade
+- `major`: mudança grande ou quebra de compatibilidade
+
 ## Automação da atualização
 
 Para atualizar o dashboard automaticamente no servidor ou máquina onde esse projeto roda:
