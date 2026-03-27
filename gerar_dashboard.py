@@ -6,6 +6,8 @@ from html import escape
 from pathlib import Path
 import pandas as pd
 
+VERSAO_DASHBOARD = "V2.0.0"
+
 
 def _serializar_registros(df: pd.DataFrame, detalhe_cols: list[str]) -> list[dict[str, str | int | float | None]]:
     if df.empty:
@@ -155,6 +157,7 @@ def gerar_html_dashboard(
     refresh_seconds: int,
     sgp_base_url: str,
     output_html: str,
+    embutir_dados: bool = True,
 ) -> None:
     payload = montar_payload_dashboard(
         resumo_df=resumo_df,
@@ -179,6 +182,9 @@ def gerar_html_dashboard(
     data_final_padrao = payload["data_final_padrao"]
     data_snapshot_atual = payload["data_snapshot_atual"]
     titulo_periodo = payload["titulo_periodo"]
+    titulo_dashboard = f"Dashboard de OS SGP - {VERSAO_DASHBOARD}"
+    dados_embutidos = detalhes_data if embutir_dados else []
+    votos_embutidos = votos_data if embutir_dados else []
     header_cols = "".join(
         f'<th aria-sort="none"><button type="button" class="sort-header" data-col="{escape(col)}" data-label="{escape(detalhe_labels.get(col, col))}"><span class="sort-header-label">{escape(detalhe_labels.get(col, col))}</span><span class="sort-indicator" aria-hidden="true">△</span></button></th>'
         for col in detalhe_cols
@@ -193,7 +199,7 @@ def gerar_html_dashboard(
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Dashboard OS SGP</title>
+  <title>{escape(titulo_dashboard)}</title>
   <style>
     :root {{
       --bg: #eef3f1;
@@ -835,7 +841,7 @@ def gerar_html_dashboard(
     <section class="hero">
       <div class="hero-head">
         <div class="hero-titles">
-          <h1>Dashboard de OS SGP</h1>
+          <h1>{escape(titulo_dashboard)}</h1>
           <p>{escape(titulo_periodo)}</p>
         </div>
         <div class="refresh-badge">
@@ -1040,8 +1046,8 @@ def gerar_html_dashboard(
     const detalheCols = {json.dumps(detalhe_cols, ensure_ascii=False)};
     const votosCols = {json.dumps(votos_cols, ensure_ascii=False)};
     const mesesOrdem = {json.dumps(meses_ordem, ensure_ascii=False)};
-    let detalhes = {json.dumps(detalhes_data, ensure_ascii=False)};
-    let votosData = {json.dumps(votos_data, ensure_ascii=False)};
+    let detalhes = {json.dumps(dados_embutidos, ensure_ascii=False)};
+    let votosData = {json.dumps(votos_embutidos, ensure_ascii=False)};
     let dataInicialPadrao = "{data_inicial_padrao}";
     let dataFinalPadrao = "{data_final_padrao}";
     let dataSnapshotAtual = "{data_snapshot_atual}";
@@ -2589,15 +2595,17 @@ def gerar_html_dashboard(
 
       atualizandoArquivos = true;
       refreshNowButton.disabled = true;
+      const target = origem === "auto" ? "os" : "all";
       const mensagem = origem === "auto"
-        ? "A contagem chegou ao fim e o dashboard está executando a mesma rotina da atualização automática."
-        : "O dashboard está executando a mesma rotina automática para atualizar os dados e o HTML.";
+        ? "A contagem chegou ao fim e o dashboard está atualizando apenas as O.S. mais recentes."
+        : "O dashboard está executando uma atualização completa de O.S. e votos.";
       atualizarVisibilidadeOverlay(true, mensagem, "Executando rotina automática de atualização...");
       refreshCountdown.textContent = "atualizando";
       salvarFiltros();
 
       try {{
-        const resposta = await window.fetch(refreshApiUrl, {{
+        const urlAtualizacao = `${{refreshApiUrl}}?target=${{encodeURIComponent(target)}}`;
+        const resposta = await window.fetch(urlAtualizacao, {{
           method: "POST",
           mode: "cors",
           headers: {{

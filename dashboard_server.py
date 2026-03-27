@@ -10,6 +10,7 @@ from functools import partial
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
 class DashboardRequestHandler(SimpleHTTPRequestHandler):
     refresh_lock = threading.Lock()
@@ -20,6 +21,7 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
         "finished_at": None,
         "ok": None,
         "message": "Nenhuma atualização em execução.",
+        "target": None,
     }
 
     def __init__(self, *args, directory: str | None = None, **kwargs):
@@ -50,8 +52,19 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
         super().do_GET()
 
     def do_POST(self) -> None:
-        if self.path.rstrip("/") != "/api/refresh":
+        parsed_url = urlparse(self.path)
+        if parsed_url.path.rstrip("/") != "/api/refresh":
             self.send_error(HTTPStatus.NOT_FOUND, "Endpoint não encontrado")
+            return
+        target = parse_qs(parsed_url.query).get("target", ["all"])[0].strip().lower() or "all"
+        if target not in {"all", "os", "votos"}:
+            self._responder_json(
+                HTTPStatus.BAD_REQUEST,
+                {
+                    "ok": False,
+                    "message": f"Target de atualização inválido: {target}",
+                },
+            )
             return
 
         if not self.refresh_lock.acquire(blocking=False):
@@ -72,19 +85,21 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
                 "started_at": time.time(),
                 "finished_at": None,
                 "ok": None,
-                "message": "Executando rotina automática de atualização...",
+                "message": f"Executando rotina automática de atualização ({target})...",
+                "target": target,
             }
         )
 
-        worker = threading.Thread(target=self._executar_refresh_em_background, daemon=True)
+        worker = threading.Thread(target=self._executar_refresh_em_background, args=(target,), daemon=True)
         worker.start()
         self._responder_json(
             HTTPStatus.ACCEPTED,
             {
                 "ok": True,
                 "started": True,
-                "message": "Atualização iniciada em segundo plano.",
+                "message": f"Atualização ({target}) iniciada em segundo plano.",
                 "status_url": "/api/refresh-status",
+                "target": target,
             },
         )
 
@@ -125,14 +140,14 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
 
         self._responder_json(HTTPStatus.OK, payload)
 
-    def _executar_refresh_em_background(self) -> None:
+    def _executar_refresh_em_background(self, target: str) -> None:
         try:
             script_path = self.base_dir / "atualizar_dashboard.sh"
             if not script_path.exists():
                 raise FileNotFoundError(f"Script de atualização não encontrado: {script_path}")
 
             processo = subprocess.run(
-                [str(script_path)],
+                [str(script_path), target],
                 cwd=self.base_dir,
                 capture_output=True,
                 text=True,
@@ -148,7 +163,8 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
                     "running": False,
                     "finished_at": time.time(),
                     "ok": True,
-                    "message": "Dados e HTML atualizados com o mesmo fluxo da rotina automática.",
+                    "message": f"Atualização ({target}) concluída com sucesso.",
+                    "target": target,
                 }
             )
         except Exception as exc:  # pragma: no cover - proteção de runtime
@@ -159,6 +175,7 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
                     "finished_at": time.time(),
                     "ok": False,
                     "message": f"Falha ao atualizar arquivos: {exc}",
+                    "target": target,
                 }
             )
         finally:

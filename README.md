@@ -80,7 +80,9 @@ Tudo que aparecer em `finalizado por` e não estiver nas listas acima será clas
 "dashboard": {
   "ano_padrao": 2026,
   "mes_padrao": "Todos",
-  "atualizacao_segundos": 300
+  "atualizacao_segundos": 300,
+  "janela_recente_dias": 45,
+  "votos_cache_segundos": 300
 }
 ```
 
@@ -102,6 +104,10 @@ Valores possíveis para `mes_padrao`:
 `atualizacao_segundos` controla:
 - o contador regressivo mostrado no topo do dashboard
 - o intervalo usado pela automação local via `cron`
+
+`janela_recente_dias` controla quantos dias recentes de O.S. serão buscados no SGP a cada refresh incremental.
+
+`votos_cache_segundos` controla por quanto tempo o CSV de votos pode ser reaproveitado antes de um novo download.
 
 ## Instalação
 
@@ -291,9 +297,9 @@ Fazendo assim, a publicação é paralela e reversível.
 - `dashboard_os_sgp.html`
 - `dashboard_data.json`
 
-O HTML continua sendo gerado como snapshot para abertura direta e fallback local.
-Quando o servidor local `dashboard_server.py` está em execução, a página também pode buscar
-os dados atualizados em `/api/dashboard-data`, reduzindo a dependência do snapshot embutido.
+O HTML agora funciona como uma casca leve do dashboard.
+Quando o servidor local `dashboard_server.py` está em execução, a página busca os dados atualizados
+em `/api/dashboard-data`, reduzindo o volume embutido no HTML e evitando regenerar a página inteira a cada refresh.
 
 ## Atenção importante
 

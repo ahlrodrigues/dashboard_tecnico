@@ -10,6 +10,7 @@ config.json
 # Generated artifacts and operational data
 dashboard_os_sgp.html
 dashboard_data.json
+.cache/
 # Legacy artifact from the old snapshot flow
 os_finalizadas_tratadas.csv
 atualizar_dashboard.log
