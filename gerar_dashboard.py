@@ -955,6 +955,19 @@ def gerar_html_dashboard(
 	      </div>
 	    </div>
 
+	    <div class="panel full">
+	      <h2 class="section-title" id="tituloDetalhamentoPops">Detalhamento por POP</h2>
+	      <div class="panel-meta" id="detalhamentoPopsMeta">Mostrando as O.S. do recorte filtradas por POP.</div>
+      <div class="table-wrap">
+        <table id="tabelaDetalhamentoPops">
+          <thead>
+            <tr><th>Data</th><th>POP</th><th>OS</th><th>Cliente</th><th>Contrato</th><th>Status</th><th>Motivo</th><th>Responsável</th><th>Auxiliares</th></tr>
+          </thead>
+          <tbody id="detalhamentoPopsBody"></tbody>
+        </table>
+      </div>
+    </div>
+
 	    <div class="grid-panels">
 	      <div class="panel">
 	        <h2 class="section-title" id="tituloTempoBacklog">Tempo médio e backlog</h2>
@@ -1103,10 +1116,12 @@ def gerar_html_dashboard(
 		    const rankingBody = document.getElementById("rankingBody");
     const rankingVotosResumoBody = document.getElementById("rankingVotosResumoBody");
     const rankingVotosBody = document.getElementById("rankingVotosBody");
+    const detalhamentoPopsBody = document.getElementById("detalhamentoPopsBody");
 		    const detalhesBody = document.getElementById("detalhesBody");
     const reincidenciasBody = document.getElementById("reincidenciasBody");
 		    const painelTempoMeta = document.getElementById("painelTempoMeta");
 		    const rankingMeta = document.getElementById("rankingMeta");
+    const detalhamentoPopsMeta = document.getElementById("detalhamentoPopsMeta");
     const rankingVotosResumoMeta = document.getElementById("rankingVotosResumoMeta");
     const rankingVotosMeta = document.getElementById("rankingVotosMeta");
 	    const graficoDiarioMeta = document.getElementById("graficoDiarioMeta");
@@ -1116,6 +1131,7 @@ def gerar_html_dashboard(
     const tituloStatusOperacional = document.getElementById("tituloStatusOperacional");
     const tituloMovimentacoes = document.getElementById("tituloMovimentacoes");
     const tituloPops = document.getElementById("tituloPops");
+    const tituloDetalhamentoPops = document.getElementById("tituloDetalhamentoPops");
     const tituloTempoBacklog = document.getElementById("tituloTempoBacklog");
     const tituloRanking = document.getElementById("tituloRanking");
     const tituloRankingVotosResumo = document.getElementById("tituloRankingVotosResumo");
@@ -1554,7 +1570,6 @@ def gerar_html_dashboard(
       preencherSelect(filtroUsuario, usuarios, "Todos os usuários");
       preencherSelect(filtroGrupo, grupos, "Todos os grupos");
       preencherSelect(filtroPop, pops, "Todos os POPs");
-
       if (dataMinDisponivel) {{
         filtroDataInicial.min = dataMinDisponivel;
         filtroDataFinal.min = dataMinDisponivel;
@@ -1800,6 +1815,10 @@ def gerar_html_dashboard(
       }});
     }}
 
+    function filtrarDetalhamentoPops(registros) {{
+      return registros;
+    }}
+
 	    function filtrarBaseEncerramentos() {{
 	      const busca = normalizarTexto(filtroBusca.value).toLowerCase();
 
@@ -1941,6 +1960,39 @@ def gerar_html_dashboard(
 	        popsGrid.appendChild(item);
 	      }});
 	    }}
+
+    function renderDetalhamentoPops(registros) {{
+      detalhamentoPopsBody.innerHTML = "";
+
+      if (!registros.length) {{
+        detalhamentoPopsBody.innerHTML = '<tr><td colspan="9" class="empty">Nenhuma O.S. encontrada para os filtros atuais.</td></tr>';
+        return;
+      }}
+
+      const linhas = [...registros].sort((a, b) => {{
+        const dataA = obterDataBaseTexto(a);
+        const dataB = obterDataBaseTexto(b);
+        const comparacaoData = dataB.localeCompare(dataA, "pt-BR", {{ sensitivity: "base" }});
+        if (comparacaoData !== 0) return comparacaoData;
+        return obterPop(a).localeCompare(obterPop(b), "pt-BR", {{ sensitivity: "base" }});
+      }});
+
+      linhas.forEach((registro) => {{
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${{normalizarTexto(obterDataBaseTexto(registro))}}</td>
+          <td>${{obterPop(registro)}}</td>
+          <td>${{normalizarTexto(registro.id || registro.ordem_servico)}}</td>
+          <td>${{normalizarTexto(registro.cliente)}}</td>
+          <td>${{normalizarTexto(registro.contrato)}}</td>
+          <td>${{obterStatus(registro)}}</td>
+          <td>${{obterMotivo(registro)}}</td>
+          <td>${{normalizarTexto(registro.responsavel)}}</td>
+          <td>${{obterTecnicosAuxiliares(registro).join(", ")}}</td>
+        `;
+        detalhamentoPopsBody.appendChild(tr);
+      }});
+    }}
 
     function renderCardsEncerramentos(registros) {{
       const cards = calcularCardsEncerramentos(registros);
@@ -2189,6 +2241,7 @@ def gerar_html_dashboard(
       tituloStatusOperacional.textContent = `Status Operacional | ${{resumo}}`;
       tituloMovimentacoes.textContent = `Movimentações | ${{resumo}}`;
       tituloPops.textContent = `POPs | ${{resumo}}`;
+      tituloDetalhamentoPops.textContent = `Detalhamento por POP | ${{resumo}}`;
       tituloTempoBacklog.textContent = `Tempo médio e backlog | ${{resumo}}`;
       tituloRanking.textContent = `Ranking por finalizador | ${{resumo}}`;
       tituloRankingVotosResumo.textContent = `Ranking de votação | ${{resumo}}`;
@@ -2602,7 +2655,7 @@ def gerar_html_dashboard(
 	      graficoDiarioMeta.textContent = `Evolução diária por membro${{contextoGrupo}} entre ${{resumo.intervalo.inicio}} e ${{resumo.intervalo.fim}}, usando a data-base de encerramento da O.S.`;
 	    }}
 
-    function atualizarMetas(registrosFinalizados, totalDetalhes, totalVotosValidos, totalVotosDetalhamento) {{
+    function atualizarMetas(registrosFinalizados, totalDetalhes, totalVotosValidos, totalVotosDetalhamento, totalDetalhamentoPops) {{
       const partes = [];
       if (filtroDataInicial.value) partes.push(`Data inicial: ${{filtroDataInicial.value}}`);
       if (filtroDataFinal.value) partes.push(`Data final: ${{filtroDataFinal.value}}`);
@@ -2614,6 +2667,7 @@ def gerar_html_dashboard(
       const textoFiltro = partes.length ? partes.join(" | ") : "Todos";
       atualizarTitulosPaineis();
       painelTempoMeta.textContent = `Tempo médio e backlog para o recorte: ${{textoFiltro}}.`;
+      detalhamentoPopsMeta.textContent = `Tabela de POPs com ${{totalDetalhamentoPops}} O.S. no recorte atual, considerando os filtros aplicados na página.`;
       rankingMeta.textContent = `Ranking atualizado com ${{registrosFinalizados.length}} OS encerradas no recorte atual.`;
       rankingVotosResumoMeta.textContent = `Ranking atualizado com ${{totalVotosValidos}} voto(s) válido(s), considerando apenas 1 voto por IP e data no recorte atual.`;
       rankingVotosMeta.textContent = `Tabela de votos atualizada com ${{totalVotosDetalhamento}} registro(s) do recorte atual; duplicidades por IP e data ficam destacadas em vermelho.`;
@@ -2629,6 +2683,7 @@ def gerar_html_dashboard(
 	      normalizarPeriodoSelecionado();
 	      salvarFiltros();
 	      const registros = filtrarDetalhes();
+      const registrosDetalhamentoPops = filtrarDetalhamentoPops(registros);
       const registrosFinalizados = registros.filter((registro) => ehStatusEncerrada(registro));
       const registrosVotos = filtrarVotosPorData();
       const registrosVotosUnicos = deduplicarVotosPorIpEData(registrosVotos);
@@ -2638,6 +2693,7 @@ def gerar_html_dashboard(
 	      renderStatusCards(registros);
 	      renderMotivoCards(registros);
 	      renderPopCards(registros);
+	      renderDetalhamentoPops(registrosDetalhamentoPops);
 	      renderCardsEncerramentos(registrosBaseEncerramentos);
 	      renderTempoBacklog(registros, registrosFinalizados);
 	      renderRanking(registrosFinalizados, registrosBaseRanking);
@@ -2647,7 +2703,7 @@ def gerar_html_dashboard(
 	      renderReincidencias(registrosBaseReincidencias);
 	      renderGrafico(registrosFinalizados);
 	      renderGraficoDiario(registrosFinalizados);
-	      atualizarMetas(registrosFinalizados, registros.length, registrosVotosUnicos.length, registrosVotos.length);
+	      atualizarMetas(registrosFinalizados, registros.length, registrosVotosUnicos.length, registrosVotos.length, registrosDetalhamentoPops.length);
 	    }}
 
     function formatarDataInput(data) {{
