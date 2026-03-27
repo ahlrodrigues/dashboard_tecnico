@@ -2789,18 +2789,11 @@ def gerar_html_dashboard(
         }}
 
         if (payload.ok) {{
-          updateOverlayStatus.textContent = payload.message || "Dados atualizados com sucesso. Reaplicando filtros...";
+          updateOverlayStatus.textContent = payload.message || "Dados atualizados com sucesso. Recarregando a página...";
           encerrarEstadoAtualizacao();
           window.setTimeout(() => {{
-            carregarDadosDashboardRemotos().finally(() => {{
-              popularFiltros();
-              restaurarFiltros();
-              aplicarFiltros();
-              window.setTimeout(() => {{
-                atualizarVisibilidadeOverlay(false);
-              }}, 600);
-            }});
-          }}, 500);
+            window.location.reload();
+          }}, 700);
           return;
         }}
 

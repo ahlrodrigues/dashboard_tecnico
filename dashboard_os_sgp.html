@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Dashboard de OS SGP - V2.3.2 (41bb7fa)</title>
+  <title>Dashboard de OS SGP - V2.3.3 (9609d2b)</title>
   <style>
     :root {
       --bg: #eef3f1;
@@ -654,7 +654,7 @@
     <section class="hero">
       <div class="hero-head">
         <div class="hero-titles">
-          <h1>Dashboard de OS SGP<span class="hero-version">V2.3.2 (41bb7fa)</span></h1>
+          <h1>Dashboard de OS SGP<span class="hero-version">V2.3.3 (9609d2b)</span></h1>
           <p>Encerramentos por data de encerramento; Status Operacional pelo backlog atual no dia filtrado</p>
         </div>
         <div class="refresh-badge">
@@ -2583,18 +2583,11 @@
         }
 
         if (payload.ok) {
-          updateOverlayStatus.textContent = payload.message || "Dados atualizados com sucesso. Reaplicando filtros...";
+          updateOverlayStatus.textContent = payload.message || "Dados atualizados com sucesso. Recarregando a página...";
           encerrarEstadoAtualizacao();
           window.setTimeout(() => {
-            carregarDadosDashboardRemotos().finally(() => {
-              popularFiltros();
-              restaurarFiltros();
-              aplicarFiltros();
-              window.setTimeout(() => {
-                atualizarVisibilidadeOverlay(false);
-              }, 600);
-            });
-          }, 500);
+            window.location.reload();
+          }, 700);
           return;
         }
 
