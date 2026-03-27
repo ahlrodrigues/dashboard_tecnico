@@ -24,7 +24,7 @@ LOG_FILE="$BASE_DIR/atualizar_live.log"
   git fetch origin
   git checkout "$BRANCH"
   git pull --ff-only origin "$BRANCH"
-  "$PYTHON_BIN" main.py
+  "$PYTHON_BIN" main.py --rebuild-html
 
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] Deploy concluido em $(git rev-parse --short HEAD)"
 } | tee -a "$LOG_FILE"

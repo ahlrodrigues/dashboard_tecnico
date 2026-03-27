@@ -225,6 +225,9 @@ def _salvar_votos_cache(base: Path, votos_df: pd.DataFrame) -> None:
 
 
 def _carregar_ou_atualizar_votos_df(base: Path, refresh_targets: set[str], cache_segundos: int) -> pd.DataFrame:
+    if not refresh_targets:
+        return _carregar_votos_cache(base)
+
     if "votos" not in refresh_targets and "all" not in refresh_targets:
         return _carregar_votos_cache(base)
 
@@ -443,13 +446,13 @@ def gerar_arquivos_dashboard(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Geração do dashboard técnico")
-    parser.add_argument("--refresh-target", choices=["all", "os", "votos"], default="all")
+    parser.add_argument("--refresh-target", choices=["all", "os", "votos", "none"], default="all")
     parser.add_argument("--rebuild-html", action="store_true", help="Regenera o HTML shell do dashboard.")
     parser.add_argument("--force-full-os", action="store_true", help="Refaz a carga anual completa de O.S.")
     args = parser.parse_args()
 
     saidas = gerar_arquivos_dashboard(
-        refresh_targets={args.refresh_target},
+        refresh_targets=set() if args.refresh_target == "none" else {args.refresh_target},
         rebuild_html=args.rebuild_html,
         force_full_os=args.force_full_os,
     )

@@ -172,7 +172,7 @@ echo "Versao atualizada para $NEW_VERSION"
 git add -A
 git commit -m "$COMMIT_MESSAGE"
 
-"$PYTHON_BIN" main.py
+"$PYTHON_BIN" main.py --refresh-target none --rebuild-html
 
 git add dashboard_os_sgp.html version.py
 git commit --amend --no-edit

@@ -191,7 +191,7 @@ Comportamento do script:
 - sobe a versão semântica em `version.py`
 - gera uma mensagem de commit automaticamente com base nos arquivos alterados
 - faz o commit
-- executa `main.py` depois do commit para embutir o hash correto no HTML
+- executa `main.py --refresh-target none --rebuild-html` depois do commit para embutir o hash correto no HTML sem depender da API
 - faz `git commit --amend --no-edit` para incluir o HTML regenerado no mesmo commit
 - faz `push` apenas quando `--push` for informado
 
@@ -298,7 +298,7 @@ O script `atualizar_live.sh`:
 - faz `git fetch`
 - garante checkout da branch `feature/dashboard-live-api` por padrão
 - executa `git pull --ff-only`
-- roda `main.py` para regenerar o dashboard
+- roda `main.py --rebuild-html` para regenerar o shell HTML e o JSON com a versão/commit atuais
 - grava log em `atualizar_live.log`
 
 ### 5. Teste manualmente a nova versão em outra porta

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Dashboard de OS SGP - V2.1.1 (35c8521)</title>
+  <title>Dashboard de OS SGP - V2.3.2 (41bb7fa)</title>
   <style>
     :root {
       --bg: #eef3f1;
@@ -654,7 +654,7 @@
     <section class="hero">
       <div class="hero-head">
         <div class="hero-titles">
-          <h1>Dashboard de OS SGP<span class="hero-version">V2.1.1 (35c8521)</span></h1>
+          <h1>Dashboard de OS SGP<span class="hero-version">V2.3.2 (41bb7fa)</span></h1>
           <p>Encerramentos por data de encerramento; Status Operacional pelo backlog atual no dia filtrado</p>
         </div>
         <div class="refresh-badge">
@@ -710,10 +710,10 @@
 	          <p class="caption">Backlog atual das ordens abertas, pendentes e em execucao no dia filtrado, para acompanhamento simultaneo da operacao.</p>
 	        </div>
 	        <div class="metric-grid cols-2">
-	          <div class="metric-item"><span class="metric-label">Total de O.S. do recorte</span><span class="metric-value" id="cardTotalStatus">4538</span></div>
-	          <div class="metric-item"><span class="metric-label">Em aberto</span><span class="metric-value" id="cardAberta">35</span></div>
+	          <div class="metric-item"><span class="metric-label">Total de O.S. do recorte</span><span class="metric-value" id="cardTotalStatus">4565</span></div>
+	          <div class="metric-item"><span class="metric-label">Em aberto</span><span class="metric-value" id="cardAberta">37</span></div>
 	          <div class="metric-item"><span class="metric-label">Pendentes</span><span class="metric-value" id="cardPendente">17</span></div>
-	          <div class="metric-item"><span class="metric-label">Em execução</span><span class="metric-value" id="cardEmExecucao">3</span></div>
+	          <div class="metric-item"><span class="metric-label">Em execução</span><span class="metric-value" id="cardEmExecucao">0</span></div>
 	        </div>
 	      </div>
 	      <div class="summary-card primary">
@@ -722,9 +722,9 @@
 	          <p class="caption">Visão consolidada das O.S. encerradas no recorte, com cortes por grupo técnico e por quem realizou o encerramento.</p>
 	        </div>
 	        <div class="metric-grid cols-2">
-	          <div class="metric-item"><span class="metric-label">Total de O.S. encerradas</span><span class="metric-value" id="cardEncerrada">4483</span></div>
-	          <div class="metric-item"><span class="metric-label">Encerradas pelo técnico</span><span class="metric-value" id="cardEncerradaTecnicos">2225</span></div>
-	          <div class="metric-item"><span class="metric-label">Encerradas por outros</span><span class="metric-value" id="cardPorOutros">2258</span></div>
+	          <div class="metric-item"><span class="metric-label">Total de O.S. encerradas</span><span class="metric-value" id="cardEncerrada">4511</span></div>
+	          <div class="metric-item"><span class="metric-label">Encerradas pelo técnico</span><span class="metric-value" id="cardEncerradaTecnicos">2257</span></div>
+	          <div class="metric-item"><span class="metric-label">Encerradas por outros</span><span class="metric-value" id="cardPorOutros">2254</span></div>
 	        </div>
 	      </div>
 	      <div class="summary-card tertiary">
@@ -734,8 +734,8 @@
 	        </div>
 	        <div class="metric-grid flow scrollable" id="movimentacoesGrid">
 	          <div class="metric-item compact"><span class="metric-label">Inviabilidades</span><span class="metric-value" id="cardInviabilidade">34</span></div>
-	          <div class="metric-item compact"><span class="metric-label">Instalação de KIT</span><span class="metric-value" id="cardInstalacoes">594</span></div>
-	          <div class="metric-item compact"><span class="metric-label">Remoção de KIT</span><span class="metric-value" id="cardRemocoes">950</span></div>
+	          <div class="metric-item compact"><span class="metric-label">Instalação de KIT</span><span class="metric-value" id="cardInstalacoes">597</span></div>
+	          <div class="metric-item compact"><span class="metric-label">Remoção de KIT</span><span class="metric-value" id="cardRemocoes">964</span></div>
 	        </div>
 	      </div>
 	      <div class="summary-card quaternary">
@@ -872,7 +872,7 @@
     const detalheCols = ["id", "cliente", "contrato", "pop", "motivo", "status", "data_finalizacao_dashboard", "finalizado_por_dashboard", "grupo_dashboard"];
     const votosCols = ["0", "tecnico", "atendimento", "star", "indicacao", "data", "hora", "ip"];
     const votosDisplayCols = ["0", "tecnico", "atendimento", "star", "indicacao", "data", "hora", "ip", "auxiliares_dupla_dashboard", "papel_dupla_dashboard", "responsavel_dupla_dashboard"];
-    const votosDisplayLabels = {"0":"0","tecnico":"tecnico","atendimento":"atendimento","star":"star","indicacao":"indicacao","data":"data","hora":"hora","ip":"ip","auxiliares_dupla_dashboard":"auxiliares_no_dia","papel_dupla_dashboard":"papel_no_dia","responsavel_dupla_dashboard":"consolidado_para"};
+    const votosDisplayLabels = {"0": "0", "tecnico": "tecnico", "atendimento": "atendimento", "star": "star", "indicacao": "indicacao", "data": "data", "hora": "hora", "ip": "ip", "auxiliares_dupla_dashboard": "auxiliares_no_dia", "papel_dupla_dashboard": "papel_no_dia", "responsavel_dupla_dashboard": "consolidado_para"};
     const mesesOrdem = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
     let detalhes = [];
     let votosData = [];
@@ -2115,7 +2115,7 @@
       }
 
       if (!registros.length) {
-        rankingVotosBody.innerHTML = `<tr><td colspan="$10" class="empty">Nenhum voto encontrado para o recorte atual.</td></tr>`;
+        rankingVotosBody.innerHTML = `<tr><td colspan="$11" class="empty">Nenhum voto encontrado para o recorte atual.</td></tr>`;
         return;
       }
 
