@@ -18,7 +18,15 @@ def ler_versao() -> tuple[int, int, int]:
 
 
 def escrever_versao(major: int, minor: int, patch: int) -> None:
-    VERSION_FILE.write_text(f'VERSION = "{major}.{minor}.{patch}"\n', encoding="utf-8")
+    conteudo = VERSION_FILE.read_text(encoding="utf-8")
+    novo_conteudo, substituicoes = VERSION_PATTERN.subn(
+        f'VERSION = "{major}.{minor}.{patch}"',
+        conteudo,
+        count=1,
+    )
+    if substituicoes != 1:
+        raise ValueError("Nao foi possivel atualizar VERSION em version.py")
+    VERSION_FILE.write_text(novo_conteudo, encoding="utf-8")
 
 
 def main() -> None:
