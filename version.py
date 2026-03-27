@@ -4,7 +4,7 @@ import subprocess
 from pathlib import Path
 
 
-VERSION = "2.5.0"
+VERSION = "2.5.1"
 
 
 def get_git_commit_short() -> str:

@@ -964,7 +964,7 @@ def gerar_html_dashboard(
 	      <div class="summary-card quaternary">
 	        <div class="summary-card-head">
 	          <h3 id="tituloPops">POPs</h3>
-	          <p class="caption">Distribuicao das O.S. encerradas por POP no recorte filtrado.</p>
+	          <p class="caption">Distribuicao de todas as O.S. por POP no recorte filtrado.</p>
 	        </div>
 	        <div class="metric-grid flow scrollable" id="popsGrid">
 	          <div class="metric-item compact"><span class="metric-label">Sem POPs no recorte</span><span class="metric-value">0</span></div>
@@ -987,7 +987,7 @@ def gerar_html_dashboard(
 
 	    <div class="panel full">
 	      <h2 class="section-title" id="tituloDetalhamentoPops">Detalhamento por POP</h2>
-	      <div class="panel-meta" id="detalhamentoPopsMeta">Mostrando as O.S. encerradas do recorte filtradas por POP.</div>
+	      <div class="panel-meta" id="detalhamentoPopsMeta">Mostrando todas as O.S. do recorte filtradas por POP.</div>
       <div class="table-wrap">
         <table id="tabelaDetalhamentoPops">
           <thead>
@@ -2758,7 +2758,7 @@ def gerar_html_dashboard(
       atualizarTitulosPaineis();
       painelTempoMeta.textContent = `Tempo médio e backlog para o recorte: ${{textoFiltro}}.`;
       backlogOperacionalMeta.textContent = `Tabela com ${{registrosOperacionais.length}} O.S. abertas, pendentes ou em execução no snapshot do dia filtrado.`;
-      detalhamentoPopsMeta.textContent = `Tabela de POPs com ${{totalDetalhamentoPops}} O.S. encerradas no recorte atual, considerando os filtros aplicados na página.`;
+      detalhamentoPopsMeta.textContent = `Tabela de POPs com ${{totalDetalhamentoPops}} O.S. no recorte atual, considerando os filtros aplicados na página.`;
       rankingMeta.textContent = `Ranking atualizado com ${{registrosFinalizados.length}} OS encerradas no recorte atual.`;
       rankingVotosResumoMeta.textContent = `Ranking atualizado com ${{totalVotosValidos}} voto(s) válido(s), considerando apenas 1 voto por IP e data no recorte atual.`;
       rankingVotosMeta.textContent = `Tabela de votos atualizada com ${{totalVotosDetalhamento}} registro(s) do recorte atual; duplicidades por IP e data ficam destacadas em vermelho.`;
@@ -2776,7 +2776,7 @@ def gerar_html_dashboard(
 	      const registros = filtrarDetalhes();
       const registrosOperacionais = filtrarBaseOperacional();
       const registrosAnaliticos = filtrarBaseAnalitica();
-      const registrosDetalhamentoPops = filtrarDetalhamentoPops(registrosAnaliticos);
+      const registrosDetalhamentoPops = filtrarDetalhamentoPops(registros);
       const registrosFinalizados = registrosAnaliticos;
       const registrosVotos = filtrarVotosPorData();
       const registrosVotosUnicos = deduplicarVotosPorIpEData(registrosVotos);
@@ -2786,7 +2786,7 @@ def gerar_html_dashboard(
 	      renderStatusCards(registrosOperacionais);
 	      renderBacklogOperacional(registrosOperacionais);
 	      renderMotivoCards(registrosAnaliticos);
-	      renderPopCards(registrosAnaliticos);
+	      renderPopCards(registros);
 	      renderDetalhamentoPops(registrosDetalhamentoPops);
 	      renderCardsEncerramentos(registrosBaseEncerramentos);
 	      renderTempoBacklog(registrosOperacionais, registrosFinalizados);
