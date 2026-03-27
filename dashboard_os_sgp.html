@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Dashboard de OS SGP - V2.5.1 (725f802)</title>
+  <title>Dashboard de OS SGP - V2.5.2 (c43f3b2)</title>
   <style>
     :root {
       --bg: #eef3f1;
@@ -672,7 +672,7 @@
     <section class="hero">
       <div class="hero-head">
         <div class="hero-titles">
-          <h1>Dashboard de OS SGP<span class="hero-meta-inline"><span class="hero-version">V2.5.1 (725f802)</span><span class="hero-meta-links"><a href="CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></span></span></h1>
+          <h1>Dashboard de OS SGP<span class="hero-meta-inline"><span class="hero-version">V2.5.2 (c43f3b2)</span><span class="hero-meta-links"><a href="CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></span></span></h1>
         </div>
         <div class="refresh-badge">
           <strong>Atualiza em</strong>
@@ -727,8 +727,8 @@
 	          <p class="caption">Backlog atual das ordens abertas, pendentes e em execucao no snapshot do dia filtrado.</p>
 	        </div>
 	        <div class="metric-grid cols-2">
-	          <div class="metric-item"><span class="metric-label">Total de O.S. do recorte</span><span class="metric-value" id="cardTotalStatus">4567</span></div>
-	          <div class="metric-item"><span class="metric-label">Em aberto</span><span class="metric-value" id="cardAberta">39</span></div>
+	          <div class="metric-item"><span class="metric-label">Total de O.S. do recorte</span><span class="metric-value" id="cardTotalStatus">4568</span></div>
+	          <div class="metric-item"><span class="metric-label">Em aberto</span><span class="metric-value" id="cardAberta">40</span></div>
 	          <div class="metric-item"><span class="metric-label">Pendentes</span><span class="metric-value" id="cardPendente">15</span></div>
 	          <div class="metric-item"><span class="metric-label">Em execução</span><span class="metric-value" id="cardEmExecucao">0</span></div>
 	        </div>
@@ -1424,6 +1424,14 @@
       return true;
     }
 
+    function dataBaseDentroDoIntervalo(registro) {
+      const data = obterDataBaseTexto(registro);
+      if (!data) return false;
+      if (filtroDataInicial.value && data < filtroDataInicial.value) return false;
+      if (filtroDataFinal.value && data > filtroDataFinal.value) return false;
+      return true;
+    }
+
     function usuarioCorrespondeAoFiltro(registro, usuarioFiltro) {
       const usuario = normalizarTexto(usuarioFiltro);
       if (!usuario) return true;
@@ -1452,6 +1460,19 @@
       return detalhes.filter((registro) => {
         if (!dataDentroDoIntervalo(registro)) return false;
         if (ehStatusEncerrada(registro)) return false;
+        if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
+        if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
+        if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
+        if (busca && !obterTextoBusca(registro).includes(busca)) return false;
+        return true;
+      });
+    }
+
+    function filtrarBasePops() {
+      const busca = normalizarTexto(filtroBusca.value).toLowerCase();
+
+      return detalhes.filter((registro) => {
+        if (!dataBaseDentroDoIntervalo(registro)) return false;
         if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
@@ -2567,10 +2588,11 @@
 	    function aplicarFiltros() {
 	      normalizarPeriodoSelecionado();
 	      salvarFiltros();
-	      const registros = filtrarDetalhes();
+      const registros = filtrarDetalhes();
       const registrosOperacionais = filtrarBaseOperacional();
       const registrosAnaliticos = filtrarBaseAnalitica();
-      const registrosDetalhamentoPops = filtrarDetalhamentoPops(registros);
+      const registrosPops = filtrarBasePops();
+      const registrosDetalhamentoPops = filtrarDetalhamentoPops(registrosPops);
       const registrosFinalizados = registrosAnaliticos;
       const registrosVotos = filtrarVotosPorData();
       const registrosVotosUnicos = deduplicarVotosPorIpEData(registrosVotos);
@@ -2580,7 +2602,7 @@
 	      renderStatusCards(registrosOperacionais);
 	      renderBacklogOperacional(registrosOperacionais);
 	      renderMotivoCards(registrosAnaliticos);
-	      renderPopCards(registros);
+	      renderPopCards(registrosPops);
 	      renderDetalhamentoPops(registrosDetalhamentoPops);
 	      renderCardsEncerramentos(registrosBaseEncerramentos);
 	      renderTempoBacklog(registrosOperacionais, registrosFinalizados);

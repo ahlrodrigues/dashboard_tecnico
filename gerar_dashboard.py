@@ -1630,6 +1630,14 @@ def gerar_html_dashboard(
       return true;
     }}
 
+    function dataBaseDentroDoIntervalo(registro) {{
+      const data = obterDataBaseTexto(registro);
+      if (!data) return false;
+      if (filtroDataInicial.value && data < filtroDataInicial.value) return false;
+      if (filtroDataFinal.value && data > filtroDataFinal.value) return false;
+      return true;
+    }}
+
     function usuarioCorrespondeAoFiltro(registro, usuarioFiltro) {{
       const usuario = normalizarTexto(usuarioFiltro);
       if (!usuario) return true;
@@ -1658,6 +1666,19 @@ def gerar_html_dashboard(
       return detalhes.filter((registro) => {{
         if (!dataDentroDoIntervalo(registro)) return false;
         if (ehStatusEncerrada(registro)) return false;
+        if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
+        if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
+        if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
+        if (busca && !obterTextoBusca(registro).includes(busca)) return false;
+        return true;
+      }});
+    }}
+
+    function filtrarBasePops() {{
+      const busca = normalizarTexto(filtroBusca.value).toLowerCase();
+
+      return detalhes.filter((registro) => {{
+        if (!dataBaseDentroDoIntervalo(registro)) return false;
         if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
@@ -2773,10 +2794,11 @@ def gerar_html_dashboard(
 	    function aplicarFiltros() {{
 	      normalizarPeriodoSelecionado();
 	      salvarFiltros();
-	      const registros = filtrarDetalhes();
+      const registros = filtrarDetalhes();
       const registrosOperacionais = filtrarBaseOperacional();
       const registrosAnaliticos = filtrarBaseAnalitica();
-      const registrosDetalhamentoPops = filtrarDetalhamentoPops(registros);
+      const registrosPops = filtrarBasePops();
+      const registrosDetalhamentoPops = filtrarDetalhamentoPops(registrosPops);
       const registrosFinalizados = registrosAnaliticos;
       const registrosVotos = filtrarVotosPorData();
       const registrosVotosUnicos = deduplicarVotosPorIpEData(registrosVotos);
@@ -2786,7 +2808,7 @@ def gerar_html_dashboard(
 	      renderStatusCards(registrosOperacionais);
 	      renderBacklogOperacional(registrosOperacionais);
 	      renderMotivoCards(registrosAnaliticos);
-	      renderPopCards(registros);
+	      renderPopCards(registrosPops);
 	      renderDetalhamentoPops(registrosDetalhamentoPops);
 	      renderCardsEncerramentos(registrosBaseEncerramentos);
 	      renderTempoBacklog(registrosOperacionais, registrosFinalizados);
