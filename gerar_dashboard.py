@@ -2325,21 +2325,20 @@ def gerar_html_dashboard(
         .sort((a, b) => b.total - a.total || a.usuario.localeCompare(b.usuario, "pt-BR", {{ sensitivity: "base" }}));
     }}
 
-    function deslocarMes(dataTexto, quantidadeMeses) {{
-      if (!dataTexto) return "";
-      const [ano, mes, dia] = dataTexto.split("-").map(Number);
-      const destino = new Date(ano, mes - 1 + quantidadeMeses, 1);
-      const ultimoDia = new Date(destino.getFullYear(), destino.getMonth() + 1, 0).getDate();
-      const diaAjustado = Math.min(dia, ultimoDia);
-      return `${{destino.getFullYear()}}-${{String(destino.getMonth() + 1).padStart(2, "0")}}-${{String(diaAjustado).padStart(2, "0")}}`;
-    }}
-
     function obterIntervaloComparativoAnterior() {{
       const intervaloAtual = obterIntervaloSelecionado();
       if (!intervaloAtual) return null;
+      const inicioAtual = new Date(`${{intervaloAtual.inicio}}T00:00:00`);
+      const fimAtual = new Date(`${{intervaloAtual.fim}}T00:00:00`);
+      if (Number.isNaN(inicioAtual.getTime()) || Number.isNaN(fimAtual.getTime())) return null;
+      const diferencaDias = Math.round((fimAtual.getTime() - inicioAtual.getTime()) / 86400000) + 1;
+      const fimAnterior = new Date(inicioAtual);
+      fimAnterior.setDate(fimAnterior.getDate() - 1);
+      const inicioAnterior = new Date(fimAnterior);
+      inicioAnterior.setDate(inicioAnterior.getDate() - (diferencaDias - 1));
       return {{
-        inicio: deslocarMes(intervaloAtual.inicio, -1),
-        fim: deslocarMes(intervaloAtual.fim, -1),
+        inicio: formatarDataInput(inicioAnterior),
+        fim: formatarDataInput(fimAnterior),
       }};
     }}
 
