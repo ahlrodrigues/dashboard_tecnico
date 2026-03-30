@@ -539,6 +539,7 @@ def gerar_html_dashboard(
       grid-template-rows: minmax(74px, auto) 1fr;
     }}
     .summary-card.secondary {{
+      grid-column: 1 / -1;
       grid-template-columns: 1fr;
       grid-template-rows: minmax(74px, auto) 1fr;
     }}
