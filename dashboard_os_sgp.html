@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Dashboard de OS SGP - V2.5.2 (9ae0666)</title>
+  <title>Dashboard de OS SGP - V2.5.2 (381f776)</title>
   <style>
     :root {
       --bg: #eef3f1;
@@ -437,6 +437,18 @@
       grid-template-rows: minmax(34px, auto) 1fr;
       align-content: start;
     }
+    .summary-card.secondary .metric-item.metric-separator {
+      position: relative;
+    }
+    .summary-card.secondary .metric-item.metric-separator::before {
+      content: "";
+      position: absolute;
+      left: -6px;
+      top: 14px;
+      bottom: 14px;
+      width: 1px;
+      background: rgba(23, 98, 76, 0.22);
+    }
     .metric-item.compact {
       min-height: 84px;
       padding: 12px 12px 10px;
@@ -678,7 +690,7 @@
     <section class="hero">
       <div class="hero-head">
         <div class="hero-titles">
-          <h1>Dashboard de OS SGP<span class="hero-meta-inline"><span class="hero-version">V2.5.2 (9ae0666)</span><span class="hero-meta-links"><a href="CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></span></span></h1>
+          <h1>Dashboard de OS SGP<span class="hero-meta-inline"><span class="hero-version">V2.5.2 (381f776)</span><span class="hero-meta-links"><a href="CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></span></span></h1>
         </div>
         <div class="refresh-badge">
           <strong>Atualiza em</strong>
@@ -737,13 +749,13 @@
 	          <p class="caption">Backlog atual e encerramentos do recorte, sempre respeitando todos os filtros selecionados.</p>
 	        </div>
 	        <div class="metric-grid cols-2">
-	          <div class="metric-item"><span class="metric-label">Total de O.S. do recorte</span><span class="metric-value" id="cardTotalStatus">4631</span></div>
-	          <div class="metric-item"><span class="metric-label">Em aberto</span><span class="metric-value" id="cardAberta">34</span></div>
+	          <div class="metric-item"><span class="metric-label">Total de O.S. do recorte</span><span class="metric-value" id="cardTotalStatus">4633</span></div>
+	          <div class="metric-item"><span class="metric-label">Em aberto</span><span class="metric-value" id="cardAberta">35</span></div>
 	          <div class="metric-item"><span class="metric-label">Pendentes</span><span class="metric-value" id="cardPendente">13</span></div>
-	          <div class="metric-item"><span class="metric-label">Em execução</span><span class="metric-value" id="cardEmExecucao">2</span></div>
-	          <div class="metric-item"><span class="metric-label">Total de O.S. encerradas</span><span class="metric-value" id="cardEncerrada">4582</span></div>
-	          <div class="metric-item"><span class="metric-label">Encerradas pelo técnico</span><span class="metric-value" id="cardEncerradaTecnicos">2292</span></div>
-	          <div class="metric-item"><span class="metric-label">Encerradas por outros</span><span class="metric-value" id="cardPorOutros">2290</span></div>
+	          <div class="metric-item"><span class="metric-label">Em execução</span><span class="metric-value" id="cardEmExecucao">1</span></div>
+	          <div class="metric-item"><span class="metric-label">Total de O.S. encerradas</span><span class="metric-value" id="cardEncerrada">4584</span></div>
+	          <div class="metric-item metric-separator"><span class="metric-label">Encerradas pelo técnico</span><span class="metric-value" id="cardEncerradaTecnicos">2293</span></div>
+	          <div class="metric-item"><span class="metric-label">Encerradas por outros</span><span class="metric-value" id="cardPorOutros">2291</span></div>
 	        </div>
 	      </div>
 	      <div class="summary-card tertiary">
@@ -754,7 +766,7 @@
 	        <div class="metric-grid flow scrollable" id="movimentacoesGrid">
 	          <div class="metric-item compact"><span class="metric-label">Inviabilidades</span><span class="metric-value" id="cardInviabilidade">34</span></div>
 	          <div class="metric-item compact"><span class="metric-label">Instalação de KIT</span><span class="metric-value" id="cardInstalacoes">603</span></div>
-	          <div class="metric-item compact"><span class="metric-label">Remoção de KIT</span><span class="metric-value" id="cardRemocoes">974</span></div>
+	          <div class="metric-item compact"><span class="metric-label">Remoção de KIT</span><span class="metric-value" id="cardRemocoes">975</span></div>
 	        </div>
 	      </div>
 	      <div class="summary-card quaternary">
@@ -1119,7 +1131,7 @@
 
 	    function obterGrupoFiltro(registro) {
 	      const grupoStatusContrato = obterGrupo(registro);
-	      if (grupoStatusContrato === "Inviabilidade") {
+	      if (grupoStatusContrato === "Inviabilidade" && motivoContaComoInviabilidadeNoFiltro(registro)) {
 	        return "Inviabilidade";
 	      }
 
@@ -1146,6 +1158,14 @@
 
     function obterMotivo(registro) {
       return normalizarTexto(registro.motivo);
+    }
+
+    function motivoContaComoInviabilidadeNoFiltro(registro) {
+      const motivo = obterMotivo(registro);
+      return (
+        motivo.localeCompare("Mudança de endereço", "pt-BR", { sensitivity: "accent" }) === 0 ||
+        motivo.localeCompare("Instalação de KIT", "pt-BR", { sensitivity: "accent" }) === 0
+      );
     }
 
     function motivoDeveSerExibido(motivo) {
@@ -1802,6 +1822,7 @@
 	    function renderMotivoCards(registros) {
 	      const contagem = new Map();
 	      let inviabilidade = 0;
+        let outrosMotivos = 0;
 
 	      registros.forEach((registro) => {
 	        if (obterGrupo(registro) === "Inviabilidade") {
@@ -1809,7 +1830,10 @@
 	          return;
 	        }
 	        const motivo = obterMotivo(registro);
-	        if (!motivoDeveSerExibido(motivo)) return;
+	        if (!motivoDeveSerExibido(motivo)) {
+            outrosMotivos += 1;
+            return;
+          }
 	        contagem.set(motivo, (contagem.get(motivo) || 0) + 1);
 	      });
 
@@ -1824,7 +1848,14 @@
 	        movimentacoesGrid.appendChild(cardInviabilidade);
 	      }
 
-	      if (!itens.length && inviabilidade === 0) {
+        if (outrosMotivos > 0) {
+          const cardOutrosMotivos = document.createElement("div");
+          cardOutrosMotivos.className = "metric-item compact";
+          cardOutrosMotivos.innerHTML = `<span class="metric-label">Outros motivos</span><span class="metric-value">${outrosMotivos}</span>`;
+          movimentacoesGrid.appendChild(cardOutrosMotivos);
+        }
+
+	      if (!itens.length && inviabilidade === 0 && outrosMotivos === 0) {
 	        movimentacoesGrid.innerHTML = '<div class="metric-item compact"><span class="metric-label">Sem motivos no recorte</span><span class="metric-value">0</span></div>';
 	        return;
 	      }

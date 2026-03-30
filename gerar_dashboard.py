@@ -647,6 +647,18 @@ def gerar_html_dashboard(
       grid-template-rows: minmax(34px, auto) 1fr;
       align-content: start;
     }}
+    .summary-card.secondary .metric-item.metric-separator {{
+      position: relative;
+    }}
+    .summary-card.secondary .metric-item.metric-separator::before {{
+      content: "";
+      position: absolute;
+      left: -6px;
+      top: 14px;
+      bottom: 14px;
+      width: 1px;
+      background: rgba(23, 98, 76, 0.22);
+    }}
     .metric-item.compact {{
       min-height: 84px;
       padding: 12px 12px 10px;
@@ -952,7 +964,7 @@ def gerar_html_dashboard(
 	          <div class="metric-item"><span class="metric-label">Pendentes</span><span class="metric-value" id="cardPendente">{cards['pendente']}</span></div>
 	          <div class="metric-item"><span class="metric-label">Em execução</span><span class="metric-value" id="cardEmExecucao">{cards['em_execucao']}</span></div>
 	          <div class="metric-item"><span class="metric-label">Total de O.S. encerradas</span><span class="metric-value" id="cardEncerrada">{cards['encerrada']}</span></div>
-	          <div class="metric-item"><span class="metric-label">Encerradas pelo técnico</span><span class="metric-value" id="cardEncerradaTecnicos">{cards['encerrada_tecnicos']}</span></div>
+	          <div class="metric-item metric-separator"><span class="metric-label">Encerradas pelo técnico</span><span class="metric-value" id="cardEncerradaTecnicos">{cards['encerrada_tecnicos']}</span></div>
 	          <div class="metric-item"><span class="metric-label">Encerradas por outros</span><span class="metric-value" id="cardPorOutros">{cards['por_outros']}</span></div>
 	        </div>
 	      </div>
@@ -1329,7 +1341,7 @@ def gerar_html_dashboard(
 
 	    function obterGrupoFiltro(registro) {{
 	      const grupoStatusContrato = obterGrupo(registro);
-	      if (grupoStatusContrato === "Inviabilidade") {{
+	      if (grupoStatusContrato === "Inviabilidade" && motivoContaComoInviabilidadeNoFiltro(registro)) {{
 	        return "Inviabilidade";
 	      }}
 
@@ -1356,6 +1368,14 @@ def gerar_html_dashboard(
 
     function obterMotivo(registro) {{
       return normalizarTexto(registro.motivo);
+    }}
+
+    function motivoContaComoInviabilidadeNoFiltro(registro) {{
+      const motivo = obterMotivo(registro);
+      return (
+        motivo.localeCompare("Mudança de endereço", "pt-BR", {{ sensitivity: "accent" }}) === 0 ||
+        motivo.localeCompare("Instalação de KIT", "pt-BR", {{ sensitivity: "accent" }}) === 0
+      );
     }}
 
     function motivoDeveSerExibido(motivo) {{
@@ -2012,6 +2032,7 @@ def gerar_html_dashboard(
 	    function renderMotivoCards(registros) {{
 	      const contagem = new Map();
 	      let inviabilidade = 0;
+        let outrosMotivos = 0;
 
 	      registros.forEach((registro) => {{
 	        if (obterGrupo(registro) === "Inviabilidade") {{
@@ -2019,7 +2040,10 @@ def gerar_html_dashboard(
 	          return;
 	        }}
 	        const motivo = obterMotivo(registro);
-	        if (!motivoDeveSerExibido(motivo)) return;
+	        if (!motivoDeveSerExibido(motivo)) {{
+            outrosMotivos += 1;
+            return;
+          }}
 	        contagem.set(motivo, (contagem.get(motivo) || 0) + 1);
 	      }});
 
@@ -2034,7 +2058,14 @@ def gerar_html_dashboard(
 	        movimentacoesGrid.appendChild(cardInviabilidade);
 	      }}
 
-	      if (!itens.length && inviabilidade === 0) {{
+        if (outrosMotivos > 0) {{
+          const cardOutrosMotivos = document.createElement("div");
+          cardOutrosMotivos.className = "metric-item compact";
+          cardOutrosMotivos.innerHTML = `<span class="metric-label">Outros motivos</span><span class="metric-value">${{outrosMotivos}}</span>`;
+          movimentacoesGrid.appendChild(cardOutrosMotivos);
+        }}
+
+	      if (!itens.length && inviabilidade === 0 && outrosMotivos === 0) {{
 	        movimentacoesGrid.innerHTML = '<div class="metric-item compact"><span class="metric-label">Sem motivos no recorte</span><span class="metric-value">0</span></div>';
 	        return;
 	      }}
