@@ -37,6 +37,9 @@ def _serializar_registros(df: pd.DataFrame, detalhe_cols: list[str]) -> list[dic
         "data_base_dashboard",
         "data_finalizacao_dashboard",
         "data_criacao_dashboard",
+        "data_agendamento",
+        "hora_agendamento",
+        "classificacoes",
         "mes_criacao_num",
         "mes_criacao_nome",
         "responsavel",
@@ -94,6 +97,7 @@ def montar_payload_dashboard(
         "data_finalizacao_dashboard": "Data finalizacao",
         "data_base_dashboard": "Data base do recorte",
         "data_criacao_dashboard": "Criada em",
+        "data_agendamento": "Agendada para",
         "finalizado_por_dashboard": "Finalizado por",
         "grupo_dashboard": "Grupo",
         "status_dashboard": "Status",
@@ -133,7 +137,7 @@ def montar_payload_dashboard(
         "mes_selecionado": mes_selecionado,
         "refresh_seconds": refresh_seconds,
         "sgp_base_url": sgp_base_url.rstrip("/"),
-        "titulo_periodo": "Encerramentos por data de encerramento; Status Operacional pelo backlog atual no dia filtrado",
+        "titulo_periodo": "Encerramentos e backlog operacional conforme o recorte atual e todos os filtros ativos",
         "detalhe_cols": detalhe_cols,
         "detalhe_labels": detalhe_labels,
         "cards": cards,
@@ -443,7 +447,7 @@ def gerar_html_dashboard(
     }}
     .toolbar {{
       display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
+      grid-template-columns: repeat(6, minmax(0, 1fr));
       gap: 14px;
       margin: 20px 0;
     }}
@@ -909,6 +913,10 @@ def gerar_html_dashboard(
         <label for="filtroPop">POP</label>
         <select id="filtroPop"></select>
       </div>
+      <div class="filter-card">
+        <label for="filtroAgendamento">Agendamento</label>
+        <select id="filtroAgendamento"></select>
+      </div>
     </section>
 
     <section class="quick-range">
@@ -920,7 +928,7 @@ def gerar_html_dashboard(
     </section>
 
     <section class="toolbar">
-      <div class="filter-card" style="grid-column: span 5;">
+      <div class="filter-card" style="grid-column: span 6;">
         <label for="filtroBusca">Busca no detalhamento</label>
         <input id="filtroBusca" type="text" placeholder="Digite cliente, contrato, POP, motivo ou usuário"/>
       </div>
@@ -930,21 +938,13 @@ def gerar_html_dashboard(
 	      <div class="summary-card secondary">
 	        <div class="summary-card-head">
 	          <h3 id="tituloStatusOperacional">Status Operacional</h3>
-	          <p class="caption">Backlog atual das ordens abertas, pendentes e em execucao no snapshot do dia filtrado.</p>
+	          <p class="caption">Backlog atual e encerramentos do recorte, sempre respeitando todos os filtros selecionados.</p>
 	        </div>
 	        <div class="metric-grid cols-2">
 	          <div class="metric-item"><span class="metric-label">Total de O.S. do recorte</span><span class="metric-value" id="cardTotalStatus">{len(detalhes_data)}</span></div>
 	          <div class="metric-item"><span class="metric-label">Em aberto</span><span class="metric-value" id="cardAberta">{cards['aberta']}</span></div>
 	          <div class="metric-item"><span class="metric-label">Pendentes</span><span class="metric-value" id="cardPendente">{cards['pendente']}</span></div>
 	          <div class="metric-item"><span class="metric-label">Em execução</span><span class="metric-value" id="cardEmExecucao">{cards['em_execucao']}</span></div>
-	        </div>
-	      </div>
-	      <div class="summary-card primary">
-	        <div class="summary-card-head">
-	          <h3 id="tituloEncerramentos">Encerramentos</h3>
-	          <p class="caption">Visão consolidada das O.S. encerradas no recorte, com cortes por grupo técnico e por quem realizou o encerramento.</p>
-	        </div>
-	        <div class="metric-grid cols-2">
 	          <div class="metric-item"><span class="metric-label">Total de O.S. encerradas</span><span class="metric-value" id="cardEncerrada">{cards['encerrada']}</span></div>
 	          <div class="metric-item"><span class="metric-label">Encerradas pelo técnico</span><span class="metric-value" id="cardEncerradaTecnicos">{cards['encerrada_tecnicos']}</span></div>
 	          <div class="metric-item"><span class="metric-label">Encerradas por outros</span><span class="metric-value" id="cardPorOutros">{cards['por_outros']}</span></div>
@@ -1125,6 +1125,7 @@ def gerar_html_dashboard(
     const filtroUsuario = document.getElementById("filtroUsuario");
     const filtroGrupo = document.getElementById("filtroGrupo");
     const filtroPop = document.getElementById("filtroPop");
+    const filtroAgendamento = document.getElementById("filtroAgendamento");
     const filtroBusca = document.getElementById("filtroBusca");
     const quickRangeButtons = Array.from(document.querySelectorAll("[data-range]"));
     const refreshCountdown = document.getElementById("refreshCountdown");
@@ -1159,7 +1160,6 @@ def gerar_html_dashboard(
 	    const graficoDiarioMeta = document.getElementById("graficoDiarioMeta");
     const detalheMeta = document.getElementById("detalheMeta");
     const reincidenciaMeta = document.getElementById("reincidenciaMeta");
-    const tituloEncerramentos = document.getElementById("tituloEncerramentos");
     const tituloStatusOperacional = document.getElementById("tituloStatusOperacional");
     const tituloMovimentacoes = document.getElementById("tituloMovimentacoes");
     const tituloPops = document.getElementById("tituloPops");
@@ -1548,6 +1548,7 @@ def gerar_html_dashboard(
         usuario: filtroUsuario.value,
         grupo: filtroGrupo.value,
         pop: filtroPop.value,
+        agendamento: filtroAgendamento.value,
         busca: filtroBusca.value,
       }};
       window.localStorage.setItem(storageKey, JSON.stringify(estado));
@@ -1563,6 +1564,7 @@ def gerar_html_dashboard(
         filtroUsuario.value = estado.usuario || "";
         filtroGrupo.value = estado.grupo || "";
         filtroPop.value = estado.pop || "";
+        filtroAgendamento.value = estado.agendamento || "";
         filtroBusca.value = estado.busca || "";
         normalizarPeriodoSelecionado();
       }} catch (_erro) {{
@@ -1603,6 +1605,7 @@ def gerar_html_dashboard(
       preencherSelect(filtroUsuario, usuarios, "Todos os usuários");
       preencherSelect(filtroGrupo, grupos, "Todos os grupos");
       preencherSelect(filtroPop, pops, "Todos os POPs");
+      preencherSelect(filtroAgendamento, ["Agendadas", "Não agendadas"], "Todas");
       if (dataMinDisponivel) {{
         filtroDataInicial.min = dataMinDisponivel;
         filtroDataFinal.min = dataMinDisponivel;
@@ -1647,6 +1650,18 @@ def gerar_html_dashboard(
       return usuarioNaEquipeResponsavel(registro, usuario);
     }}
 
+    function registroEhAgendado(registro) {{
+      return Boolean(normalizarTexto(registro.data_agendamento) || normalizarTexto(registro.hora_agendamento));
+    }}
+
+    function agendamentoCorrespondeAoFiltro(registro) {{
+      if (!filtroAgendamento.value) return true;
+      const agendado = registroEhAgendado(registro);
+      if (filtroAgendamento.value === "Agendadas") return agendado;
+      if (filtroAgendamento.value === "Não agendadas") return !agendado;
+      return true;
+    }}
+
     function filtrarDetalhes() {{
       const busca = normalizarTexto(filtroBusca.value).toLowerCase();
 
@@ -1655,6 +1670,7 @@ def gerar_html_dashboard(
         if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
+        if (!agendamentoCorrespondeAoFiltro(registro)) return false;
         if (busca && !obterTextoBusca(registro).includes(busca)) return false;
         return true;
       }});
@@ -1664,11 +1680,12 @@ def gerar_html_dashboard(
       const busca = normalizarTexto(filtroBusca.value).toLowerCase();
 
       return detalhes.filter((registro) => {{
-        if (!dataDentroDoIntervalo(registro)) return false;
+        if (!dataBaseDentroDoIntervalo(registro)) return false;
         if (ehStatusEncerrada(registro)) return false;
         if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
+        if (!agendamentoCorrespondeAoFiltro(registro)) return false;
         if (busca && !obterTextoBusca(registro).includes(busca)) return false;
         return true;
       }});
@@ -1682,6 +1699,7 @@ def gerar_html_dashboard(
         if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
+        if (!agendamentoCorrespondeAoFiltro(registro)) return false;
         if (busca && !obterTextoBusca(registro).includes(busca)) return false;
         return true;
       }});
@@ -1696,6 +1714,7 @@ def gerar_html_dashboard(
         if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
+        if (!agendamentoCorrespondeAoFiltro(registro)) return false;
         if (busca && !obterTextoBusca(registro).includes(busca)) return false;
         return true;
       }});
@@ -1710,6 +1729,7 @@ def gerar_html_dashboard(
         if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
+        if (!agendamentoCorrespondeAoFiltro(registro)) return false;
         if (busca && !obterTextoBusca(registro).includes(busca)) return false;
         return true;
       }});
@@ -1723,6 +1743,7 @@ def gerar_html_dashboard(
         if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
+        if (!agendamentoCorrespondeAoFiltro(registro)) return false;
         if (busca && !obterTextoBusca(registro).includes(busca)) return false;
         return true;
       }});
@@ -1737,6 +1758,7 @@ def gerar_html_dashboard(
         if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return;
+        if (!agendamentoCorrespondeAoFiltro(registro)) return;
         if (busca && !obterTextoBusca(registro).includes(busca)) return;
 
         const usuario = obterUsuario(registro);
@@ -1864,7 +1886,7 @@ def gerar_html_dashboard(
       const busca = normalizarTexto(filtroBusca.value).toLowerCase();
       const usuarioFiltro = normalizarTexto(filtroUsuario.value);
       const usuariosPermitidos = obterUsuariosPermitidosParaVotos();
-      const restringirPorDetalhes = Boolean(filtroUsuario.value || filtroGrupo.value || filtroPop.value || busca);
+      const restringirPorDetalhes = Boolean(filtroUsuario.value || filtroGrupo.value || filtroPop.value || filtroAgendamento.value || busca);
       const mapaDuplas = construirMapaDuplasPorDia();
 
       return votosData.flatMap((registro) => {{
@@ -1896,6 +1918,7 @@ def gerar_html_dashboard(
         if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
+        if (!agendamentoCorrespondeAoFiltro(registro)) return false;
         if (busca && !obterTextoBusca(registro).includes(busca)) return false;
         return true;
       }});
@@ -1935,7 +1958,7 @@ def gerar_html_dashboard(
       }};
     }}
 
-    function renderStatusCards(registros) {{
+    function renderStatusCards(registros, registrosEncerrados) {{
       let aberta = 0;
       let pendente = 0;
       let emExecucao = 0;
@@ -1947,7 +1970,7 @@ def gerar_html_dashboard(
         else if (status === "Em execução") emExecucao += 1;
       }});
 
-      document.getElementById("cardTotalStatus").textContent = registros.length;
+      document.getElementById("cardTotalStatus").textContent = registros.length + registrosEncerrados.length;
       document.getElementById("cardAberta").textContent = aberta;
       document.getElementById("cardPendente").textContent = pendente;
       document.getElementById("cardEmExecucao").textContent = emExecucao;
@@ -2057,7 +2080,7 @@ def gerar_html_dashboard(
       linhas.forEach((registro) => {{
         const tr = document.createElement("tr");
         tr.innerHTML = `
-          <td>${{dataSnapshotAtual}}</td>
+          <td>${{obterDataBaseTexto(registro)}}</td>
           <td>${{obterPop(registro)}}</td>
           <td>${{normalizarTexto(registro.id || registro.ordem_servico)}}</td>
           <td>${{normalizarTexto(registro.cliente)}}</td>
@@ -2341,13 +2364,13 @@ def gerar_html_dashboard(
       if (filtroUsuario.value) partes.push(`Usuário: ${{filtroUsuario.value}}`);
       if (filtroGrupo.value) partes.push(`Grupo: ${{filtroGrupo.value}}`);
       if (filtroPop.value) partes.push(`POP: ${{filtroPop.value}}`);
+      if (filtroAgendamento.value) partes.push(`Agendamento: ${{filtroAgendamento.value}}`);
       if (filtroBusca.value.trim()) partes.push(`Busca: ${{filtroBusca.value.trim()}}`);
       return partes.length ? partes.join(" | ") : "Todos os filtros";
     }}
 
     function atualizarTitulosPaineis() {{
       const resumo = obterResumoFiltrosTitulo();
-      tituloEncerramentos.textContent = `Encerramentos | ${{resumo}}`;
       tituloStatusOperacional.textContent = `Status Operacional | ${{resumo}}`;
       tituloMovimentacoes.textContent = `Movimentações | ${{resumo}}`;
       tituloPops.textContent = `POPs | ${{resumo}}`;
@@ -2773,6 +2796,7 @@ def gerar_html_dashboard(
       if (filtroUsuario.value) partes.push(`Usuário: ${{filtroUsuario.value}}`);
       if (filtroGrupo.value) partes.push(`Grupo: ${{filtroGrupo.value}}`);
       if (filtroPop.value) partes.push(`POP: ${{filtroPop.value}}`);
+      if (filtroAgendamento.value) partes.push(`Agendamento: ${{filtroAgendamento.value}}`);
       if (filtroBusca.value.trim()) partes.push(`Busca: ${{filtroBusca.value.trim()}}`);
 
       const textoFiltro = partes.length ? partes.join(" | ") : "Todos";
@@ -2805,7 +2829,7 @@ def gerar_html_dashboard(
 	      const registrosBaseEncerramentos = filtrarBaseEncerramentos();
       const registrosBaseRanking = filtrarBaseRankingComparativo();
       const registrosBaseReincidencias = filtrarBaseReincidencias();
-	      renderStatusCards(registrosOperacionais);
+	      renderStatusCards(registrosOperacionais, registrosBaseEncerramentos);
 	      renderBacklogOperacional(registrosOperacionais);
 	      renderMotivoCards(registrosAnaliticos);
 	      renderPopCards(registrosPops);
@@ -2854,7 +2878,7 @@ def gerar_html_dashboard(
       aplicarFiltros();
     }}
 
-    [filtroDataInicial, filtroDataFinal, filtroUsuario, filtroGrupo, filtroPop].forEach((select) => {{
+    [filtroDataInicial, filtroDataFinal, filtroUsuario, filtroGrupo, filtroPop, filtroAgendamento].forEach((select) => {{
       select.addEventListener("change", aplicarFiltros);
     }});
 

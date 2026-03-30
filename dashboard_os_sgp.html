@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Dashboard de OS SGP - V2.5.2 (c43f3b2)</title>
+  <title>Dashboard de OS SGP - V2.5.2 (a1a2ff5)</title>
   <style>
     :root {
       --bg: #eef3f1;
@@ -237,7 +237,7 @@
     }
     .toolbar {
       display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
+      grid-template-columns: repeat(6, minmax(0, 1fr));
       gap: 14px;
       margin: 20px 0;
     }
@@ -672,7 +672,7 @@
     <section class="hero">
       <div class="hero-head">
         <div class="hero-titles">
-          <h1>Dashboard de OS SGP<span class="hero-meta-inline"><span class="hero-version">V2.5.2 (c43f3b2)</span><span class="hero-meta-links"><a href="CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></span></span></h1>
+          <h1>Dashboard de OS SGP<span class="hero-meta-inline"><span class="hero-version">V2.5.2 (a1a2ff5)</span><span class="hero-meta-links"><a href="CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></span></span></h1>
         </div>
         <div class="refresh-badge">
           <strong>Atualiza em</strong>
@@ -703,6 +703,10 @@
         <label for="filtroPop">POP</label>
         <select id="filtroPop"></select>
       </div>
+      <div class="filter-card">
+        <label for="filtroAgendamento">Agendamento</label>
+        <select id="filtroAgendamento"></select>
+      </div>
     </section>
 
     <section class="quick-range">
@@ -714,7 +718,7 @@
     </section>
 
     <section class="toolbar">
-      <div class="filter-card" style="grid-column: span 5;">
+      <div class="filter-card" style="grid-column: span 6;">
         <label for="filtroBusca">Busca no detalhamento</label>
         <input id="filtroBusca" type="text" placeholder="Digite cliente, contrato, POP, motivo ou usuário"/>
       </div>
@@ -724,24 +728,16 @@
 	      <div class="summary-card secondary">
 	        <div class="summary-card-head">
 	          <h3 id="tituloStatusOperacional">Status Operacional</h3>
-	          <p class="caption">Backlog atual das ordens abertas, pendentes e em execucao no snapshot do dia filtrado.</p>
+	          <p class="caption">Backlog atual e encerramentos do recorte, sempre respeitando todos os filtros selecionados.</p>
 	        </div>
 	        <div class="metric-grid cols-2">
-	          <div class="metric-item"><span class="metric-label">Total de O.S. do recorte</span><span class="metric-value" id="cardTotalStatus">4568</span></div>
-	          <div class="metric-item"><span class="metric-label">Em aberto</span><span class="metric-value" id="cardAberta">40</span></div>
-	          <div class="metric-item"><span class="metric-label">Pendentes</span><span class="metric-value" id="cardPendente">15</span></div>
-	          <div class="metric-item"><span class="metric-label">Em execução</span><span class="metric-value" id="cardEmExecucao">0</span></div>
-	        </div>
-	      </div>
-	      <div class="summary-card primary">
-	        <div class="summary-card-head">
-	          <h3 id="tituloEncerramentos">Encerramentos</h3>
-	          <p class="caption">Visão consolidada das O.S. encerradas no recorte, com cortes por grupo técnico e por quem realizou o encerramento.</p>
-	        </div>
-	        <div class="metric-grid cols-2">
-	          <div class="metric-item"><span class="metric-label">Total de O.S. encerradas</span><span class="metric-value" id="cardEncerrada">4513</span></div>
-	          <div class="metric-item"><span class="metric-label">Encerradas pelo técnico</span><span class="metric-value" id="cardEncerradaTecnicos">2259</span></div>
-	          <div class="metric-item"><span class="metric-label">Encerradas por outros</span><span class="metric-value" id="cardPorOutros">2254</span></div>
+	          <div class="metric-item"><span class="metric-label">Total de O.S. do recorte</span><span class="metric-value" id="cardTotalStatus">4629</span></div>
+	          <div class="metric-item"><span class="metric-label">Em aberto</span><span class="metric-value" id="cardAberta">41</span></div>
+	          <div class="metric-item"><span class="metric-label">Pendentes</span><span class="metric-value" id="cardPendente">10</span></div>
+	          <div class="metric-item"><span class="metric-label">Em execução</span><span class="metric-value" id="cardEmExecucao">2</span></div>
+	          <div class="metric-item"><span class="metric-label">Total de O.S. encerradas</span><span class="metric-value" id="cardEncerrada">4576</span></div>
+	          <div class="metric-item"><span class="metric-label">Encerradas pelo técnico</span><span class="metric-value" id="cardEncerradaTecnicos">2287</span></div>
+	          <div class="metric-item"><span class="metric-label">Encerradas por outros</span><span class="metric-value" id="cardPorOutros">2289</span></div>
 	        </div>
 	      </div>
 	      <div class="summary-card tertiary">
@@ -751,8 +747,8 @@
 	        </div>
 	        <div class="metric-grid flow scrollable" id="movimentacoesGrid">
 	          <div class="metric-item compact"><span class="metric-label">Inviabilidades</span><span class="metric-value" id="cardInviabilidade">34</span></div>
-	          <div class="metric-item compact"><span class="metric-label">Instalação de KIT</span><span class="metric-value" id="cardInstalacoes">599</span></div>
-	          <div class="metric-item compact"><span class="metric-label">Remoção de KIT</span><span class="metric-value" id="cardRemocoes">964</span></div>
+	          <div class="metric-item compact"><span class="metric-label">Instalação de KIT</span><span class="metric-value" id="cardInstalacoes">603</span></div>
+	          <div class="metric-item compact"><span class="metric-label">Remoção de KIT</span><span class="metric-value" id="cardRemocoes">974</span></div>
 	        </div>
 	      </div>
 	      <div class="summary-card quaternary">
@@ -907,8 +903,8 @@
     let detalhes = [];
     let votosData = [];
     let dataInicialPadrao = "2026-01-01";
-    let dataFinalPadrao = "2026-03-27";
-    let dataSnapshotAtual = "2026-03-27";
+    let dataFinalPadrao = "2026-03-30";
+    let dataSnapshotAtual = "2026-03-30";
     let datasDisponiveisOrdenadas = [];
     let dataMinDisponivel = "";
     let dataMaxDisponivel = "";
@@ -919,6 +915,7 @@
     const filtroUsuario = document.getElementById("filtroUsuario");
     const filtroGrupo = document.getElementById("filtroGrupo");
     const filtroPop = document.getElementById("filtroPop");
+    const filtroAgendamento = document.getElementById("filtroAgendamento");
     const filtroBusca = document.getElementById("filtroBusca");
     const quickRangeButtons = Array.from(document.querySelectorAll("[data-range]"));
     const refreshCountdown = document.getElementById("refreshCountdown");
@@ -953,7 +950,6 @@
 	    const graficoDiarioMeta = document.getElementById("graficoDiarioMeta");
     const detalheMeta = document.getElementById("detalheMeta");
     const reincidenciaMeta = document.getElementById("reincidenciaMeta");
-    const tituloEncerramentos = document.getElementById("tituloEncerramentos");
     const tituloStatusOperacional = document.getElementById("tituloStatusOperacional");
     const tituloMovimentacoes = document.getElementById("tituloMovimentacoes");
     const tituloPops = document.getElementById("tituloPops");
@@ -1342,6 +1338,7 @@
         usuario: filtroUsuario.value,
         grupo: filtroGrupo.value,
         pop: filtroPop.value,
+        agendamento: filtroAgendamento.value,
         busca: filtroBusca.value,
       };
       window.localStorage.setItem(storageKey, JSON.stringify(estado));
@@ -1357,6 +1354,7 @@
         filtroUsuario.value = estado.usuario || "";
         filtroGrupo.value = estado.grupo || "";
         filtroPop.value = estado.pop || "";
+        filtroAgendamento.value = estado.agendamento || "";
         filtroBusca.value = estado.busca || "";
         normalizarPeriodoSelecionado();
       } catch (_erro) {
@@ -1397,6 +1395,7 @@
       preencherSelect(filtroUsuario, usuarios, "Todos os usuários");
       preencherSelect(filtroGrupo, grupos, "Todos os grupos");
       preencherSelect(filtroPop, pops, "Todos os POPs");
+      preencherSelect(filtroAgendamento, ["Agendadas", "Não agendadas"], "Todas");
       if (dataMinDisponivel) {
         filtroDataInicial.min = dataMinDisponivel;
         filtroDataFinal.min = dataMinDisponivel;
@@ -1441,6 +1440,18 @@
       return usuarioNaEquipeResponsavel(registro, usuario);
     }
 
+    function registroEhAgendado(registro) {
+      return Boolean(normalizarTexto(registro.data_agendamento) || normalizarTexto(registro.hora_agendamento));
+    }
+
+    function agendamentoCorrespondeAoFiltro(registro) {
+      if (!filtroAgendamento.value) return true;
+      const agendado = registroEhAgendado(registro);
+      if (filtroAgendamento.value === "Agendadas") return agendado;
+      if (filtroAgendamento.value === "Não agendadas") return !agendado;
+      return true;
+    }
+
     function filtrarDetalhes() {
       const busca = normalizarTexto(filtroBusca.value).toLowerCase();
 
@@ -1449,6 +1460,7 @@
         if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
+        if (!agendamentoCorrespondeAoFiltro(registro)) return false;
         if (busca && !obterTextoBusca(registro).includes(busca)) return false;
         return true;
       });
@@ -1458,11 +1470,12 @@
       const busca = normalizarTexto(filtroBusca.value).toLowerCase();
 
       return detalhes.filter((registro) => {
-        if (!dataDentroDoIntervalo(registro)) return false;
+        if (!dataBaseDentroDoIntervalo(registro)) return false;
         if (ehStatusEncerrada(registro)) return false;
         if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
+        if (!agendamentoCorrespondeAoFiltro(registro)) return false;
         if (busca && !obterTextoBusca(registro).includes(busca)) return false;
         return true;
       });
@@ -1476,6 +1489,7 @@
         if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
+        if (!agendamentoCorrespondeAoFiltro(registro)) return false;
         if (busca && !obterTextoBusca(registro).includes(busca)) return false;
         return true;
       });
@@ -1490,6 +1504,7 @@
         if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
+        if (!agendamentoCorrespondeAoFiltro(registro)) return false;
         if (busca && !obterTextoBusca(registro).includes(busca)) return false;
         return true;
       });
@@ -1504,6 +1519,7 @@
         if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
+        if (!agendamentoCorrespondeAoFiltro(registro)) return false;
         if (busca && !obterTextoBusca(registro).includes(busca)) return false;
         return true;
       });
@@ -1517,6 +1533,7 @@
         if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
+        if (!agendamentoCorrespondeAoFiltro(registro)) return false;
         if (busca && !obterTextoBusca(registro).includes(busca)) return false;
         return true;
       });
@@ -1531,6 +1548,7 @@
         if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return;
+        if (!agendamentoCorrespondeAoFiltro(registro)) return;
         if (busca && !obterTextoBusca(registro).includes(busca)) return;
 
         const usuario = obterUsuario(registro);
@@ -1658,7 +1676,7 @@
       const busca = normalizarTexto(filtroBusca.value).toLowerCase();
       const usuarioFiltro = normalizarTexto(filtroUsuario.value);
       const usuariosPermitidos = obterUsuariosPermitidosParaVotos();
-      const restringirPorDetalhes = Boolean(filtroUsuario.value || filtroGrupo.value || filtroPop.value || busca);
+      const restringirPorDetalhes = Boolean(filtroUsuario.value || filtroGrupo.value || filtroPop.value || filtroAgendamento.value || busca);
       const mapaDuplas = construirMapaDuplasPorDia();
 
       return votosData.flatMap((registro) => {
@@ -1690,6 +1708,7 @@
         if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
+        if (!agendamentoCorrespondeAoFiltro(registro)) return false;
         if (busca && !obterTextoBusca(registro).includes(busca)) return false;
         return true;
       });
@@ -1729,7 +1748,7 @@
       };
     }
 
-    function renderStatusCards(registros) {
+    function renderStatusCards(registros, registrosEncerrados) {
       let aberta = 0;
       let pendente = 0;
       let emExecucao = 0;
@@ -1741,7 +1760,7 @@
         else if (status === "Em execução") emExecucao += 1;
       });
 
-      document.getElementById("cardTotalStatus").textContent = registros.length;
+      document.getElementById("cardTotalStatus").textContent = registros.length + registrosEncerrados.length;
       document.getElementById("cardAberta").textContent = aberta;
       document.getElementById("cardPendente").textContent = pendente;
       document.getElementById("cardEmExecucao").textContent = emExecucao;
@@ -1851,7 +1870,7 @@
       linhas.forEach((registro) => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
-          <td>${dataSnapshotAtual}</td>
+          <td>${obterDataBaseTexto(registro)}</td>
           <td>${obterPop(registro)}</td>
           <td>${normalizarTexto(registro.id || registro.ordem_servico)}</td>
           <td>${normalizarTexto(registro.cliente)}</td>
@@ -2135,13 +2154,13 @@
       if (filtroUsuario.value) partes.push(`Usuário: ${filtroUsuario.value}`);
       if (filtroGrupo.value) partes.push(`Grupo: ${filtroGrupo.value}`);
       if (filtroPop.value) partes.push(`POP: ${filtroPop.value}`);
+      if (filtroAgendamento.value) partes.push(`Agendamento: ${filtroAgendamento.value}`);
       if (filtroBusca.value.trim()) partes.push(`Busca: ${filtroBusca.value.trim()}`);
       return partes.length ? partes.join(" | ") : "Todos os filtros";
     }
 
     function atualizarTitulosPaineis() {
       const resumo = obterResumoFiltrosTitulo();
-      tituloEncerramentos.textContent = `Encerramentos | ${resumo}`;
       tituloStatusOperacional.textContent = `Status Operacional | ${resumo}`;
       tituloMovimentacoes.textContent = `Movimentações | ${resumo}`;
       tituloPops.textContent = `POPs | ${resumo}`;
@@ -2567,6 +2586,7 @@
       if (filtroUsuario.value) partes.push(`Usuário: ${filtroUsuario.value}`);
       if (filtroGrupo.value) partes.push(`Grupo: ${filtroGrupo.value}`);
       if (filtroPop.value) partes.push(`POP: ${filtroPop.value}`);
+      if (filtroAgendamento.value) partes.push(`Agendamento: ${filtroAgendamento.value}`);
       if (filtroBusca.value.trim()) partes.push(`Busca: ${filtroBusca.value.trim()}`);
 
       const textoFiltro = partes.length ? partes.join(" | ") : "Todos";
@@ -2599,7 +2619,7 @@
 	      const registrosBaseEncerramentos = filtrarBaseEncerramentos();
       const registrosBaseRanking = filtrarBaseRankingComparativo();
       const registrosBaseReincidencias = filtrarBaseReincidencias();
-	      renderStatusCards(registrosOperacionais);
+	      renderStatusCards(registrosOperacionais, registrosBaseEncerramentos);
 	      renderBacklogOperacional(registrosOperacionais);
 	      renderMotivoCards(registrosAnaliticos);
 	      renderPopCards(registrosPops);
@@ -2648,7 +2668,7 @@
       aplicarFiltros();
     }
 
-    [filtroDataInicial, filtroDataFinal, filtroUsuario, filtroGrupo, filtroPop].forEach((select) => {
+    [filtroDataInicial, filtroDataFinal, filtroUsuario, filtroGrupo, filtroPop, filtroAgendamento].forEach((select) => {
       select.addEventListener("change", aplicarFiltros);
     });
 
