@@ -612,10 +612,9 @@ def gerar_html_dashboard(
       flex: 0 1 calc((100% - 60px) / 6);
       min-width: 150px;
     }}
-    .summary-card.primary .metric-grid,
     .summary-card.secondary .metric-grid {{
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(7, minmax(0, 1fr));
       gap: 10px;
       width: 100%;
       justify-content: stretch;
@@ -823,7 +822,6 @@ def gerar_html_dashboard(
 	      .cards-stack {{
 	        grid-template-columns: 1fr;
 	      }}
-	      .summary-card.primary .metric-grid,
 	      .summary-card.secondary .metric-grid {{
 	        grid-template-columns: repeat(2, minmax(0, 1fr));
 	      }}
@@ -838,7 +836,6 @@ def gerar_html_dashboard(
 	      .metric-grid {{
 	        justify-content: flex-start;
 	      }}
-	      .summary-card.primary .metric-grid,
 	      .summary-card.secondary .metric-grid {{
 	        grid-template-columns: 1fr;
 	      }}
