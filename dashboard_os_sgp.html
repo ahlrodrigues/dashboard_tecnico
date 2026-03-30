@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Dashboard de OS SGP - V2.5.2 (381f776)</title>
+  <title>Dashboard de OS SGP - V2.5.2 (cad6322)</title>
   <style>
     :root {
       --bg: #eef3f1;
@@ -237,7 +237,7 @@
     }
     .toolbar {
       display: grid;
-      grid-template-columns: repeat(6, minmax(0, 1fr));
+      grid-template-columns: repeat(7, minmax(0, 1fr));
       gap: 14px;
       margin: 20px 0;
     }
@@ -690,7 +690,7 @@
     <section class="hero">
       <div class="hero-head">
         <div class="hero-titles">
-          <h1>Dashboard de OS SGP<span class="hero-meta-inline"><span class="hero-version">V2.5.2 (381f776)</span><span class="hero-meta-links"><a href="CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></span></span></h1>
+          <h1>Dashboard de OS SGP<span class="hero-meta-inline"><span class="hero-version">V2.5.2 (cad6322)</span><span class="hero-meta-links"><a href="CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></span></span></h1>
         </div>
         <div class="refresh-badge">
           <strong>Atualiza em</strong>
@@ -725,6 +725,10 @@
         <label for="filtroAgendamento">Agendamento</label>
         <select id="filtroAgendamento"></select>
       </div>
+      <div class="filter-card">
+        <label for="filtroStatusOs">Status da O.S.</label>
+        <select id="filtroStatusOs"></select>
+      </div>
     </section>
 
     <section class="quick-range">
@@ -736,7 +740,7 @@
     </section>
 
     <section class="toolbar">
-      <div class="filter-card" style="grid-column: span 6;">
+      <div class="filter-card" style="grid-column: span 7;">
         <label for="filtroBusca">Busca no detalhamento</label>
         <input id="filtroBusca" type="text" placeholder="Digite cliente, contrato, POP, motivo ou usuário"/>
       </div>
@@ -749,13 +753,13 @@
 	          <p class="caption">Backlog atual e encerramentos do recorte, sempre respeitando todos os filtros selecionados.</p>
 	        </div>
 	        <div class="metric-grid cols-2">
-	          <div class="metric-item"><span class="metric-label">Total de O.S. do recorte</span><span class="metric-value" id="cardTotalStatus">4633</span></div>
-	          <div class="metric-item"><span class="metric-label">Em aberto</span><span class="metric-value" id="cardAberta">35</span></div>
-	          <div class="metric-item"><span class="metric-label">Pendentes</span><span class="metric-value" id="cardPendente">13</span></div>
+	          <div class="metric-item"><span class="metric-label">Total de O.S. do recorte</span><span class="metric-value" id="cardTotalStatus">4634</span></div>
+	          <div class="metric-item"><span class="metric-label">Em aberto</span><span class="metric-value" id="cardAberta">34</span></div>
+	          <div class="metric-item"><span class="metric-label">Pendentes</span><span class="metric-value" id="cardPendente">11</span></div>
 	          <div class="metric-item"><span class="metric-label">Em execução</span><span class="metric-value" id="cardEmExecucao">1</span></div>
-	          <div class="metric-item"><span class="metric-label">Total de O.S. encerradas</span><span class="metric-value" id="cardEncerrada">4584</span></div>
-	          <div class="metric-item metric-separator"><span class="metric-label">Encerradas pelo técnico</span><span class="metric-value" id="cardEncerradaTecnicos">2293</span></div>
-	          <div class="metric-item"><span class="metric-label">Encerradas por outros</span><span class="metric-value" id="cardPorOutros">2291</span></div>
+	          <div class="metric-item"><span class="metric-label">Total de O.S. encerradas</span><span class="metric-value" id="cardEncerrada">4588</span></div>
+	          <div class="metric-item metric-separator"><span class="metric-label">Encerradas pelo técnico</span><span class="metric-value" id="cardEncerradaTecnicos">2295</span></div>
+	          <div class="metric-item"><span class="metric-label">Encerradas por outros</span><span class="metric-value" id="cardPorOutros">2293</span></div>
 	        </div>
 	      </div>
 	      <div class="summary-card tertiary">
@@ -766,7 +770,7 @@
 	        <div class="metric-grid flow scrollable" id="movimentacoesGrid">
 	          <div class="metric-item compact"><span class="metric-label">Inviabilidades</span><span class="metric-value" id="cardInviabilidade">34</span></div>
 	          <div class="metric-item compact"><span class="metric-label">Instalação de KIT</span><span class="metric-value" id="cardInstalacoes">603</span></div>
-	          <div class="metric-item compact"><span class="metric-label">Remoção de KIT</span><span class="metric-value" id="cardRemocoes">975</span></div>
+	          <div class="metric-item compact"><span class="metric-label">Remoção de KIT</span><span class="metric-value" id="cardRemocoes">976</span></div>
 	        </div>
 	      </div>
 	      <div class="summary-card quaternary">
@@ -934,6 +938,7 @@
     const filtroGrupo = document.getElementById("filtroGrupo");
     const filtroPop = document.getElementById("filtroPop");
     const filtroAgendamento = document.getElementById("filtroAgendamento");
+    const filtroStatusOs = document.getElementById("filtroStatusOs");
     const filtroBusca = document.getElementById("filtroBusca");
     const quickRangeButtons = Array.from(document.querySelectorAll("[data-range]"));
     const refreshCountdown = document.getElementById("refreshCountdown");
@@ -1392,6 +1397,7 @@
         grupo: filtroGrupo.value,
         pop: filtroPop.value,
         agendamento: filtroAgendamento.value,
+        statusOs: filtroStatusOs.value,
         busca: filtroBusca.value,
       };
       window.localStorage.setItem(storageKey, JSON.stringify(estado));
@@ -1408,6 +1414,7 @@
         filtroGrupo.value = estado.grupo || "";
         filtroPop.value = estado.pop || "";
         filtroAgendamento.value = estado.agendamento || "";
+        filtroStatusOs.value = estado.statusOs || "";
         filtroBusca.value = estado.busca || "";
         normalizarPeriodoSelecionado();
       } catch (_erro) {
@@ -1444,11 +1451,15 @@
       const pops = [...new Set(detalhes.map(obterPop).filter(Boolean))].sort((a, b) =>
         a.localeCompare(b, "pt-BR", { sensitivity: "base" })
       );
+      const statusDisponiveis = [...new Set(detalhes.map(obterStatus).filter(Boolean))].sort((a, b) =>
+        a.localeCompare(b, "pt-BR", { sensitivity: "base" })
+      );
 
       preencherSelect(filtroUsuario, usuarios, "Todos os usuários");
       preencherSelect(filtroGrupo, grupos, "Todos os grupos");
       preencherSelect(filtroPop, pops, "Todos os POPs");
       preencherSelect(filtroAgendamento, ["Agendadas", "Não agendadas"], "Todas");
+      preencherSelect(filtroStatusOs, statusDisponiveis, "Todos os status");
       if (dataMinDisponivel) {
         filtroDataInicial.min = dataMinDisponivel;
         filtroDataFinal.min = dataMinDisponivel;
@@ -1505,6 +1516,11 @@
       return true;
     }
 
+    function statusCorrespondeAoFiltro(registro) {
+      if (!filtroStatusOs.value) return true;
+      return obterStatus(registro) === filtroStatusOs.value;
+    }
+
     function filtrarDetalhes() {
       const busca = normalizarTexto(filtroBusca.value).toLowerCase();
 
@@ -1514,6 +1530,7 @@
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
         if (!agendamentoCorrespondeAoFiltro(registro)) return false;
+        if (!statusCorrespondeAoFiltro(registro)) return false;
         if (busca && !obterTextoBusca(registro).includes(busca)) return false;
         return true;
       });
@@ -1529,6 +1546,7 @@
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
         if (!agendamentoCorrespondeAoFiltro(registro)) return false;
+        if (!statusCorrespondeAoFiltro(registro)) return false;
         if (busca && !obterTextoBusca(registro).includes(busca)) return false;
         return true;
       });
@@ -1543,6 +1561,7 @@
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
         if (!agendamentoCorrespondeAoFiltro(registro)) return false;
+        if (!statusCorrespondeAoFiltro(registro)) return false;
         if (busca && !obterTextoBusca(registro).includes(busca)) return false;
         return true;
       });
@@ -1558,6 +1577,7 @@
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
         if (!agendamentoCorrespondeAoFiltro(registro)) return false;
+        if (!statusCorrespondeAoFiltro(registro)) return false;
         if (busca && !obterTextoBusca(registro).includes(busca)) return false;
         return true;
       });
@@ -1573,6 +1593,7 @@
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
         if (!agendamentoCorrespondeAoFiltro(registro)) return false;
+        if (!statusCorrespondeAoFiltro(registro)) return false;
         if (busca && !obterTextoBusca(registro).includes(busca)) return false;
         return true;
       });
@@ -1587,6 +1608,7 @@
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
         if (!agendamentoCorrespondeAoFiltro(registro)) return false;
+        if (!statusCorrespondeAoFiltro(registro)) return false;
         if (busca && !obterTextoBusca(registro).includes(busca)) return false;
         return true;
       });
@@ -1602,6 +1624,7 @@
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return;
         if (!agendamentoCorrespondeAoFiltro(registro)) return;
+        if (!statusCorrespondeAoFiltro(registro)) return;
         if (busca && !obterTextoBusca(registro).includes(busca)) return;
 
         const usuario = obterUsuario(registro);
@@ -1729,7 +1752,7 @@
       const busca = normalizarTexto(filtroBusca.value).toLowerCase();
       const usuarioFiltro = normalizarTexto(filtroUsuario.value);
       const usuariosPermitidos = obterUsuariosPermitidosParaVotos();
-      const restringirPorDetalhes = Boolean(filtroUsuario.value || filtroGrupo.value || filtroPop.value || filtroAgendamento.value || busca);
+      const restringirPorDetalhes = Boolean(filtroUsuario.value || filtroGrupo.value || filtroPop.value || filtroAgendamento.value || filtroStatusOs.value || busca);
       const mapaDuplas = construirMapaDuplasPorDia();
 
       return votosData.flatMap((registro) => {
@@ -1762,6 +1785,7 @@
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
         if (!agendamentoCorrespondeAoFiltro(registro)) return false;
+        if (!statusCorrespondeAoFiltro(registro)) return false;
         if (busca && !obterTextoBusca(registro).includes(busca)) return false;
         return true;
       });
@@ -2219,6 +2243,7 @@
       if (filtroGrupo.value) partes.push(`Grupo: ${filtroGrupo.value}`);
       if (filtroPop.value) partes.push(`POP: ${filtroPop.value}`);
       if (filtroAgendamento.value) partes.push(`Agendamento: ${filtroAgendamento.value}`);
+      if (filtroStatusOs.value) partes.push(`Status: ${filtroStatusOs.value}`);
       if (filtroBusca.value.trim()) partes.push(`Busca: ${filtroBusca.value.trim()}`);
       return partes.length ? partes.join(" | ") : "Todos os filtros";
     }
@@ -2652,6 +2677,7 @@
       if (filtroGrupo.value) partes.push(`Grupo: ${filtroGrupo.value}`);
       if (filtroPop.value) partes.push(`POP: ${filtroPop.value}`);
       if (filtroAgendamento.value) partes.push(`Agendamento: ${filtroAgendamento.value}`);
+      if (filtroStatusOs.value) partes.push(`Status: ${filtroStatusOs.value}`);
       if (filtroBusca.value.trim()) partes.push(`Busca: ${filtroBusca.value.trim()}`);
 
       const textoFiltro = partes.length ? partes.join(" | ") : "Todos";
@@ -2686,7 +2712,7 @@
       const registrosBaseReincidencias = filtrarBaseReincidencias();
 	      renderStatusCards(registrosOperacionais, registrosBaseEncerramentos);
 	      renderBacklogOperacional(registrosOperacionais);
-	      renderMotivoCards(registrosAnaliticos);
+	      renderMotivoCards(registrosPops);
 	      renderPopCards(registrosPops);
 	      renderDetalhamentoPops(registrosDetalhamentoPops);
 	      renderCardsEncerramentos(registrosBaseEncerramentos);
@@ -2733,7 +2759,7 @@
       aplicarFiltros();
     }
 
-    [filtroDataInicial, filtroDataFinal, filtroUsuario, filtroGrupo, filtroPop, filtroAgendamento].forEach((select) => {
+    [filtroDataInicial, filtroDataFinal, filtroUsuario, filtroGrupo, filtroPop, filtroAgendamento, filtroStatusOs].forEach((select) => {
       select.addEventListener("change", aplicarFiltros);
     });
 

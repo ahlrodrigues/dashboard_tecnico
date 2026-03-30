@@ -447,7 +447,7 @@ def gerar_html_dashboard(
     }}
     .toolbar {{
       display: grid;
-      grid-template-columns: repeat(6, minmax(0, 1fr));
+      grid-template-columns: repeat(7, minmax(0, 1fr));
       gap: 14px;
       margin: 20px 0;
     }}
@@ -935,6 +935,10 @@ def gerar_html_dashboard(
         <label for="filtroAgendamento">Agendamento</label>
         <select id="filtroAgendamento"></select>
       </div>
+      <div class="filter-card">
+        <label for="filtroStatusOs">Status da O.S.</label>
+        <select id="filtroStatusOs"></select>
+      </div>
     </section>
 
     <section class="quick-range">
@@ -946,7 +950,7 @@ def gerar_html_dashboard(
     </section>
 
     <section class="toolbar">
-      <div class="filter-card" style="grid-column: span 6;">
+      <div class="filter-card" style="grid-column: span 7;">
         <label for="filtroBusca">Busca no detalhamento</label>
         <input id="filtroBusca" type="text" placeholder="Digite cliente, contrato, POP, motivo ou usuário"/>
       </div>
@@ -1144,6 +1148,7 @@ def gerar_html_dashboard(
     const filtroGrupo = document.getElementById("filtroGrupo");
     const filtroPop = document.getElementById("filtroPop");
     const filtroAgendamento = document.getElementById("filtroAgendamento");
+    const filtroStatusOs = document.getElementById("filtroStatusOs");
     const filtroBusca = document.getElementById("filtroBusca");
     const quickRangeButtons = Array.from(document.querySelectorAll("[data-range]"));
     const refreshCountdown = document.getElementById("refreshCountdown");
@@ -1602,6 +1607,7 @@ def gerar_html_dashboard(
         grupo: filtroGrupo.value,
         pop: filtroPop.value,
         agendamento: filtroAgendamento.value,
+        statusOs: filtroStatusOs.value,
         busca: filtroBusca.value,
       }};
       window.localStorage.setItem(storageKey, JSON.stringify(estado));
@@ -1618,6 +1624,7 @@ def gerar_html_dashboard(
         filtroGrupo.value = estado.grupo || "";
         filtroPop.value = estado.pop || "";
         filtroAgendamento.value = estado.agendamento || "";
+        filtroStatusOs.value = estado.statusOs || "";
         filtroBusca.value = estado.busca || "";
         normalizarPeriodoSelecionado();
       }} catch (_erro) {{
@@ -1654,11 +1661,15 @@ def gerar_html_dashboard(
       const pops = [...new Set(detalhes.map(obterPop).filter(Boolean))].sort((a, b) =>
         a.localeCompare(b, "pt-BR", {{ sensitivity: "base" }})
       );
+      const statusDisponiveis = [...new Set(detalhes.map(obterStatus).filter(Boolean))].sort((a, b) =>
+        a.localeCompare(b, "pt-BR", {{ sensitivity: "base" }})
+      );
 
       preencherSelect(filtroUsuario, usuarios, "Todos os usuários");
       preencherSelect(filtroGrupo, grupos, "Todos os grupos");
       preencherSelect(filtroPop, pops, "Todos os POPs");
       preencherSelect(filtroAgendamento, ["Agendadas", "Não agendadas"], "Todas");
+      preencherSelect(filtroStatusOs, statusDisponiveis, "Todos os status");
       if (dataMinDisponivel) {{
         filtroDataInicial.min = dataMinDisponivel;
         filtroDataFinal.min = dataMinDisponivel;
@@ -1715,6 +1726,11 @@ def gerar_html_dashboard(
       return true;
     }}
 
+    function statusCorrespondeAoFiltro(registro) {{
+      if (!filtroStatusOs.value) return true;
+      return obterStatus(registro) === filtroStatusOs.value;
+    }}
+
     function filtrarDetalhes() {{
       const busca = normalizarTexto(filtroBusca.value).toLowerCase();
 
@@ -1724,6 +1740,7 @@ def gerar_html_dashboard(
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
         if (!agendamentoCorrespondeAoFiltro(registro)) return false;
+        if (!statusCorrespondeAoFiltro(registro)) return false;
         if (busca && !obterTextoBusca(registro).includes(busca)) return false;
         return true;
       }});
@@ -1739,6 +1756,7 @@ def gerar_html_dashboard(
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
         if (!agendamentoCorrespondeAoFiltro(registro)) return false;
+        if (!statusCorrespondeAoFiltro(registro)) return false;
         if (busca && !obterTextoBusca(registro).includes(busca)) return false;
         return true;
       }});
@@ -1753,6 +1771,7 @@ def gerar_html_dashboard(
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
         if (!agendamentoCorrespondeAoFiltro(registro)) return false;
+        if (!statusCorrespondeAoFiltro(registro)) return false;
         if (busca && !obterTextoBusca(registro).includes(busca)) return false;
         return true;
       }});
@@ -1768,6 +1787,7 @@ def gerar_html_dashboard(
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
         if (!agendamentoCorrespondeAoFiltro(registro)) return false;
+        if (!statusCorrespondeAoFiltro(registro)) return false;
         if (busca && !obterTextoBusca(registro).includes(busca)) return false;
         return true;
       }});
@@ -1783,6 +1803,7 @@ def gerar_html_dashboard(
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
         if (!agendamentoCorrespondeAoFiltro(registro)) return false;
+        if (!statusCorrespondeAoFiltro(registro)) return false;
         if (busca && !obterTextoBusca(registro).includes(busca)) return false;
         return true;
       }});
@@ -1797,6 +1818,7 @@ def gerar_html_dashboard(
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
         if (!agendamentoCorrespondeAoFiltro(registro)) return false;
+        if (!statusCorrespondeAoFiltro(registro)) return false;
         if (busca && !obterTextoBusca(registro).includes(busca)) return false;
         return true;
       }});
@@ -1812,6 +1834,7 @@ def gerar_html_dashboard(
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return;
         if (!agendamentoCorrespondeAoFiltro(registro)) return;
+        if (!statusCorrespondeAoFiltro(registro)) return;
         if (busca && !obterTextoBusca(registro).includes(busca)) return;
 
         const usuario = obterUsuario(registro);
@@ -1939,7 +1962,7 @@ def gerar_html_dashboard(
       const busca = normalizarTexto(filtroBusca.value).toLowerCase();
       const usuarioFiltro = normalizarTexto(filtroUsuario.value);
       const usuariosPermitidos = obterUsuariosPermitidosParaVotos();
-      const restringirPorDetalhes = Boolean(filtroUsuario.value || filtroGrupo.value || filtroPop.value || filtroAgendamento.value || busca);
+      const restringirPorDetalhes = Boolean(filtroUsuario.value || filtroGrupo.value || filtroPop.value || filtroAgendamento.value || filtroStatusOs.value || busca);
       const mapaDuplas = construirMapaDuplasPorDia();
 
       return votosData.flatMap((registro) => {{
@@ -1972,6 +1995,7 @@ def gerar_html_dashboard(
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
         if (!agendamentoCorrespondeAoFiltro(registro)) return false;
+        if (!statusCorrespondeAoFiltro(registro)) return false;
         if (busca && !obterTextoBusca(registro).includes(busca)) return false;
         return true;
       }});
@@ -2429,6 +2453,7 @@ def gerar_html_dashboard(
       if (filtroGrupo.value) partes.push(`Grupo: ${{filtroGrupo.value}}`);
       if (filtroPop.value) partes.push(`POP: ${{filtroPop.value}}`);
       if (filtroAgendamento.value) partes.push(`Agendamento: ${{filtroAgendamento.value}}`);
+      if (filtroStatusOs.value) partes.push(`Status: ${{filtroStatusOs.value}}`);
       if (filtroBusca.value.trim()) partes.push(`Busca: ${{filtroBusca.value.trim()}}`);
       return partes.length ? partes.join(" | ") : "Todos os filtros";
     }}
@@ -2862,6 +2887,7 @@ def gerar_html_dashboard(
       if (filtroGrupo.value) partes.push(`Grupo: ${{filtroGrupo.value}}`);
       if (filtroPop.value) partes.push(`POP: ${{filtroPop.value}}`);
       if (filtroAgendamento.value) partes.push(`Agendamento: ${{filtroAgendamento.value}}`);
+      if (filtroStatusOs.value) partes.push(`Status: ${{filtroStatusOs.value}}`);
       if (filtroBusca.value.trim()) partes.push(`Busca: ${{filtroBusca.value.trim()}}`);
 
       const textoFiltro = partes.length ? partes.join(" | ") : "Todos";
@@ -2896,7 +2922,7 @@ def gerar_html_dashboard(
       const registrosBaseReincidencias = filtrarBaseReincidencias();
 	      renderStatusCards(registrosOperacionais, registrosBaseEncerramentos);
 	      renderBacklogOperacional(registrosOperacionais);
-	      renderMotivoCards(registrosAnaliticos);
+	      renderMotivoCards(registrosPops);
 	      renderPopCards(registrosPops);
 	      renderDetalhamentoPops(registrosDetalhamentoPops);
 	      renderCardsEncerramentos(registrosBaseEncerramentos);
@@ -2943,7 +2969,7 @@ def gerar_html_dashboard(
       aplicarFiltros();
     }}
 
-    [filtroDataInicial, filtroDataFinal, filtroUsuario, filtroGrupo, filtroPop, filtroAgendamento].forEach((select) => {{
+    [filtroDataInicial, filtroDataFinal, filtroUsuario, filtroGrupo, filtroPop, filtroAgendamento, filtroStatusOs].forEach((select) => {{
       select.addEventListener("change", aplicarFiltros);
     }});
 
