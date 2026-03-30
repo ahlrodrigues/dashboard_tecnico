@@ -812,11 +812,11 @@ def gerar_html_dashboard(
     tbody tr.unknown-ip-row:nth-child(even),
     tbody tr.unknown-ip-row {{
       background: rgba(208, 74, 74, 0.10);
-      color: #a12b2b;
+      color: #c97a17;
     }}
     tbody tr.unknown-ip-row:hover {{
       background: rgba(208, 74, 74, 0.16);
-      color: #a12b2b;
+      color: #c97a17;
     }}
     .empty {{
       padding: 24px;
@@ -2057,9 +2057,10 @@ def gerar_html_dashboard(
 	      const contagem = new Map();
 	      let inviabilidade = 0;
         let outrosMotivos = 0;
+        const agruparComoInviabilidade = filtroGrupo.value === "Inviabilidade";
 
 	      registros.forEach((registro) => {{
-	        if (obterGrupo(registro) === "Inviabilidade") {{
+	        if (agruparComoInviabilidade && obterGrupoFiltro(registro) === "Inviabilidade") {{
 	          inviabilidade += 1;
 	          return;
 	        }}

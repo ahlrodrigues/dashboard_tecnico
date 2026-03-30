@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Dashboard de OS SGP - V2.5.2 (cad6322)</title>
+  <title>Dashboard de OS SGP - V2.5.2 (4caf411)</title>
   <style>
     :root {
       --bg: #eef3f1;
@@ -602,11 +602,11 @@
     tbody tr.unknown-ip-row:nth-child(even),
     tbody tr.unknown-ip-row {
       background: rgba(208, 74, 74, 0.10);
-      color: #a12b2b;
+      color: #c97a17;
     }
     tbody tr.unknown-ip-row:hover {
       background: rgba(208, 74, 74, 0.16);
-      color: #a12b2b;
+      color: #c97a17;
     }
     .empty {
       padding: 24px;
@@ -690,7 +690,7 @@
     <section class="hero">
       <div class="hero-head">
         <div class="hero-titles">
-          <h1>Dashboard de OS SGP<span class="hero-meta-inline"><span class="hero-version">V2.5.2 (cad6322)</span><span class="hero-meta-links"><a href="CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></span></span></h1>
+          <h1>Dashboard de OS SGP<span class="hero-meta-inline"><span class="hero-version">V2.5.2 (4caf411)</span><span class="hero-meta-links"><a href="CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></span></span></h1>
         </div>
         <div class="refresh-badge">
           <strong>Atualiza em</strong>
@@ -753,13 +753,13 @@
 	          <p class="caption">Backlog atual e encerramentos do recorte, sempre respeitando todos os filtros selecionados.</p>
 	        </div>
 	        <div class="metric-grid cols-2">
-	          <div class="metric-item"><span class="metric-label">Total de O.S. do recorte</span><span class="metric-value" id="cardTotalStatus">4634</span></div>
-	          <div class="metric-item"><span class="metric-label">Em aberto</span><span class="metric-value" id="cardAberta">34</span></div>
-	          <div class="metric-item"><span class="metric-label">Pendentes</span><span class="metric-value" id="cardPendente">11</span></div>
-	          <div class="metric-item"><span class="metric-label">Em execução</span><span class="metric-value" id="cardEmExecucao">1</span></div>
-	          <div class="metric-item"><span class="metric-label">Total de O.S. encerradas</span><span class="metric-value" id="cardEncerrada">4588</span></div>
-	          <div class="metric-item metric-separator"><span class="metric-label">Encerradas pelo técnico</span><span class="metric-value" id="cardEncerradaTecnicos">2295</span></div>
-	          <div class="metric-item"><span class="metric-label">Encerradas por outros</span><span class="metric-value" id="cardPorOutros">2293</span></div>
+	          <div class="metric-item"><span class="metric-label">Total de O.S. do recorte</span><span class="metric-value" id="cardTotalStatus">4637</span></div>
+	          <div class="metric-item"><span class="metric-label">Em aberto</span><span class="metric-value" id="cardAberta">36</span></div>
+	          <div class="metric-item"><span class="metric-label">Pendentes</span><span class="metric-value" id="cardPendente">9</span></div>
+	          <div class="metric-item"><span class="metric-label">Em execução</span><span class="metric-value" id="cardEmExecucao">0</span></div>
+	          <div class="metric-item"><span class="metric-label">Total de O.S. encerradas</span><span class="metric-value" id="cardEncerrada">4592</span></div>
+	          <div class="metric-item metric-separator"><span class="metric-label">Encerradas pelo técnico</span><span class="metric-value" id="cardEncerradaTecnicos">2296</span></div>
+	          <div class="metric-item"><span class="metric-label">Encerradas por outros</span><span class="metric-value" id="cardPorOutros">2296</span></div>
 	        </div>
 	      </div>
 	      <div class="summary-card tertiary">
@@ -769,8 +769,8 @@
 	        </div>
 	        <div class="metric-grid flow scrollable" id="movimentacoesGrid">
 	          <div class="metric-item compact"><span class="metric-label">Inviabilidades</span><span class="metric-value" id="cardInviabilidade">34</span></div>
-	          <div class="metric-item compact"><span class="metric-label">Instalação de KIT</span><span class="metric-value" id="cardInstalacoes">603</span></div>
-	          <div class="metric-item compact"><span class="metric-label">Remoção de KIT</span><span class="metric-value" id="cardRemocoes">976</span></div>
+	          <div class="metric-item compact"><span class="metric-label">Instalação de KIT</span><span class="metric-value" id="cardInstalacoes">604</span></div>
+	          <div class="metric-item compact"><span class="metric-label">Remoção de KIT</span><span class="metric-value" id="cardRemocoes">977</span></div>
 	        </div>
 	      </div>
 	      <div class="summary-card quaternary">
@@ -1847,9 +1847,10 @@
 	      const contagem = new Map();
 	      let inviabilidade = 0;
         let outrosMotivos = 0;
+        const agruparComoInviabilidade = filtroGrupo.value === "Inviabilidade";
 
 	      registros.forEach((registro) => {
-	        if (obterGrupo(registro) === "Inviabilidade") {
+	        if (agruparComoInviabilidade && obterGrupoFiltro(registro) === "Inviabilidade") {
 	          inviabilidade += 1;
 	          return;
 	        }
