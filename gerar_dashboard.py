@@ -653,11 +653,13 @@ def gerar_html_dashboard(
     .summary-card.secondary .metric-item.metric-separator::before {{
       content: "";
       position: absolute;
-      left: -6px;
-      top: 14px;
-      bottom: 14px;
-      width: 1px;
-      background: rgba(23, 98, 76, 0.22);
+      left: -8px;
+      top: 10px;
+      bottom: 10px;
+      width: 3px;
+      border-radius: 999px;
+      background: rgba(23, 98, 76, 0.52);
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.65);
     }}
     .metric-item.compact {{
       min-height: 84px;
