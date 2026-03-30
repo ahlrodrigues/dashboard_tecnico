@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Dashboard de OS SGP - V2.5.3 (74ef550)</title>
+  <title>Dashboard de OS SGP - V2.5.3 (464a9aa)</title>
   <style>
     :root {
       --bg: #eef3f1;
@@ -692,7 +692,7 @@
     <section class="hero">
       <div class="hero-head">
         <div class="hero-titles">
-          <h1>Dashboard de OS SGP<span class="hero-meta-inline"><span class="hero-version">V2.5.3 (74ef550)</span><span class="hero-meta-links"><a href="CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></span></span></h1>
+          <h1>Dashboard de OS SGP<span class="hero-meta-inline"><span class="hero-version">V2.5.3 (464a9aa)</span><span class="hero-meta-links"><a href="CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></span></span></h1>
         </div>
         <div class="refresh-badge">
           <strong>Atualiza em</strong>
@@ -756,11 +756,11 @@
 	        </div>
 	        <div class="metric-grid cols-2">
 	          <div class="metric-item"><span class="metric-label">Total de O.S. do recorte</span><span class="metric-value" id="cardTotalStatus">4642</span></div>
-	          <div class="metric-item"><span class="metric-label">Em aberto</span><span class="metric-value" id="cardAberta">41</span></div>
+	          <div class="metric-item"><span class="metric-label">Em aberto</span><span class="metric-value" id="cardAberta">40</span></div>
 	          <div class="metric-item"><span class="metric-label">Pendentes</span><span class="metric-value" id="cardPendente">9</span></div>
 	          <div class="metric-item"><span class="metric-label">Em execução</span><span class="metric-value" id="cardEmExecucao">0</span></div>
-	          <div class="metric-item"><span class="metric-label">Total de O.S. encerradas</span><span class="metric-value" id="cardEncerrada">4592</span></div>
-	          <div class="metric-item metric-separator"><span class="metric-label">Encerradas pelo técnico</span><span class="metric-value" id="cardEncerradaTecnicos">2296</span></div>
+	          <div class="metric-item"><span class="metric-label">Total de O.S. encerradas</span><span class="metric-value" id="cardEncerrada">4593</span></div>
+	          <div class="metric-item metric-separator"><span class="metric-label">Encerradas pelo técnico</span><span class="metric-value" id="cardEncerradaTecnicos">2297</span></div>
 	          <div class="metric-item"><span class="metric-label">Encerradas por outros</span><span class="metric-value" id="cardPorOutros">2296</span></div>
 	        </div>
 	      </div>
@@ -1617,7 +1617,6 @@
         if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
-        if (!agendamentoCorrespondeAoFiltro(registro)) return false;
         if (!statusCorrespondeAoFiltro(registro)) return false;
         if (busca && !obterTextoBusca(registro).includes(busca)) return false;
         return true;
