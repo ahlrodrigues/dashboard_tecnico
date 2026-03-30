@@ -787,16 +787,18 @@ def gerar_html_dashboard(
     tbody tr:hover {{
       background: rgba(220, 239, 231, 0.40);
     }}
-    tbody tr.duplicate-vote-row:nth-child(even),
-    tbody tr.duplicate-vote-row {{
-      background: rgba(208, 74, 74, 0.10);
-    }}
-    tbody tr.duplicate-vote-row:hover {{
-      background: rgba(208, 74, 74, 0.16);
-    }}
     td.duplicate-vote-cell {{
       color: #a12b2b;
       font-weight: 800;
+    }}
+    tbody tr.unknown-ip-row:nth-child(even),
+    tbody tr.unknown-ip-row {{
+      background: rgba(208, 74, 74, 0.10);
+      color: #a12b2b;
+    }}
+    tbody tr.unknown-ip-row:hover {{
+      background: rgba(208, 74, 74, 0.16);
+      color: #a12b2b;
     }}
     .empty {{
       padding: 24px;
@@ -1463,6 +1465,12 @@ def gerar_html_dashboard(
       const data = obterDataVotoTexto(registro);
       if (!ip || !data) return "";
       return `${{ip}}|||${{data}}`;
+    }}
+
+    function ipEstaNosRangesConhecidos(registro) {{
+      const ip = normalizarTexto(registro.ip);
+      if (!ip) return false;
+      return ["100.64", "191.241", "143.137", "170.120"].some((prefixo) => ip.startsWith(prefixo));
     }}
 
     function analisarDuplicidadeVotos(registros) {{
@@ -2469,8 +2477,9 @@ def gerar_html_dashboard(
       linhas.forEach((registro) => {{
         const tr = document.createElement("tr");
         const possuiDuplicidadeIpData = analiseDuplicidade.chavesDuplicadas.has(obterChaveDuplicidadeVoto(registro));
-        if (possuiDuplicidadeIpData) {{
-          tr.classList.add("duplicate-vote-row");
+        const possuiIpDesconhecido = !ipEstaNosRangesConhecidos(registro);
+        if (possuiIpDesconhecido) {{
+          tr.classList.add("unknown-ip-row");
         }}
         votosDisplayCols.forEach((coluna) => {{
           const td = document.createElement("td");
@@ -2804,7 +2813,7 @@ def gerar_html_dashboard(
       detalhamentoPopsMeta.textContent = `Tabela de POPs com ${{totalDetalhamentoPops}} O.S. no recorte atual, considerando os filtros aplicados na página.`;
       rankingMeta.textContent = `Ranking atualizado com ${{registrosFinalizados.length}} OS encerradas no recorte atual.`;
       rankingVotosResumoMeta.textContent = `Ranking atualizado com ${{totalVotosValidos}} voto(s) válido(s), considerando apenas 1 voto por IP e data no recorte atual.`;
-      rankingVotosMeta.textContent = `Tabela de votos atualizada com ${{totalVotosDetalhamento}} registro(s) do recorte atual; duplicidades por IP e data ficam destacadas em vermelho.`;
+      rankingVotosMeta.textContent = `Tabela de votos atualizada com ${{totalVotosDetalhamento}} registro(s) do recorte atual; duplicidades por IP e data destacam a fonte em vermelho e IPs fora dos ranges permitidos deixam a linha inteira em vermelho.`;
       detalheMeta.textContent = `Mostrando ${{totalDetalhes}} O.S. encerrada(s) após aplicar os filtros.`;
       const intervaloReincidencia = obterIntervaloReincidencia30Dias();
       const descricaoReincidencia = intervaloReincidencia
