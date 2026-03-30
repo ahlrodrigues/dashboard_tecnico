@@ -700,6 +700,7 @@ def gerar_html_dashboard(
       display: grid;
       grid-template-columns: 1.05fr 0.95fr;
       gap: 18px;
+      margin-top: 18px;
     }}
     .panel {{
       padding: 18px;
@@ -1190,6 +1191,7 @@ def gerar_html_dashboard(
       jpaulo: "joaopaulo",
       luizcarlos: "luizcarlos",
       lcarlos: "luizcarlos",
+      jcarlos: "cabral",
     }};
     const rotulosCanonicosUsuarios = {{
       joaopaulo: "JOAO PAULO",
@@ -1410,6 +1412,26 @@ def gerar_html_dashboard(
 
     function obterDataBaseTexto(registro) {{
       return normalizarTexto(registro.data_base_dashboard || registro.data_finalizacao_dashboard || registro.data_criacao_dashboard);
+    }}
+
+    function obterDataAgendamentoTexto(registro) {{
+      return normalizarTexto(registro.data_agendamento);
+    }}
+
+    function obterDataIntervaloDetalhe(registro) {{
+      if (filtroAgendamento.value === "Agendadas") {{
+        const dataAgendamento = obterDataAgendamentoTexto(registro);
+        if (dataAgendamento) return dataAgendamento;
+      }}
+      return obterDataFiltroTexto(registro);
+    }}
+
+    function obterDataIntervaloBase(registro) {{
+      if (filtroAgendamento.value === "Agendadas") {{
+        const dataAgendamento = obterDataAgendamentoTexto(registro);
+        if (dataAgendamento) return dataAgendamento;
+      }}
+      return obterDataBaseTexto(registro);
     }}
 
     function obterDataFiltroTexto(registro) {{
@@ -1637,7 +1659,7 @@ def gerar_html_dashboard(
     }}
 
     function dataDentroDoIntervalo(registro) {{
-      const data = obterDataFiltroTexto(registro);
+      const data = obterDataIntervaloDetalhe(registro);
       if (!data) return false;
       if (filtroDataInicial.value && data < filtroDataInicial.value) return false;
       if (filtroDataFinal.value && data > filtroDataFinal.value) return false;
@@ -1645,7 +1667,7 @@ def gerar_html_dashboard(
     }}
 
     function dataBaseDentroDoIntervalo(registro) {{
-      const data = obterDataBaseTexto(registro);
+      const data = obterDataIntervaloBase(registro);
       if (!data) return false;
       if (filtroDataInicial.value && data < filtroDataInicial.value) return false;
       if (filtroDataFinal.value && data > filtroDataFinal.value) return false;
