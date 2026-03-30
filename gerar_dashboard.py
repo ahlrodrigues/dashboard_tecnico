@@ -1699,6 +1699,14 @@ def gerar_html_dashboard(
       return true;
     }}
 
+    function dataDentroDoIntervaloRanking(registro) {{
+      const data = obterDataFiltroTexto(registro);
+      if (!data) return false;
+      if (filtroDataInicial.value && data < filtroDataInicial.value) return false;
+      if (filtroDataFinal.value && data > filtroDataFinal.value) return false;
+      return true;
+    }}
+
     function dataBaseDentroDoIntervalo(registro) {{
       const data = obterDataIntervaloBase(registro);
       if (!data) return false;
@@ -1799,7 +1807,7 @@ def gerar_html_dashboard(
       const busca = normalizarTexto(filtroBusca.value).toLowerCase();
 
       return detalhes.filter((registro) => {{
-        if (!dataDentroDoIntervalo(registro)) return false;
+        if (!dataDentroDoIntervaloRanking(registro)) return false;
         if (!ehStatusEncerrada(registro)) return false;
         if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
@@ -2344,7 +2352,7 @@ def gerar_html_dashboard(
 
     function dataDentroDoIntervaloPersonalizado(registro, intervalo) {{
       if (!intervalo) return false;
-      const data = obterDataIntervaloDetalhe(registro);
+      const data = obterDataFiltroTexto(registro);
       if (!data) return false;
       if (intervalo.inicio && data < intervalo.inicio) return false;
       if (intervalo.fim && data > intervalo.fim) return false;
@@ -2357,14 +2365,14 @@ def gerar_html_dashboard(
         return {{ texto: "-", classe: "flat" }};
       }}
 
-      const atual = registrosBase.filter((registro) =>
-        obterUsuario(registro) === usuario &&
+      const atual = registrosAtuais.filter((registro) =>
+        usuariosSaoEquivalentes(obterUsuario(registro), usuario) &&
         obterGrupoFiltro(registro) === grupo &&
-        dataDentroDoIntervalo(registro)
+        dataDentroDoIntervaloRanking(registro)
       ).length;
 
       const anterior = registrosBase.filter((registro) =>
-        obterUsuario(registro) === usuario &&
+        usuariosSaoEquivalentes(obterUsuario(registro), usuario) &&
         obterGrupoFiltro(registro) === grupo &&
         dataDentroDoIntervaloPersonalizado(registro, intervaloAnterior)
       ).length;
@@ -2917,6 +2925,7 @@ def gerar_html_dashboard(
       const registrosPops = filtrarBasePops();
       const registrosDetalhamentoPops = filtrarDetalhamentoPops(registrosPops);
       const registrosFinalizados = registrosAnaliticos;
+      const registrosRanking = filtrarBaseRanking();
       const registrosVotos = filtrarVotosPorData();
       const registrosVotosUnicos = deduplicarVotosPorIpEData(registrosVotos);
 	      const registrosBaseEncerramentos = filtrarBaseEncerramentos();
@@ -2929,7 +2938,7 @@ def gerar_html_dashboard(
 	      renderDetalhamentoPops(registrosDetalhamentoPops);
 	      renderCardsEncerramentos(registrosBaseEncerramentos);
 	      renderTempoBacklog(registrosOperacionais, registrosFinalizados);
-	      renderRanking(registrosFinalizados, registrosBaseRanking);
+	      renderRanking(registrosRanking, registrosBaseRanking);
 	      renderRankingVotosResumo(registrosVotos);
 	      renderRankingVotos(registrosVotos);
 	      renderDetalhes(registrosAnaliticos);
