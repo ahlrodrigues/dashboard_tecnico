@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Dashboard de OS SGP - V2.5.3 (c5c2f0d)</title>
+  <title>Dashboard de OS SGP - V2.5.3 (607d761)</title>
   <style>
     :root {
       --bg: #eef3f1;
@@ -692,7 +692,7 @@
     <section class="hero">
       <div class="hero-head">
         <div class="hero-titles">
-          <h1>Dashboard de OS SGP<span class="hero-meta-inline"><span class="hero-version">V2.5.3 (c5c2f0d)</span><span class="hero-meta-links"><a href="CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></span></span></h1>
+          <h1>Dashboard de OS SGP<span class="hero-meta-inline"><span class="hero-version">V2.5.3 (607d761)</span><span class="hero-meta-links"><a href="CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></span></span></h1>
         </div>
         <div class="refresh-badge">
           <strong>Atualiza em</strong>
@@ -2134,7 +2134,7 @@
 
     function dataDentroDoIntervaloPersonalizado(registro, intervalo) {
       if (!intervalo) return false;
-      const data = obterDataBaseTexto(registro);
+      const data = obterDataIntervaloDetalhe(registro);
       if (!data) return false;
       if (intervalo.inicio && data < intervalo.inicio) return false;
       if (intervalo.fim && data > intervalo.fim) return false;

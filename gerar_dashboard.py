@@ -2344,7 +2344,7 @@ def gerar_html_dashboard(
 
     function dataDentroDoIntervaloPersonalizado(registro, intervalo) {{
       if (!intervalo) return false;
-      const data = obterDataBaseTexto(registro);
+      const data = obterDataIntervaloDetalhe(registro);
       if (!data) return false;
       if (intervalo.inicio && data < intervalo.inicio) return false;
       if (intervalo.fim && data > intervalo.fim) return false;
