@@ -1050,7 +1050,7 @@ def gerar_html_dashboard(
                   <th>Finalizado Por</th>
                   <th>Grupo</th>
                   <th>Total</th>
-                  <th>Var. mes anterior</th>
+                  <th>Var. do recorte</th>
                 </tr>
               </thead>
               <tbody id="rankingBody"></tbody>
