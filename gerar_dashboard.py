@@ -787,9 +787,14 @@ def gerar_html_dashboard(
     tbody tr:hover {{
       background: rgba(220, 239, 231, 0.40);
     }}
-    td.duplicate-vote-cell {{
+    tbody tr.duplicate-vote-row:nth-child(even),
+    tbody tr.duplicate-vote-row {{
       color: #a12b2b;
-      font-weight: 800;
+      background: rgba(208, 74, 74, 0.10);
+    }}
+    tbody tr.duplicate-vote-row:hover {{
+      color: #a12b2b;
+      background: rgba(208, 74, 74, 0.16);
     }}
     tbody tr.unknown-ip-row:nth-child(even),
     tbody tr.unknown-ip-row {{
@@ -2478,6 +2483,9 @@ def gerar_html_dashboard(
         const tr = document.createElement("tr");
         const possuiDuplicidadeIpData = analiseDuplicidade.chavesDuplicadas.has(obterChaveDuplicidadeVoto(registro));
         const possuiIpDesconhecido = !ipEstaNosRangesConhecidos(registro);
+        if (possuiDuplicidadeIpData) {{
+          tr.classList.add("duplicate-vote-row");
+        }}
         if (possuiIpDesconhecido) {{
           tr.classList.add("unknown-ip-row");
         }}
@@ -2487,9 +2495,6 @@ def gerar_html_dashboard(
             ? (analiseDuplicidade.registrosValidos.has(registro) ? obterUsuarioVotoConsolidado(registro) : "-")
             : normalizarTexto(registro[coluna]);
           td.textContent = valor;
-          if ((coluna === "ip" || coluna === "data") && possuiDuplicidadeIpData) {{
-            td.classList.add("duplicate-vote-cell");
-          }}
           tr.appendChild(td);
         }});
         rankingVotosBody.appendChild(tr);
@@ -2813,7 +2818,7 @@ def gerar_html_dashboard(
       detalhamentoPopsMeta.textContent = `Tabela de POPs com ${{totalDetalhamentoPops}} O.S. no recorte atual, considerando os filtros aplicados na página.`;
       rankingMeta.textContent = `Ranking atualizado com ${{registrosFinalizados.length}} OS encerradas no recorte atual.`;
       rankingVotosResumoMeta.textContent = `Ranking atualizado com ${{totalVotosValidos}} voto(s) válido(s), considerando apenas 1 voto por IP e data no recorte atual.`;
-      rankingVotosMeta.textContent = `Tabela de votos atualizada com ${{totalVotosDetalhamento}} registro(s) do recorte atual; duplicidades por IP e data destacam a fonte em vermelho e IPs fora dos ranges permitidos deixam a linha inteira em vermelho.`;
+      rankingVotosMeta.textContent = `Tabela de votos atualizada com ${{totalVotosDetalhamento}} registro(s) do recorte atual; duplicidades por IP e data e IPs fora dos ranges permitidos deixam a linha inteira em vermelho.`;
       detalheMeta.textContent = `Mostrando ${{totalDetalhes}} O.S. encerrada(s) após aplicar os filtros.`;
       const intervaloReincidencia = obterIntervaloReincidencia30Dias();
       const descricaoReincidencia = intervaloReincidencia

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Dashboard de OS SGP - V2.5.2 (723c5ac)</title>
+  <title>Dashboard de OS SGP - V2.5.2 (550cfd5)</title>
   <style>
     :root {
       --bg: #eef3f1;
@@ -577,9 +577,14 @@
     tbody tr:hover {
       background: rgba(220, 239, 231, 0.40);
     }
-    td.duplicate-vote-cell {
+    tbody tr.duplicate-vote-row:nth-child(even),
+    tbody tr.duplicate-vote-row {
       color: #a12b2b;
-      font-weight: 800;
+      background: rgba(208, 74, 74, 0.10);
+    }
+    tbody tr.duplicate-vote-row:hover {
+      color: #a12b2b;
+      background: rgba(208, 74, 74, 0.16);
     }
     tbody tr.unknown-ip-row:nth-child(even),
     tbody tr.unknown-ip-row {
@@ -672,7 +677,7 @@
     <section class="hero">
       <div class="hero-head">
         <div class="hero-titles">
-          <h1>Dashboard de OS SGP<span class="hero-meta-inline"><span class="hero-version">V2.5.2 (723c5ac)</span><span class="hero-meta-links"><a href="CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></span></span></h1>
+          <h1>Dashboard de OS SGP<span class="hero-meta-inline"><span class="hero-version">V2.5.2 (550cfd5)</span><span class="hero-meta-links"><a href="CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></span></span></h1>
         </div>
         <div class="refresh-badge">
           <strong>Atualiza em</strong>
@@ -731,13 +736,13 @@
 	          <p class="caption">Backlog atual e encerramentos do recorte, sempre respeitando todos os filtros selecionados.</p>
 	        </div>
 	        <div class="metric-grid cols-2">
-	          <div class="metric-item"><span class="metric-label">Total de O.S. do recorte</span><span class="metric-value" id="cardTotalStatus">4629</span></div>
-	          <div class="metric-item"><span class="metric-label">Em aberto</span><span class="metric-value" id="cardAberta">36</span></div>
-	          <div class="metric-item"><span class="metric-label">Pendentes</span><span class="metric-value" id="cardPendente">11</span></div>
-	          <div class="metric-item"><span class="metric-label">Em execução</span><span class="metric-value" id="cardEmExecucao">1</span></div>
-	          <div class="metric-item"><span class="metric-label">Total de O.S. encerradas</span><span class="metric-value" id="cardEncerrada">4581</span></div>
+	          <div class="metric-item"><span class="metric-label">Total de O.S. do recorte</span><span class="metric-value" id="cardTotalStatus">4631</span></div>
+	          <div class="metric-item"><span class="metric-label">Em aberto</span><span class="metric-value" id="cardAberta">35</span></div>
+	          <div class="metric-item"><span class="metric-label">Pendentes</span><span class="metric-value" id="cardPendente">12</span></div>
+	          <div class="metric-item"><span class="metric-label">Em execução</span><span class="metric-value" id="cardEmExecucao">2</span></div>
+	          <div class="metric-item"><span class="metric-label">Total de O.S. encerradas</span><span class="metric-value" id="cardEncerrada">4582</span></div>
 	          <div class="metric-item"><span class="metric-label">Encerradas pelo técnico</span><span class="metric-value" id="cardEncerradaTecnicos">2292</span></div>
-	          <div class="metric-item"><span class="metric-label">Encerradas por outros</span><span class="metric-value" id="cardPorOutros">2289</span></div>
+	          <div class="metric-item"><span class="metric-label">Encerradas por outros</span><span class="metric-value" id="cardPorOutros">2290</span></div>
 	        </div>
 	      </div>
 	      <div class="summary-card tertiary">
@@ -2268,6 +2273,9 @@
         const tr = document.createElement("tr");
         const possuiDuplicidadeIpData = analiseDuplicidade.chavesDuplicadas.has(obterChaveDuplicidadeVoto(registro));
         const possuiIpDesconhecido = !ipEstaNosRangesConhecidos(registro);
+        if (possuiDuplicidadeIpData) {
+          tr.classList.add("duplicate-vote-row");
+        }
         if (possuiIpDesconhecido) {
           tr.classList.add("unknown-ip-row");
         }
@@ -2277,9 +2285,6 @@
             ? (analiseDuplicidade.registrosValidos.has(registro) ? obterUsuarioVotoConsolidado(registro) : "-")
             : normalizarTexto(registro[coluna]);
           td.textContent = valor;
-          if ((coluna === "ip" || coluna === "data") && possuiDuplicidadeIpData) {
-            td.classList.add("duplicate-vote-cell");
-          }
           tr.appendChild(td);
         });
         rankingVotosBody.appendChild(tr);
@@ -2603,7 +2608,7 @@
       detalhamentoPopsMeta.textContent = `Tabela de POPs com ${totalDetalhamentoPops} O.S. no recorte atual, considerando os filtros aplicados na página.`;
       rankingMeta.textContent = `Ranking atualizado com ${registrosFinalizados.length} OS encerradas no recorte atual.`;
       rankingVotosResumoMeta.textContent = `Ranking atualizado com ${totalVotosValidos} voto(s) válido(s), considerando apenas 1 voto por IP e data no recorte atual.`;
-      rankingVotosMeta.textContent = `Tabela de votos atualizada com ${totalVotosDetalhamento} registro(s) do recorte atual; duplicidades por IP e data destacam a fonte em vermelho e IPs fora dos ranges permitidos deixam a linha inteira em vermelho.`;
+      rankingVotosMeta.textContent = `Tabela de votos atualizada com ${totalVotosDetalhamento} registro(s) do recorte atual; duplicidades por IP e data e IPs fora dos ranges permitidos deixam a linha inteira em vermelho.`;
       detalheMeta.textContent = `Mostrando ${totalDetalhes} O.S. encerrada(s) após aplicar os filtros.`;
       const intervaloReincidencia = obterIntervaloReincidencia30Dias();
       const descricaoReincidencia = intervaloReincidencia
