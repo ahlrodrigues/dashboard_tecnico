@@ -592,6 +592,33 @@
     tbody tr:hover {
       background: rgba(220, 239, 231, 0.40);
     }
+    tbody tr.history-event-row {
+      border-left: 4px solid transparent;
+    }
+    tbody tr.history-event-row td:first-child {
+      border-left: 0;
+    }
+    tbody tr.history-event-row.event-entry-new,
+    tbody tr.history-event-row.event-entry-transfer,
+    tbody tr.history-event-row.event-entry-reopen {
+      background: rgba(22, 163, 74, 0.10);
+      border-left-color: #16a34a;
+    }
+    tbody tr.history-event-row.event-exit-transfer {
+      background: rgba(71, 85, 105, 0.12);
+      border-left-color: #475569;
+    }
+    tbody tr.history-event-row.event-exit-closed {
+      background: rgba(220, 38, 38, 0.10);
+      border-left-color: #dc2626;
+    }
+    tbody tr.history-event-row.event-aggregate {
+      background: rgba(29, 78, 216, 0.08);
+      border-left-color: #1d4ed8;
+    }
+    tbody tr.history-event-row:hover {
+      filter: brightness(0.98);
+    }
     tbody tr.duplicate-vote-row:nth-child(even),
     tbody tr.duplicate-vote-row {
       color: #a12b2b;
@@ -879,14 +906,16 @@
 
 	    <div class="panel full">
 	      <h2 class="section-title" id="tituloHistoricoTecnicos">Histórico dos técnicos</h2>
-	      <div class="panel-meta" id="historicoTecnicosMeta">Mostrando a evolução do itinerário e dos fechamentos por coleta.</div>
+	      <div class="panel-meta" id="historicoTecnicosMeta">Mostrando a evolução do itinerário no período filtrado.</div>
 	      <canvas id="graficoHistoricoTecnicos"></canvas>
-	      <div class="panel-meta" id="historicoTecnicosEventosMeta">Lista fixa dos eventos registrados no período mostrado no gráfico.</div>
+	      <div class="panel-meta" id="historicoTecnicosEventosMeta">Lista fixa da evolução do itinerário e dos eventos registrados no período mostrado no gráfico.</div>
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
               <th>Coleta</th>
+              <th>Itinerário</th>
+              <th>Variação</th>
               <th>Evento</th>
               <th>O.S.</th>
               <th>Cliente</th>
@@ -895,7 +924,7 @@
             </tr>
           </thead>
           <tbody id="historicoTecnicosEventosBody">
-            <tr><td colspan="6" class="empty">Os eventos registrados no período aparecerão aqui automaticamente.</td></tr>
+            <tr><td colspan="8" class="empty">A evolução do itinerário e os eventos registrados no período aparecerão aqui automaticamente.</td></tr>
           </tbody>
         </table>
       </div>
@@ -2672,8 +2701,6 @@
 	                  const delta = Number(evento.deltaCarteira || 0);
 	                  linhas.push(`Delta do itinerário: ${delta > 0 ? "+" : ""}${delta}`);
 	                }
-	                if (Number(evento.entradasCarteira || 0) > 0) linhas.push(`Entradas na carteira: ${evento.entradasCarteira}`);
-	                if (Number(evento.saidasCarteira || 0) > 0) linhas.push(`Saídas da carteira: ${evento.saidasCarteira}`);
 	                if (Number(evento.novasOs || 0) > 0) linhas.push(`Novas O.S.: ${evento.novasOs}`);
 	                if (Number(evento.transferenciasEntrada || 0) > 0) linhas.push(`Transferências recebidas: ${evento.transferenciasEntrada}`);
 	                if (Number(evento.transferenciasSaida || 0) > 0) linhas.push(`Transferências cedidas: ${evento.transferenciasSaida}`);
@@ -2892,6 +2919,23 @@
 	      }
 	    }
 
+	    function obterClasseEventoCarteira(evento) {
+	      switch (normalizarTexto(evento?.tipo)) {
+	        case "entrada_nova":
+	          return "event-entry-new";
+	        case "entrada_transferencia":
+	          return "event-entry-transfer";
+	        case "entrada_reabertura":
+	          return "event-entry-reopen";
+	        case "saida_transferencia":
+	          return "event-exit-transfer";
+	        case "saida_encerramento":
+	          return "event-exit-closed";
+	        default:
+	          return "event-aggregate";
+	      }
+	    }
+
 	    function formatarDetalhesEventoCarteira(evento) {
 	      if (!evento || typeof evento !== "object") return "";
 	      const partes = [];
@@ -2921,7 +2965,7 @@
 	      const resumo = resumoHistoricoTecnicosAtual;
 	      if (!resumo || !Array.isArray(resumo.labels) || !resumo.labels.length) {
 	        historicoTecnicosEventosMeta.textContent = "Sem histórico suficiente para detalhar os eventos por coleta.";
-	        historicoTecnicosEventosBody.innerHTML = `<tr><td colspan="6" class="empty">Sem eventos para exibir.</td></tr>`;
+	        historicoTecnicosEventosBody.innerHTML = `<tr><td colspan="8" class="empty">Sem eventos para exibir.</td></tr>`;
 	        return;
 	      }
 	      const linhas = [];
@@ -2937,14 +2981,19 @@
 	        if (detalhes.length) {
 	          detalhes.forEach((item) => {
 	            totalEventos += 1;
-	            linhas.push([
-	              coleta,
-	              formatarTipoEventoCarteira(item),
-	              normalizarTexto(item.os_id) || "-",
-	              normalizarTexto(item.cliente) || "-",
-	              normalizarTexto(item.pop) || "-",
-	              formatarDetalhesEventoCarteira(item) || formatarEventoCarteira(item) || "-",
-	            ]);
+	            linhas.push({
+	              classe: obterClasseEventoCarteira(item),
+	              valores: [
+	                coleta,
+	                String(evento?.itinerario ?? "-"),
+	                Number(evento?.deltaCarteira || 0) ? `${Number(evento.deltaCarteira || 0) > 0 ? "+" : ""}${Number(evento.deltaCarteira || 0)}` : "0",
+	                formatarTipoEventoCarteira(item),
+	                normalizarTexto(item.os_id) || "-",
+	                normalizarTexto(item.cliente) || "-",
+	                normalizarTexto(item.pop) || "-",
+	                formatarDetalhesEventoCarteira(item) || formatarEventoCarteira(item) || "-",
+	              ],
+	            });
 	          });
 	          return;
 	        }
@@ -2958,25 +3007,31 @@
 	        if (Number(evento?.entradasCarteira || 0) > 0) partes.push(`${evento.entradasCarteira} entrada(s)`);
 	        if (Number(evento?.saidasCarteira || 0) > 0) partes.push(`${evento.saidasCarteira} saída(s)`);
 	        if (Number(evento?.lacunaMinutos || 0) > 10) partes.push(`lacuna de ${evento.lacunaMinutos} min entre coletas`);
-	        linhas.push([
-	          coleta,
-	          "Variação agregada",
-	          "-",
-	          "-",
-	          "-",
-	          partes.length ? `${partes.join(" | ")} | detalhe por O.S. indisponível neste ponto do histórico legado.` : "Detalhe por O.S. indisponível neste ponto do histórico legado.",
-	        ]);
+	        linhas.push({
+	          classe: "event-aggregate",
+	          valores: [
+	            coleta,
+	            String(evento?.itinerario ?? "-"),
+	            partes.length && Number(evento?.deltaCarteira || 0) ? `${Number(evento.deltaCarteira || 0) > 0 ? "+" : ""}${Number(evento.deltaCarteira || 0)}` : "0",
+	            "Variação agregada",
+	            "-",
+	            "-",
+	            "-",
+	            partes.length ? `${partes.join(" | ")} | detalhe por O.S. indisponível neste ponto do histórico legado.` : "Detalhe por O.S. indisponível neste ponto do histórico legado.",
+	          ],
+	        });
 	      });
 
 	      historicoTecnicosEventosMeta.textContent = `Lista fixa com ${totalEventos} evento(s) em ${totalColetasComEvento} coleta(s) do período mostrado no gráfico.`;
 	      if (!linhas.length) {
-	        historicoTecnicosEventosBody.innerHTML = `<tr><td colspan="6" class="empty">Nenhum evento com valor acima de zero no período filtrado.</td></tr>`;
+	        historicoTecnicosEventosBody.innerHTML = `<tr><td colspan="8" class="empty">Nenhuma variação relevante do itinerário no período filtrado.</td></tr>`;
 	        return;
 	      }
 	      historicoTecnicosEventosBody.innerHTML = "";
-	      linhas.forEach((colunas) => {
+	      linhas.forEach((linha) => {
 	        const tr = document.createElement("tr");
-	        colunas.forEach((valor) => {
+	        tr.className = `history-event-row ${linha.classe || "event-aggregate"}`;
+	        linha.valores.forEach((valor) => {
 	          const td = document.createElement("td");
 	          td.textContent = valor;
 	          tr.appendChild(td);
@@ -3064,6 +3119,7 @@
 	        const deltaCarteira = Number(item.deltaCarteira || 0) || deltaFallback;
 	        return {
 	        capturadoEm: capturas[indice],
+	        itinerario: item.totalCarteira,
 	        entradasCarteira,
 	        saidasCarteira,
 	        novasOs: item.novasOs,
@@ -3133,20 +3189,6 @@
 	        },
 	        {
 	          type: "bar",
-	          label: "Entradas na carteira",
-	          data: ocultarZerosNoGrafico(resumo.entradasCarteira),
-	          backgroundColor: hexParaRgba("#16a34a", 0.78),
-	          yAxisID: "yEventos",
-	        },
-	        {
-	          type: "bar",
-	          label: "Saídas da carteira",
-	          data: ocultarZerosNoGrafico(resumo.saidasCarteira),
-	          backgroundColor: hexParaRgba("#475569", 0.78),
-	          yAxisID: "yEventos",
-	        },
-	        {
-	          type: "bar",
 	          label: "Recebidas",
 	          data: ocultarZerosNoGrafico(resumo.recebidasNoPeriodo),
 	          backgroundColor: hexParaRgba("#06b6d4", 0.78),
@@ -3170,7 +3212,8 @@
 
 	      const totalLacunas = resumo.eventosCarteira.filter((item) => Number(item.lacunaMinutos || 0) > 10).length;
 	      const complementoLacunas = totalLacunas ? ` Há ${totalLacunas} lacuna(s) de coleta destacadas no tooltip.` : "";
-	      historicoTecnicosMeta.textContent = `Histórico de ${resumo.tecnicoSelecionado} com ${resumo.totalCapturas} coleta(s) no intervalo selecionado; passe o mouse nos pontos para ver entradas, saídas, transferências e encerramentos de cada mudança do itinerário.${complementoLacunas}`;
+	      const itinerarioFinal = resumo.totalCarteira.length ? resumo.totalCarteira[resumo.totalCarteira.length - 1] : 0;
+	      historicoTecnicosMeta.textContent = `Histórico de ${resumo.tecnicoSelecionado} com ${resumo.totalCapturas} coleta(s) no intervalo selecionado; o gráfico mostra como o itinerário variou no período e terminou com ${itinerarioFinal} O.S.${complementoLacunas}`;
 	      renderHistoricoTecnicosEventos();
 	    }
 
