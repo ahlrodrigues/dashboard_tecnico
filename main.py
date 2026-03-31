@@ -318,6 +318,12 @@ def _resolver_finalizador_os(registro: dict[str, object]) -> tuple[str, str]:
     return finalizador_key, finalizador
 
 
+def _extrair_numero_os(os_id: str) -> str:
+    if ":" not in os_id:
+        return os_id
+    return os_id.split(":", 1)[1].strip()
+
+
 def _carregar_tecnicos_history(base: Path) -> list[dict[str, object]]:
     payload = _ler_json(_caminho_cache(base, TECNICOS_HISTORY_FILENAME))
     if not payload:
@@ -463,6 +469,15 @@ def _atualizar_historico_tecnicos(
                 "em_execucao": 0,
                 "encerradas_no_periodo": 0,
                 "recebidas_no_periodo": 0,
+                "entradas_na_carteira": 0,
+                "saidas_da_carteira": 0,
+                "novas_os_no_periodo": 0,
+                "transferencias_entrada_no_periodo": 0,
+                "transferencias_saida_no_periodo": 0,
+                "encerradas_da_carteira_no_periodo": 0,
+                "reabertas_no_periodo": 0,
+                "delta_carteira": 0,
+                "eventos": [],
             }
         else:
             summary_map[tecnico_key]["tecnico_nome"] = _normalizar_nome_exibicao_tecnico(
@@ -470,6 +485,51 @@ def _atualizar_historico_tecnicos(
                 str(summary_map[tecnico_key]["tecnico_nome"]),
             )
         return summary_map[tecnico_key]
+
+    def registrar_evento_carteira(
+        tecnico_key: str,
+        tecnico_nome: str,
+        tipo: str,
+        os_id: str,
+        anterior: dict[str, object] | None = None,
+        atual: dict[str, object] | None = None,
+    ) -> None:
+        summary = ensure_summary(tecnico_key, tecnico_nome)
+        if summary is None:
+            return
+
+        evento = {
+            "tipo": tipo,
+            "os_id": _extrair_numero_os(os_id),
+            "cliente": _texto_limpo((atual or anterior or {}).get("cliente", "")),
+            "pop": _texto_limpo((atual or anterior or {}).get("pop", "")),
+            "de_tecnico": _texto_limpo((anterior or {}).get("tecnico_nome", "")),
+            "para_tecnico": _texto_limpo((atual or {}).get("tecnico_nome", "")),
+            "finalizador": _texto_limpo((atual or {}).get("finalizador_nome", "")),
+            "status_anterior": _texto_limpo((anterior or {}).get("status", "")),
+            "status_atual": _texto_limpo((atual or {}).get("status", "")),
+        }
+        eventos = summary.get("eventos")
+        if isinstance(eventos, list):
+            eventos.append(evento)
+
+        if tipo in {"entrada_nova", "entrada_transferencia", "entrada_reabertura"}:
+            summary["entradas_na_carteira"] += 1
+            summary["delta_carteira"] += 1
+        if tipo in {"saida_transferencia", "saida_encerramento"}:
+            summary["saidas_da_carteira"] += 1
+            summary["delta_carteira"] -= 1
+
+        if tipo == "entrada_nova":
+            summary["novas_os_no_periodo"] += 1
+        elif tipo == "entrada_transferencia":
+            summary["transferencias_entrada_no_periodo"] += 1
+        elif tipo == "saida_transferencia":
+            summary["transferencias_saida_no_periodo"] += 1
+        elif tipo == "saida_encerramento":
+            summary["encerradas_da_carteira_no_periodo"] += 1
+        elif tipo == "entrada_reabertura":
+            summary["reabertas_no_periodo"] += 1
 
     if not df.empty:
         for registro in df.fillna("").to_dict(orient="records"):
@@ -489,6 +549,8 @@ def _atualizar_historico_tecnicos(
                 "tecnico_nome": _normalizar_nome_exibicao_tecnico(dono_nome, finalizador_nome),
                 "finalizador": finalizador_key,
                 "finalizador_nome": _normalizar_nome_exibicao_tecnico(finalizador_nome),
+                "cliente": _texto_limpo(registro.get("cliente", "")),
+                "pop": _texto_limpo(registro.get("pop", "")),
             }
 
             if status != "Encerrada":
@@ -506,23 +568,52 @@ def _atualizar_historico_tecnicos(
                 continue
 
             anterior = previous_state.get(os_id)
+            if anterior is None:
+                if status != "Encerrada" and dono_key:
+                    registrar_evento_carteira(dono_key, dono_nome, "entrada_nova", os_id, atual=current_state[os_id])
+                continue
+
+            status_anterior = _texto_limpo(anterior.get("status", ""))
+            tecnico_anterior = _texto_limpo(anterior.get("tecnico", ""))
+            tecnico_anterior_nome = _texto_limpo(anterior.get("tecnico_nome", ""))
+
             if status == "Encerrada":
-                if anterior and _texto_limpo(anterior.get("status", "")) != "Encerrada":
+                if status_anterior != "Encerrada":
                     encerramento_key = finalizador_key
                     encerramento_nome = finalizador_nome
                     summary = ensure_summary(encerramento_key, encerramento_nome)
                     if summary is not None:
                         summary["encerradas_no_periodo"] += 1
+                    if tecnico_anterior:
+                        registrar_evento_carteira(
+                            tecnico_anterior,
+                            tecnico_anterior_nome or tecnico_anterior,
+                            "saida_encerramento",
+                            os_id,
+                            anterior=anterior,
+                            atual=current_state[os_id],
+                        )
                 continue
 
-            if anterior is None:
+            if status_anterior == "Encerrada":
+                if dono_key:
+                    registrar_evento_carteira(dono_key, dono_nome, "entrada_reabertura", os_id, anterior=anterior, atual=current_state[os_id])
                 continue
 
-            tecnico_anterior = _texto_limpo(anterior.get("tecnico", ""))
             if dono_key and tecnico_anterior != dono_key:
                 summary = ensure_summary(dono_key, dono_nome)
                 if summary is not None:
                     summary["recebidas_no_periodo"] += 1
+                registrar_evento_carteira(dono_key, dono_nome, "entrada_transferencia", os_id, anterior=anterior, atual=current_state[os_id])
+                if tecnico_anterior:
+                    registrar_evento_carteira(
+                        tecnico_anterior,
+                        tecnico_anterior_nome or tecnico_anterior,
+                        "saida_transferencia",
+                        os_id,
+                        anterior=anterior,
+                        atual=current_state[os_id],
+                    )
 
     if summary_map:
         coleta_atual = [summary_map[chave] for chave in sorted(summary_map)]

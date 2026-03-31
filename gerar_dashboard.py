@@ -1162,6 +1162,7 @@ def gerar_html_dashboard(
     let detalhes = {json.dumps(dados_embutidos, ensure_ascii=False)};
     let votosData = {json.dumps(votos_embutidos, ensure_ascii=False)};
     let tecnicoHistoryData = {json.dumps(tecnico_history_embutido, ensure_ascii=False)};
+    let resumoHistoricoTecnicosAtual = null;
     let dataInicialPadrao = "{data_inicial_padrao}";
     let dataFinalPadrao = "{data_final_padrao}";
     let dataSnapshotAtual = "{data_snapshot_atual}";
@@ -1299,6 +1300,7 @@ def gerar_html_dashboard(
       detalhes = Array.isArray(payload.detalhes_data) ? payload.detalhes_data : [];
       votosData = Array.isArray(payload.votos_data) ? payload.votos_data : [];
       tecnicoHistoryData = Array.isArray(payload.tecnico_history_data) ? payload.tecnico_history_data : [];
+      resumoHistoricoTecnicosAtual = null;
       dashboardVersion = normalizarTexto(payload.dashboard_version) || dashboardVersion;
       dashboardTitle = normalizarTexto(payload.dashboard_title) || dashboardTitle;
       dashboardTitleBase = normalizarTexto(payload.dashboard_title_base) || dashboardTitleBase;
@@ -2854,7 +2856,48 @@ def gerar_html_dashboard(
 	        maintainAspectRatio: false,
 	        interaction: {{ mode: "index", intersect: false }},
 	        plugins: {{
-	          legend: {{ position: "top" }}
+	          legend: {{ position: "top" }},
+	          tooltip: {{
+	            callbacks: {{
+	              afterBody(items) {{
+	                if (!items.length || !resumoHistoricoTecnicosAtual) return [];
+	                const indice = items[0].dataIndex;
+	                const evento = Array.isArray(resumoHistoricoTecnicosAtual.eventosCarteira)
+	                  ? resumoHistoricoTecnicosAtual.eventosCarteira[indice]
+	                  : null;
+	                if (!evento) return [];
+
+	                const linhas = [];
+	                if (Number(evento.lacunaMinutos || 0) > 10) {{
+	                  linhas.push(`Lacuna entre coletas: ${{evento.lacunaMinutos}} min`);
+	                }}
+	                if (Number(evento.deltaCarteira || 0) !== 0) {{
+	                  const delta = Number(evento.deltaCarteira || 0);
+	                  linhas.push(`Delta do itinerário: ${{delta > 0 ? "+" : ""}}${{delta}}`);
+	                }}
+	                if (Number(evento.entradasCarteira || 0) > 0) linhas.push(`Entradas na carteira: ${{evento.entradasCarteira}}`);
+	                if (Number(evento.saidasCarteira || 0) > 0) linhas.push(`Saídas da carteira: ${{evento.saidasCarteira}}`);
+	                if (Number(evento.novasOs || 0) > 0) linhas.push(`Novas O.S.: ${{evento.novasOs}}`);
+	                if (Number(evento.transferenciasEntrada || 0) > 0) linhas.push(`Transferências recebidas: ${{evento.transferenciasEntrada}}`);
+	                if (Number(evento.transferenciasSaida || 0) > 0) linhas.push(`Transferências cedidas: ${{evento.transferenciasSaida}}`);
+	                if (Number(evento.encerradasDaCarteira || 0) > 0) linhas.push(`Saídas por encerramento: ${{evento.encerradasDaCarteira}}`);
+	                if (Number(evento.reabertas || 0) > 0) linhas.push(`Reaberturas recebidas: ${{evento.reabertas}}`);
+
+	                const detalhes = Array.isArray(evento.detalhes) ? evento.detalhes : [];
+	                detalhes.slice(0, 6).forEach((item) => {{
+	                  const texto = formatarEventoCarteira(item);
+	                  if (texto) linhas.push(texto);
+	                }});
+	                if (detalhes.length > 6) {{
+	                  linhas.push(`+${{detalhes.length - 6}} evento(s) adicionais`);
+	                }}
+	                if (!detalhes.length && Number(evento.deltaCarteira || 0) !== 0) {{
+	                  linhas.push("Detalhe por O.S. indisponível neste ponto do histórico legado.");
+	                }}
+	                return linhas;
+	              }}
+	            }}
+	          }}
 	        }},
 	        scales: {{
 	          y: {{ beginAtZero: true, ticks: {{ precision: 0 }} }},
@@ -3001,6 +3044,46 @@ def gerar_html_dashboard(
 	      return totalPontos > 24 ? `${{data}} ${{hora}}` : hora;
 	    }}
 
+	    function diferencaMinutosEntreCapturas(anterior, atual) {{
+	      const inicio = Date.parse(normalizarTexto(anterior));
+	      const fim = Date.parse(normalizarTexto(atual));
+	      if (Number.isNaN(inicio) || Number.isNaN(fim) || fim <= inicio) return 0;
+	      return Math.round((fim - inicio) / 60000);
+	    }}
+
+	    function formatarEventoCarteira(evento) {{
+	      if (!evento || typeof evento !== "object") return "";
+	      const osId = normalizarTexto(evento.os_id);
+	      const cliente = normalizarTexto(evento.cliente);
+	      const pop = normalizarTexto(evento.pop);
+	      const finalizador = normalizarTexto(evento.finalizador);
+	      const deTecnico = normalizarTexto(evento.de_tecnico);
+	      const paraTecnico = normalizarTexto(evento.para_tecnico);
+	      const sufixoCliente = cliente ? ` - ${{cliente}}` : "";
+	      const sufixoPop = pop ? ` (${{pop}})` : "";
+
+	      switch (normalizarTexto(evento.tipo)) {{
+	        case "entrada_nova":
+	          return `Nova O.S. ${{osId}}${{sufixoCliente}}${{sufixoPop}}`;
+	        case "entrada_transferencia":
+	          return `Recebeu O.S. ${{osId}} de ${{deTecnico || "outro técnico"}}${{sufixoCliente}}${{sufixoPop}}`;
+	        case "saida_transferencia":
+	          return `Transferiu O.S. ${{osId}} para ${{paraTecnico || "outro técnico"}}${{sufixoCliente}}${{sufixoPop}}`;
+	        case "saida_encerramento":
+	          return `Saiu por encerramento: O.S. ${{osId}}${{finalizador ? ` por ${{finalizador}}` : ""}}${{sufixoCliente}}${{sufixoPop}}`;
+	        case "entrada_reabertura":
+	          return `Reabertura da O.S. ${{osId}}${{sufixoCliente}}${{sufixoPop}}`;
+	        default:
+	          return "";
+	      }}
+	    }}
+
+	    function ocultarZerosEmLinha(valores) {{
+	      return Array.isArray(valores)
+	        ? valores.map((valor) => Number(valor || 0) > 0 ? valor : null)
+	        : [];
+	    }}
+
 	    function agruparHistoricoTecnicos() {{
 	      const usuarioFiltro = normalizarChaveUsuario(filtroUsuario.value);
 	      const mapa = new Map();
@@ -3020,6 +3103,15 @@ def gerar_html_dashboard(
 	            emExecucao: 0,
 	            encerradasNoPeriodo: 0,
 	            recebidasNoPeriodo: 0,
+	            entradasCarteira: 0,
+	            saidasCarteira: 0,
+	            novasOs: 0,
+	            transferenciasEntrada: 0,
+	            transferenciasSaida: 0,
+	            encerradasDaCarteira: 0,
+	            reabertas: 0,
+	            deltaCarteira: 0,
+	            detalhes: [],
 	          }});
 	        }}
 
@@ -3029,6 +3121,17 @@ def gerar_html_dashboard(
 	        bucket.emExecucao += Number(registro.em_execucao || 0);
 	        bucket.encerradasNoPeriodo += Number(registro.encerradas_no_periodo || 0);
 	        bucket.recebidasNoPeriodo += Number(registro.recebidas_no_periodo || 0);
+	        bucket.entradasCarteira += Number(registro.entradas_na_carteira || 0);
+	        bucket.saidasCarteira += Number(registro.saidas_da_carteira || 0);
+	        bucket.novasOs += Number(registro.novas_os_no_periodo || 0);
+	        bucket.transferenciasEntrada += Number(registro.transferencias_entrada_no_periodo || 0);
+	        bucket.transferenciasSaida += Number(registro.transferencias_saida_no_periodo || 0);
+	        bucket.encerradasDaCarteira += Number(registro.encerradas_da_carteira_no_periodo || 0);
+	        bucket.reabertas += Number(registro.reabertas_no_periodo || 0);
+	        bucket.deltaCarteira += Number(registro.delta_carteira || 0);
+	        if (Array.isArray(registro.eventos)) {{
+	          registro.eventos.forEach((evento) => bucket.detalhes.push(evento));
+	        }}
 
 	        if (tecnicoKey) {{
 	          rotulos.set(tecnicoKey, normalizarTexto(registro.tecnico_nome) || tecnicoKey);
@@ -3038,6 +3141,25 @@ def gerar_html_dashboard(
 	      const capturas = [...mapa.keys()].sort((a, b) => a.localeCompare(b, "pt-BR", {{ sensitivity: "base" }}));
 	      const labels = capturas.map((capturadoEm) => formatarRotuloHistorico(capturadoEm, capturas.length));
 	      const resumo = capturas.map((capturadoEm) => mapa.get(capturadoEm));
+	      const eventosCarteira = resumo.map((item, indice) => {{
+	        const itemAnterior = indice > 0 ? resumo[indice - 1] : null;
+	        const deltaFallback = itemAnterior ? item.totalCarteira - itemAnterior.totalCarteira : 0;
+	        const entradasCarteira = item.entradasCarteira || (deltaFallback > 0 ? deltaFallback : 0);
+	        const saidasCarteira = item.saidasCarteira || (deltaFallback < 0 ? Math.abs(deltaFallback) : 0);
+	        const deltaCarteira = Number(item.deltaCarteira || 0) || deltaFallback;
+	        return {{
+	        entradasCarteira,
+	        saidasCarteira,
+	        novasOs: item.novasOs,
+	        transferenciasEntrada: item.transferenciasEntrada,
+	        transferenciasSaida: item.transferenciasSaida,
+	        encerradasDaCarteira: item.encerradasDaCarteira,
+	        reabertas: item.reabertas,
+	        deltaCarteira,
+	        detalhes: item.detalhes,
+	        lacunaMinutos: indice > 0 ? diferencaMinutosEntreCapturas(capturas[indice - 1], capturas[indice]) : 0,
+	      }};
+	      }});
 	      const tecnicoSelecionado = usuarioFiltro ? normalizarRotuloUsuario(rotulos.get(usuarioFiltro) || filtroUsuario.value, rotulos) : "Equipe";
 
 	      return {{
@@ -3049,11 +3171,15 @@ def gerar_html_dashboard(
 	        emExecucao: resumo.map((item) => item.emExecucao),
 	        encerradasNoPeriodo: resumo.map((item) => item.encerradasNoPeriodo),
 	        recebidasNoPeriodo: resumo.map((item) => item.recebidasNoPeriodo),
+	        entradasCarteira: resumo.map((item) => item.entradasCarteira),
+	        saidasCarteira: resumo.map((item) => item.saidasCarteira),
+	        eventosCarteira,
 	      }};
 	    }}
 
 	    function renderGraficoHistoricoTecnicos() {{
 	      const resumo = agruparHistoricoTecnicos();
+	      resumoHistoricoTecnicosAtual = resumo;
 	      graficoHistoricoTecnicos.data.labels = resumo.labels;
 	      graficoHistoricoTecnicos.data.datasets = [
 	        {{
@@ -3069,7 +3195,7 @@ def gerar_html_dashboard(
 	        {{
 	          type: "line",
 	          label: "Pendentes",
-	          data: resumo.pendentes,
+	          data: ocultarZerosEmLinha(resumo.pendentes),
 	          borderColor: "#f59e0b",
 	          backgroundColor: hexParaRgba("#f59e0b", 0.16),
 	          tension: 0.28,
@@ -3079,12 +3205,26 @@ def gerar_html_dashboard(
 	        {{
 	          type: "line",
 	          label: "Em execução",
-	          data: resumo.emExecucao,
+	          data: ocultarZerosEmLinha(resumo.emExecucao),
 	          borderColor: "#c026d3",
 	          backgroundColor: hexParaRgba("#c026d3", 0.16),
 	          tension: 0.28,
 	          fill: false,
 	          yAxisID: "y",
+	        }},
+	        {{
+	          type: "bar",
+	          label: "Entradas na carteira",
+	          data: resumo.entradasCarteira,
+	          backgroundColor: hexParaRgba("#16a34a", 0.78),
+	          yAxisID: "yEventos",
+	        }},
+	        {{
+	          type: "bar",
+	          label: "Saídas da carteira",
+	          data: resumo.saidasCarteira,
+	          backgroundColor: hexParaRgba("#475569", 0.78),
+	          yAxisID: "yEventos",
 	        }},
 	        {{
 	          type: "bar",
@@ -3108,7 +3248,9 @@ def gerar_html_dashboard(
 	        return;
 	      }}
 
-	      historicoTecnicosMeta.textContent = `Histórico de ${{resumo.tecnicoSelecionado}} com ${{resumo.totalCapturas}} coleta(s) no intervalo selecionado, usando a série agregada por coleta e os filtros de data e usuário.`;
+	      const totalLacunas = resumo.eventosCarteira.filter((item) => Number(item.lacunaMinutos || 0) > 10).length;
+	      const complementoLacunas = totalLacunas ? ` Há ${{totalLacunas}} lacuna(s) de coleta destacadas no tooltip.` : "";
+	      historicoTecnicosMeta.textContent = `Histórico de ${{resumo.tecnicoSelecionado}} com ${{resumo.totalCapturas}} coleta(s) no intervalo selecionado; passe o mouse nos pontos para ver entradas, saídas, transferências e encerramentos de cada mudança do itinerário.${{complementoLacunas}}`;
 	    }}
 
     function atualizarMetas(registrosOperacionais, registrosFinalizados, totalDetalhes, totalVotosValidos, totalVotosDetalhamento, totalDetalhamentoPops) {{
