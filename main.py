@@ -25,7 +25,7 @@ VOTOS_CACHE_FILENAME = "dashboard_votos_cache.json"
 TECNICOS_CACHE_FILENAME = "dashboard_tecnicos_cache.json"
 TECNICOS_HISTORY_FILENAME = "dashboard_tecnicos_history.json"
 OS_ESTADO_ATUAL_FILENAME = "dashboard_os_estado_atual.json"
-TECNICOS_HISTORY_RETENCAO_DIAS = 120
+TECNICOS_HISTORY_RETENCAO_DIAS = 366
 
 
 MAPA_MES = {
