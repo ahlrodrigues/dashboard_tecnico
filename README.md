@@ -115,7 +115,9 @@ Tudo que aparecer em `finalizado por` e não estiver nas listas resolvidas acima
   "mes_padrao": "Todos",
   "atualizacao_segundos": 300,
   "janela_recente_dias": 45,
-  "votos_cache_segundos": 300
+  "votos_cache_segundos": 300,
+  "tecnicos_history_hora_inicio": 5,
+  "tecnicos_history_hora_fim": 20
 }
 ```
 
@@ -141,6 +143,8 @@ Valores possíveis para `mes_padrao`:
 `janela_recente_dias` controla quantos dias recentes de O.S. serão buscados no SGP a cada refresh incremental.
 
 `votos_cache_segundos` controla por quanto tempo o CSV de votos pode ser reaproveitado antes de um novo download.
+
+`tecnicos_history_hora_inicio` e `tecnicos_history_hora_fim` controlam a janela horária em que novas coletas entram no histórico dos técnicos.
 
 ## Instalação
 
