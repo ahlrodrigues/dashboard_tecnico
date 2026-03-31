@@ -32,6 +32,34 @@
       margin: 28px auto;
       padding: 0 18px 40px;
     }
+    .scroll-top-button {
+      position: fixed;
+      right: 22px;
+      bottom: 22px;
+      width: 52px;
+      height: 52px;
+      border: 0;
+      border-radius: 999px;
+      background: rgba(23, 98, 76, 0.92);
+      color: #f7fffb;
+      font-size: 24px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 16px 36px rgba(23, 50, 41, 0.22);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(10px);
+      transition: opacity 0.18s ease, transform 0.18s ease, background 0.18s ease;
+      z-index: 30;
+    }
+    .scroll-top-button.visible {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
+    }
+    .scroll-top-button:hover {
+      background: #1f7a5f;
+    }
     .hero {
       background: linear-gradient(135deg, rgba(23, 98, 76, 0.96), rgba(38, 125, 98, 0.88));
       color: #f7fffb;
@@ -969,6 +997,7 @@
       </div>
     </div>
   </div>
+  <button type="button" id="scrollTopButton" class="scroll-top-button" aria-label="Voltar aos filtros" title="Voltar aos filtros">↑</button>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script>
@@ -1056,6 +1085,7 @@
     const detalhesHead = document.getElementById("detalhesHead");
     const rankingVotosHead = document.getElementById("rankingVotosHead");
     const reincidenciasHead = document.getElementById("reincidenciasHead");
+    const scrollTopButton = document.getElementById("scrollTopButton");
 	    const movimentacoesGrid = document.getElementById("movimentacoesGrid");
 	    const popsGrid = document.getElementById("popsGrid");
     const storageKey = "dashboard_tecnico_filtros";
@@ -3317,6 +3347,21 @@
     quickRangeButtons.forEach((button) => {
       button.addEventListener("click", () => aplicarAtalhoPeriodo(button.dataset.range));
     });
+
+    function atualizarBotaoVoltarAoTopo() {
+      if (!scrollTopButton) return;
+      scrollTopButton.classList.toggle("visible", window.scrollY > 280);
+    }
+
+    if (scrollTopButton) {
+      scrollTopButton.addEventListener("click", () => {
+        const topoFiltros = filtroDataInicial?.closest(".toolbar");
+        const destino = topoFiltros ? topoFiltros.offsetTop - 16 : 0;
+        window.scrollTo({ top: Math.max(destino, 0), behavior: "smooth" });
+      });
+      atualizarBotaoVoltarAoTopo();
+      window.addEventListener("scroll", atualizarBotaoVoltarAoTopo, { passive: true });
+    }
 
     function formatarTempo(totalSegundos) {
       const minutos = Math.floor(totalSegundos / 60);
