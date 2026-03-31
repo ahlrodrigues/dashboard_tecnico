@@ -26,6 +26,8 @@ TECNICOS_CACHE_FILENAME = "dashboard_tecnicos_cache.json"
 TECNICOS_HISTORY_FILENAME = "dashboard_tecnicos_history.json"
 OS_ESTADO_ATUAL_FILENAME = "dashboard_os_estado_atual.json"
 TECNICOS_HISTORY_RETENCAO_DIAS = 366
+TECNICOS_HISTORY_HORA_INICIO = 5
+TECNICOS_HISTORY_HORA_FIM = 20
 
 
 MAPA_MES = {
@@ -382,6 +384,11 @@ def _prunar_tecnicos_history(records: list[dict[str, object]], retention_days: i
     return filtrados
 
 
+def _historico_tecnicos_em_janela_coleta(agora: datetime | None = None) -> bool:
+    referencia = agora or datetime.now()
+    return TECNICOS_HISTORY_HORA_INICIO <= referencia.hour <= TECNICOS_HISTORY_HORA_FIM
+
+
 def _normalizar_snapshot_tecnicos(records: list[dict[str, object]]) -> list[dict[str, object]]:
     campos_snapshot = (
         "tecnico",
@@ -424,6 +431,8 @@ def _atualizar_historico_tecnicos(
     history_records = _carregar_tecnicos_history(base)
     precisa_capturar = "os" in refresh_targets or "all" in refresh_targets or not history_records
     if not precisa_capturar:
+        return _prunar_tecnicos_history(history_records, TECNICOS_HISTORY_RETENCAO_DIAS)
+    if not _historico_tecnicos_em_janela_coleta():
         return _prunar_tecnicos_history(history_records, TECNICOS_HISTORY_RETENCAO_DIAS)
 
     captured_at = _agora_iso()
