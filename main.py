@@ -382,6 +382,40 @@ def _prunar_tecnicos_history(records: list[dict[str, object]], retention_days: i
     return filtrados
 
 
+def _normalizar_snapshot_tecnicos(records: list[dict[str, object]]) -> list[dict[str, object]]:
+    campos_snapshot = (
+        "tecnico",
+        "tecnico_nome",
+        "total_carteira",
+        "abertas",
+        "pendentes",
+        "em_execucao",
+        "encerradas_no_periodo",
+        "recebidas_no_periodo",
+    )
+    snapshot_normalizado: list[dict[str, object]] = []
+    for registro in records:
+        item = {campo: registro.get(campo) for campo in campos_snapshot}
+        snapshot_normalizado.append(item)
+    snapshot_normalizado.sort(key=lambda item: (_texto_limpo(item.get("tecnico", "")), _texto_limpo(item.get("tecnico_nome", ""))))
+    return snapshot_normalizado
+
+
+def _extrair_ultima_coleta_tecnicos(records: list[dict[str, object]]) -> list[dict[str, object]]:
+    ultimo_capturado_em = ""
+    ultima_coleta: list[dict[str, object]] = []
+    for registro in records:
+        capturado_em = _texto_limpo(registro.get("capturado_em", ""))
+        if not capturado_em:
+            continue
+        if capturado_em > ultimo_capturado_em:
+            ultimo_capturado_em = capturado_em
+            ultima_coleta = [registro]
+        elif capturado_em == ultimo_capturado_em:
+            ultima_coleta.append(registro)
+    return ultima_coleta
+
+
 def _atualizar_historico_tecnicos(
     base: Path,
     df: pd.DataFrame,
@@ -475,7 +509,10 @@ def _atualizar_historico_tecnicos(
                     summary["recebidas_no_periodo"] += 1
 
     if summary_map:
-        history_records.extend(summary_map[chave] for chave in sorted(summary_map))
+        coleta_atual = [summary_map[chave] for chave in sorted(summary_map)]
+        ultima_coleta = _extrair_ultima_coleta_tecnicos(history_records)
+        if _normalizar_snapshot_tecnicos(coleta_atual) != _normalizar_snapshot_tecnicos(ultima_coleta):
+            history_records.extend(coleta_atual)
 
     history_records = _prunar_tecnicos_history(history_records, TECNICOS_HISTORY_RETENCAO_DIAS)
     _salvar_tecnicos_history(base, history_records)
