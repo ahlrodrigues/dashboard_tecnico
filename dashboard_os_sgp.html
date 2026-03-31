@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Dashboard de OS SGP - V2.5.3 (464a9aa)</title>
+  <title>Dashboard de OS SGP - V2.5.3 (3435e27)</title>
   <style>
     :root {
       --bg: #eef3f1;
@@ -692,7 +692,7 @@
     <section class="hero">
       <div class="hero-head">
         <div class="hero-titles">
-          <h1>Dashboard de OS SGP<span class="hero-meta-inline"><span class="hero-version">V2.5.3 (464a9aa)</span><span class="hero-meta-links"><a href="CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></span></span></h1>
+          <h1>Dashboard de OS SGP<span class="hero-meta-inline"><span class="hero-version">V2.5.3 (3435e27)</span><span class="hero-meta-links"><a href="CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></span></span></h1>
         </div>
         <div class="refresh-badge">
           <strong>Atualiza em</strong>
@@ -755,13 +755,13 @@
 	          <p class="caption">Backlog atual e encerramentos do recorte, sempre respeitando todos os filtros selecionados.</p>
 	        </div>
 	        <div class="metric-grid cols-2">
-	          <div class="metric-item"><span class="metric-label">Total de O.S. do recorte</span><span class="metric-value" id="cardTotalStatus">4642</span></div>
-	          <div class="metric-item"><span class="metric-label">Em aberto</span><span class="metric-value" id="cardAberta">40</span></div>
-	          <div class="metric-item"><span class="metric-label">Pendentes</span><span class="metric-value" id="cardPendente">9</span></div>
-	          <div class="metric-item"><span class="metric-label">Em execução</span><span class="metric-value" id="cardEmExecucao">0</span></div>
-	          <div class="metric-item"><span class="metric-label">Total de O.S. encerradas</span><span class="metric-value" id="cardEncerrada">4593</span></div>
-	          <div class="metric-item metric-separator"><span class="metric-label">Encerradas pelo técnico</span><span class="metric-value" id="cardEncerradaTecnicos">2297</span></div>
-	          <div class="metric-item"><span class="metric-label">Encerradas por outros</span><span class="metric-value" id="cardPorOutros">2296</span></div>
+	          <div class="metric-item"><span class="metric-label">Total de O.S. do recorte</span><span class="metric-value" id="cardTotalStatus">4667</span></div>
+	          <div class="metric-item"><span class="metric-label">Em aberto</span><span class="metric-value" id="cardAberta">50</span></div>
+	          <div class="metric-item"><span class="metric-label">Pendentes</span><span class="metric-value" id="cardPendente">6</span></div>
+	          <div class="metric-item"><span class="metric-label">Em execução</span><span class="metric-value" id="cardEmExecucao">2</span></div>
+	          <div class="metric-item"><span class="metric-label">Total de O.S. encerradas</span><span class="metric-value" id="cardEncerrada">4609</span></div>
+	          <div class="metric-item metric-separator"><span class="metric-label">Encerradas pelo técnico</span><span class="metric-value" id="cardEncerradaTecnicos">2309</span></div>
+	          <div class="metric-item"><span class="metric-label">Encerradas por outros</span><span class="metric-value" id="cardPorOutros">2300</span></div>
 	        </div>
 	      </div>
 	      <div class="summary-card tertiary">
@@ -771,8 +771,8 @@
 	        </div>
 	        <div class="metric-grid flow scrollable" id="movimentacoesGrid">
 	          <div class="metric-item compact"><span class="metric-label">Inviabilidades</span><span class="metric-value" id="cardInviabilidade">34</span></div>
-	          <div class="metric-item compact"><span class="metric-label">Instalação de KIT</span><span class="metric-value" id="cardInstalacoes">604</span></div>
-	          <div class="metric-item compact"><span class="metric-label">Remoção de KIT</span><span class="metric-value" id="cardRemocoes">979</span></div>
+	          <div class="metric-item compact"><span class="metric-label">Instalação de KIT</span><span class="metric-value" id="cardInstalacoes">608</span></div>
+	          <div class="metric-item compact"><span class="metric-label">Remoção de KIT</span><span class="metric-value" id="cardRemocoes">985</span></div>
 	        </div>
 	      </div>
 	      <div class="summary-card quaternary">
@@ -878,6 +878,12 @@
 	    </div>
 
 	    <div class="panel full">
+	      <h2 class="section-title" id="tituloHistoricoTecnicos">Histórico dos técnicos</h2>
+	      <div class="panel-meta" id="historicoTecnicosMeta">Mostrando a evolução da carteira e dos fechamentos por coleta.</div>
+	      <canvas id="graficoHistoricoTecnicos"></canvas>
+	    </div>
+
+	    <div class="panel full">
 	      <h2 class="section-title" id="tituloDetalhamento">Detalhamento</h2>
 	      <div class="panel-meta" id="detalheMeta">Mostrando os registros filtrados.</div>
       <div class="table-wrap">
@@ -926,9 +932,10 @@
     const mesesOrdem = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
     let detalhes = [];
     let votosData = [];
+    let tecnicoHistoryData = [];
     let dataInicialPadrao = "2026-01-01";
-    let dataFinalPadrao = "2026-03-30";
-    let dataSnapshotAtual = "2026-03-30";
+    let dataFinalPadrao = "2026-03-31";
+    let dataSnapshotAtual = "2026-03-31";
     let datasDisponiveisOrdenadas = [];
     let dataMinDisponivel = "";
     let dataMaxDisponivel = "";
@@ -973,6 +980,7 @@
     const rankingVotosResumoMeta = document.getElementById("rankingVotosResumoMeta");
     const rankingVotosMeta = document.getElementById("rankingVotosMeta");
 	    const graficoDiarioMeta = document.getElementById("graficoDiarioMeta");
+    const historicoTecnicosMeta = document.getElementById("historicoTecnicosMeta");
     const detalheMeta = document.getElementById("detalheMeta");
     const reincidenciaMeta = document.getElementById("reincidenciaMeta");
     const tituloStatusOperacional = document.getElementById("tituloStatusOperacional");
@@ -986,6 +994,7 @@
     const tituloRankingVotos = document.getElementById("tituloRankingVotos");
     const tituloGraficoMensal = document.getElementById("tituloGraficoMensal");
     const tituloGraficoDiario = document.getElementById("tituloGraficoDiario");
+    const tituloHistoricoTecnicos = document.getElementById("tituloHistoricoTecnicos");
     const tituloDetalhamento = document.getElementById("tituloDetalhamento");
     const tituloReincidencia = document.getElementById("tituloReincidencia");
     const detalhesHead = document.getElementById("detalhesHead");
@@ -1043,6 +1052,7 @@
       if (!payload || typeof payload !== "object") return;
       detalhes = Array.isArray(payload.detalhes_data) ? payload.detalhes_data : [];
       votosData = Array.isArray(payload.votos_data) ? payload.votos_data : [];
+      tecnicoHistoryData = Array.isArray(payload.tecnico_history_data) ? payload.tecnico_history_data : [];
       dataInicialPadrao = normalizarTexto(payload.data_inicial_padrao);
       dataFinalPadrao = normalizarTexto(payload.data_final_padrao);
       dataSnapshotAtual = normalizarTexto(payload.data_snapshot_atual) || dataSnapshotAtual;
@@ -2022,16 +2032,30 @@
       document.getElementById("cardPorOutros").textContent = cards.porOutros;
     }
 
+    function obterMembroGrafico(registro) {
+      if (ehStatusEncerrada(registro)) {
+        return obterUsuario(registro);
+      }
+
+      const responsavel = normalizarTexto(registro.responsavel);
+      if (responsavel) return responsavel;
+
+      const auxiliares = obterTecnicosAuxiliares(registro);
+      if (auxiliares.length) return auxiliares[0];
+
+      return "";
+    }
+
     function agruparResumo(registros) {
       return mesesOrdem.map((mes) => {
         const itens = registros.filter((registro) => obterMes(registro) === mes);
         return {
           mes_nome: mes,
-          finalizadas: itens.length,
-          tecnicos: itens.filter((registro) => obterGrupoEncerramento(registro) === "Técnicos").length,
-          infra: itens.filter((registro) => obterGrupoEncerramento(registro) === "Infra").length,
-          inviabilidade: itens.filter((registro) => obterGrupo(registro) === "Inviabilidade").length,
-          outros: itens.filter((registro) => obterGrupoEncerramento(registro) === "Outros").length,
+          total: itens.length,
+          tecnicos: itens.filter((registro) => obterGrupoFiltro(registro) === "Técnicos").length,
+          infra: itens.filter((registro) => obterGrupoFiltro(registro) === "Infra").length,
+          inviabilidade: itens.filter((registro) => obterGrupoFiltro(registro) === "Inviabilidade").length,
+          outros: itens.filter((registro) => obterGrupoFiltro(registro) === "Outros").length,
         };
       });
     }
@@ -2270,6 +2294,7 @@
       tituloRankingVotos.textContent = `Detalhamento dos votos | ${resumo}`;
       tituloGraficoMensal.textContent = `Gráfico mensal | ${resumo}`;
       tituloGraficoDiario.textContent = `Evolução diária dos grupos | ${resumo}`;
+      tituloHistoricoTecnicos.textContent = "Histórico dos técnicos";
       tituloDetalhamento.textContent = `Detalhamento | ${resumo}`;
       tituloReincidencia.textContent = `Reincidência por cliente/contrato | ${resumo}`;
     }
@@ -2528,7 +2553,7 @@
       data: {
         labels: mesesOrdem,
         datasets: [
-          { label: "Finalizadas", data: [], backgroundColor: "#17624c" },
+          { label: "Total", data: [], backgroundColor: "#17624c" },
           { label: "Técnicos", data: [], backgroundColor: "#4e9c83" },
           { label: "Infra", data: [], backgroundColor: "#7bc6ac" },
           { label: "Inviabilidade", data: [], backgroundColor: "#d18b2c" },
@@ -2568,6 +2593,32 @@
 	      }
 	    });
 
+	    const graficoHistoricoTecnicos = new Chart(document.getElementById("graficoHistoricoTecnicos"), {
+	      type: "bar",
+	      data: {
+	        labels: [],
+	        datasets: []
+	      },
+	      options: {
+	        responsive: true,
+	        maintainAspectRatio: false,
+	        interaction: { mode: "index", intersect: false },
+	        plugins: {
+	          legend: { position: "top" }
+	        },
+	        scales: {
+	          y: { beginAtZero: true, ticks: { precision: 0 } },
+	          yEventos: {
+	            beginAtZero: true,
+	            position: "right",
+	            grid: { drawOnChartArea: false },
+	            ticks: { precision: 0 }
+	          },
+	          x: { grid: { display: false } }
+	        }
+	      }
+	    });
+
 	    const paletaGraficoDiario = [
 	      "#17624c",
 	      "#4e9c83",
@@ -2593,7 +2644,7 @@
 
 	    function renderGrafico(registros) {
 	      const resumo = agruparResumo(registros);
-	      graficoMensal.data.datasets[0].data = resumo.map((item) => item.finalizadas);
+	      graficoMensal.data.datasets[0].data = resumo.map((item) => item.total);
       graficoMensal.data.datasets[1].data = resumo.map((item) => item.tecnicos);
       graficoMensal.data.datasets[2].data = resumo.map((item) => item.infra);
       graficoMensal.data.datasets[3].data = resumo.map((item) => item.inviabilidade);
@@ -2630,7 +2681,7 @@
 	        const data = obterDataBaseTexto(registro);
 	        if (!data || !mapaIndices.has(data)) return;
 
-	        const membro = obterUsuario(registro) || "Sem usuário";
+	        const membro = obterMembroGrafico(registro) || "Sem usuário";
 	        const indice = mapaIndices.get(data);
 	        if (!mapaMembros.has(membro)) {
 	          mapaMembros.set(membro, Array.from({ length: labels.length }, () => 0));
@@ -2675,7 +2726,133 @@
 	      }
 
 	      const contextoGrupo = filtroGrupo.value ? ` do grupo ${filtroGrupo.value}` : "";
-	      graficoDiarioMeta.textContent = `Evolução diária por membro${contextoGrupo} entre ${resumo.intervalo.inicio} e ${resumo.intervalo.fim}, usando a data-base de encerramento da O.S.`;
+	      graficoDiarioMeta.textContent = `Evolução diária por membro${contextoGrupo} entre ${resumo.intervalo.inicio} e ${resumo.intervalo.fim}, usando a data-base do recorte atual.`;
+	    }
+
+	    function dataCapturaDentroDoIntervalo(capturadoEm) {
+	      const data = normalizarTexto(capturadoEm).slice(0, 10);
+	      if (!data) return false;
+	      if (filtroDataInicial.value && data < filtroDataInicial.value) return false;
+	      if (filtroDataFinal.value && data > filtroDataFinal.value) return false;
+	      return true;
+	    }
+
+	    function formatarRotuloHistorico(capturadoEm, totalPontos) {
+	      const texto = normalizarTexto(capturadoEm);
+	      if (texto.length < 16) return texto;
+	      const data = texto.slice(8, 10) + "/" + texto.slice(5, 7);
+	      const hora = texto.slice(11, 16);
+	      return totalPontos > 24 ? `${data} ${hora}` : hora;
+	    }
+
+	    function agruparHistoricoTecnicos() {
+	      const usuarioFiltro = normalizarChaveUsuario(filtroUsuario.value);
+	      const mapa = new Map();
+	      const rotulos = new Map();
+
+	      tecnicoHistoryData.forEach((registro) => {
+	        const capturadoEm = normalizarTexto(registro.capturado_em);
+	        if (!capturadoEm || !dataCapturaDentroDoIntervalo(capturadoEm)) return;
+
+	        const tecnicoKey = normalizarChaveUsuario(registro.tecnico || registro.tecnico_nome);
+	        if (usuarioFiltro && tecnicoKey !== usuarioFiltro) return;
+
+	        if (!mapa.has(capturadoEm)) {
+	          mapa.set(capturadoEm, {
+	            totalCarteira: 0,
+	            pendentes: 0,
+	            emExecucao: 0,
+	            encerradasNoPeriodo: 0,
+	            recebidasNoPeriodo: 0,
+	          });
+	        }
+
+	        const bucket = mapa.get(capturadoEm);
+	        bucket.totalCarteira += Number(registro.total_carteira || 0);
+	        bucket.pendentes += Number(registro.pendentes || 0);
+	        bucket.emExecucao += Number(registro.em_execucao || 0);
+	        bucket.encerradasNoPeriodo += Number(registro.encerradas_no_periodo || 0);
+	        bucket.recebidasNoPeriodo += Number(registro.recebidas_no_periodo || 0);
+
+	        if (tecnicoKey) {
+	          rotulos.set(tecnicoKey, normalizarTexto(registro.tecnico_nome) || tecnicoKey);
+	        }
+	      });
+
+	      const capturas = [...mapa.keys()].sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }));
+	      const labels = capturas.map((capturadoEm) => formatarRotuloHistorico(capturadoEm, capturas.length));
+	      const resumo = capturas.map((capturadoEm) => mapa.get(capturadoEm));
+	      const tecnicoSelecionado = usuarioFiltro ? normalizarRotuloUsuario(rotulos.get(usuarioFiltro) || filtroUsuario.value, rotulos) : "Equipe";
+
+	      return {
+	        labels,
+	        tecnicoSelecionado,
+	        totalCapturas: capturas.length,
+	        totalCarteira: resumo.map((item) => item.totalCarteira),
+	        pendentes: resumo.map((item) => item.pendentes),
+	        emExecucao: resumo.map((item) => item.emExecucao),
+	        encerradasNoPeriodo: resumo.map((item) => item.encerradasNoPeriodo),
+	        recebidasNoPeriodo: resumo.map((item) => item.recebidasNoPeriodo),
+	      };
+	    }
+
+	    function renderGraficoHistoricoTecnicos() {
+	      const resumo = agruparHistoricoTecnicos();
+	      graficoHistoricoTecnicos.data.labels = resumo.labels;
+	      graficoHistoricoTecnicos.data.datasets = [
+	        {
+	          type: "line",
+	          label: "Carteira",
+	          data: resumo.totalCarteira,
+	          borderColor: "#17624c",
+	          backgroundColor: hexParaRgba("#17624c", 0.16),
+	          tension: 0.28,
+	          fill: false,
+	          yAxisID: "y",
+	        },
+	        {
+	          type: "line",
+	          label: "Pendentes",
+	          data: resumo.pendentes,
+	          borderColor: "#d18b2c",
+	          backgroundColor: hexParaRgba("#d18b2c", 0.16),
+	          tension: 0.28,
+	          fill: false,
+	          yAxisID: "y",
+	        },
+	        {
+	          type: "line",
+	          label: "Em execução",
+	          data: resumo.emExecucao,
+	          borderColor: "#7f5af0",
+	          backgroundColor: hexParaRgba("#7f5af0", 0.16),
+	          tension: 0.28,
+	          fill: false,
+	          yAxisID: "y",
+	        },
+	        {
+	          type: "bar",
+	          label: "Recebidas",
+	          data: resumo.recebidasNoPeriodo,
+	          backgroundColor: hexParaRgba("#227c9d", 0.72),
+	          yAxisID: "yEventos",
+	        },
+	        {
+	          type: "bar",
+	          label: "Encerradas",
+	          data: resumo.encerradasNoPeriodo,
+	          backgroundColor: hexParaRgba("#4e9c83", 0.72),
+	          yAxisID: "yEventos",
+	        },
+	      ];
+	      graficoHistoricoTecnicos.update();
+
+	      if (!resumo.labels.length) {
+	        historicoTecnicosMeta.textContent = "Sem histórico suficiente para montar a evolução dos técnicos no intervalo selecionado.";
+	        return;
+	      }
+
+	      historicoTecnicosMeta.textContent = `Histórico de ${resumo.tecnicoSelecionado} com ${resumo.totalCapturas} coleta(s) no intervalo selecionado, usando a série agregada por coleta e os filtros de data e usuário.`;
 	    }
 
     function atualizarMetas(registrosOperacionais, registrosFinalizados, totalDetalhes, totalVotosValidos, totalVotosDetalhamento, totalDetalhamentoPops) {
@@ -2732,8 +2909,9 @@
 	      renderRankingVotos(registrosVotos);
 	      renderDetalhes(registrosAnaliticos);
 	      renderReincidencias(registrosBaseReincidencias);
-	      renderGrafico(registrosFinalizados);
-	      renderGraficoDiario(registrosFinalizados);
+	      renderGrafico(registrosPops);
+	      renderGraficoDiario(registrosPops);
+	      renderGraficoHistoricoTecnicos();
 	      atualizarMetas(registrosOperacionais, registrosFinalizados, registrosAnaliticos.length, registrosVotosUnicos.length, registrosVotos.length, registrosDetalhamentoPops.length);
 	    }
 

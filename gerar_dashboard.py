@@ -71,6 +71,12 @@ def _serializar_votos(df: pd.DataFrame, votos_cols: list[str]) -> list[dict[str,
     return view[base_cols].fillna("").to_dict(orient="records")
 
 
+def _serializar_tecnico_history(records: list[dict[str, object]] | None) -> list[dict[str, object]]:
+    if not records:
+        return []
+    return [registro for registro in records if isinstance(registro, dict)]
+
+
 def montar_payload_dashboard(
     resumo_df: pd.DataFrame,
     ranking_df: pd.DataFrame,
@@ -81,6 +87,7 @@ def montar_payload_dashboard(
     mes_selecionado: str,
     refresh_seconds: int,
     sgp_base_url: str,
+    tecnico_history_records: list[dict[str, object]] | None = None,
 ) -> dict[str, object]:
     detalhe_cols: list[str] = []
     for cand in ["id", "ordem_servico", "cliente", "contrato", "pop", "motivo", "status"]:
@@ -121,6 +128,7 @@ def montar_payload_dashboard(
     detalhes_data = _serializar_registros(detalhes_df, detalhe_cols) if detalhe_cols else []
     votos_cols = [col for col in votos_df.columns.tolist() if col != "data_voto_dashboard"] if not votos_df.empty else []
     votos_data = _serializar_votos(votos_df, votos_cols)
+    tecnico_history_data = _serializar_tecnico_history(tecnico_history_records)
     meses_ordem = resumo_df["mes_nome"].tolist()
     refresh_seconds = max(int(refresh_seconds), 30)
 
@@ -144,6 +152,7 @@ def montar_payload_dashboard(
         "detalhes_data": detalhes_data,
         "votos_cols": votos_cols,
         "votos_data": votos_data,
+        "tecnico_history_data": tecnico_history_data,
         "meses_ordem": meses_ordem,
         "data_inicial_padrao": data_inicial_padrao,
         "data_final_padrao": data_final_padrao,
@@ -162,6 +171,7 @@ def gerar_html_dashboard(
     mes_selecionado: str,
     refresh_seconds: int,
     sgp_base_url: str,
+    tecnico_history_records: list[dict[str, object]] | None,
     output_html: str,
     embutir_dados: bool = True,
 ) -> None:
@@ -175,6 +185,7 @@ def gerar_html_dashboard(
         mes_selecionado=mes_selecionado,
         refresh_seconds=refresh_seconds,
         sgp_base_url=sgp_base_url,
+        tecnico_history_records=tecnico_history_records,
     )
     detalhe_cols = payload["detalhe_cols"]
     detalhe_labels = payload["detalhe_labels"]
@@ -182,6 +193,7 @@ def gerar_html_dashboard(
     detalhes_data = payload["detalhes_data"]
     votos_cols = payload["votos_cols"]
     votos_data = payload["votos_data"]
+    tecnico_history_data = payload["tecnico_history_data"]
     meses_ordem = payload["meses_ordem"]
     refresh_seconds = payload["refresh_seconds"]
     data_inicial_padrao = payload["data_inicial_padrao"]
@@ -192,6 +204,7 @@ def gerar_html_dashboard(
     titulo_dashboard_base = "Dashboard de OS SGP"
     dados_embutidos = detalhes_data if embutir_dados else []
     votos_embutidos = votos_data if embutir_dados else []
+    tecnico_history_embutido = tecnico_history_data if embutir_dados else []
     header_cols = "".join(
         f'<th aria-sort="none"><button type="button" class="sort-header" data-col="{escape(col)}" data-label="{escape(detalhe_labels.get(col, col))}"><span class="sort-header-label">{escape(detalhe_labels.get(col, col))}</span><span class="sort-indicator" aria-hidden="true">△</span></button></th>'
         for col in detalhe_cols
@@ -1088,6 +1101,12 @@ def gerar_html_dashboard(
 	    </div>
 
 	    <div class="panel full">
+	      <h2 class="section-title" id="tituloHistoricoTecnicos">Histórico dos técnicos</h2>
+	      <div class="panel-meta" id="historicoTecnicosMeta">Mostrando a evolução da carteira e dos fechamentos por coleta.</div>
+	      <canvas id="graficoHistoricoTecnicos"></canvas>
+	    </div>
+
+	    <div class="panel full">
 	      <h2 class="section-title" id="tituloDetalhamento">Detalhamento</h2>
 	      <div class="panel-meta" id="detalheMeta">Mostrando os registros filtrados.</div>
       <div class="table-wrap">
@@ -1136,6 +1155,7 @@ def gerar_html_dashboard(
     const mesesOrdem = {json.dumps(meses_ordem, ensure_ascii=False)};
     let detalhes = {json.dumps(dados_embutidos, ensure_ascii=False)};
     let votosData = {json.dumps(votos_embutidos, ensure_ascii=False)};
+    let tecnicoHistoryData = {json.dumps(tecnico_history_embutido, ensure_ascii=False)};
     let dataInicialPadrao = "{data_inicial_padrao}";
     let dataFinalPadrao = "{data_final_padrao}";
     let dataSnapshotAtual = "{data_snapshot_atual}";
@@ -1183,6 +1203,7 @@ def gerar_html_dashboard(
     const rankingVotosResumoMeta = document.getElementById("rankingVotosResumoMeta");
     const rankingVotosMeta = document.getElementById("rankingVotosMeta");
 	    const graficoDiarioMeta = document.getElementById("graficoDiarioMeta");
+    const historicoTecnicosMeta = document.getElementById("historicoTecnicosMeta");
     const detalheMeta = document.getElementById("detalheMeta");
     const reincidenciaMeta = document.getElementById("reincidenciaMeta");
     const tituloStatusOperacional = document.getElementById("tituloStatusOperacional");
@@ -1196,6 +1217,7 @@ def gerar_html_dashboard(
     const tituloRankingVotos = document.getElementById("tituloRankingVotos");
     const tituloGraficoMensal = document.getElementById("tituloGraficoMensal");
     const tituloGraficoDiario = document.getElementById("tituloGraficoDiario");
+    const tituloHistoricoTecnicos = document.getElementById("tituloHistoricoTecnicos");
     const tituloDetalhamento = document.getElementById("tituloDetalhamento");
     const tituloReincidencia = document.getElementById("tituloReincidencia");
     const detalhesHead = document.getElementById("detalhesHead");
@@ -1253,6 +1275,7 @@ def gerar_html_dashboard(
       if (!payload || typeof payload !== "object") return;
       detalhes = Array.isArray(payload.detalhes_data) ? payload.detalhes_data : [];
       votosData = Array.isArray(payload.votos_data) ? payload.votos_data : [];
+      tecnicoHistoryData = Array.isArray(payload.tecnico_history_data) ? payload.tecnico_history_data : [];
       dataInicialPadrao = normalizarTexto(payload.data_inicial_padrao);
       dataFinalPadrao = normalizarTexto(payload.data_final_padrao);
       dataSnapshotAtual = normalizarTexto(payload.data_snapshot_atual) || dataSnapshotAtual;
@@ -2494,6 +2517,7 @@ def gerar_html_dashboard(
       tituloRankingVotos.textContent = `Detalhamento dos votos | ${{resumo}}`;
       tituloGraficoMensal.textContent = `Gráfico mensal | ${{resumo}}`;
       tituloGraficoDiario.textContent = `Evolução diária dos grupos | ${{resumo}}`;
+      tituloHistoricoTecnicos.textContent = "Histórico dos técnicos";
       tituloDetalhamento.textContent = `Detalhamento | ${{resumo}}`;
       tituloReincidencia.textContent = `Reincidência por cliente/contrato | ${{resumo}}`;
     }}
@@ -2792,6 +2816,32 @@ def gerar_html_dashboard(
 	      }}
 	    }});
 
+	    const graficoHistoricoTecnicos = new Chart(document.getElementById("graficoHistoricoTecnicos"), {{
+	      type: "bar",
+	      data: {{
+	        labels: [],
+	        datasets: []
+	      }},
+	      options: {{
+	        responsive: true,
+	        maintainAspectRatio: false,
+	        interaction: {{ mode: "index", intersect: false }},
+	        plugins: {{
+	          legend: {{ position: "top" }}
+	        }},
+	        scales: {{
+	          y: {{ beginAtZero: true, ticks: {{ precision: 0 }} }},
+	          yEventos: {{
+	            beginAtZero: true,
+	            position: "right",
+	            grid: {{ drawOnChartArea: false }},
+	            ticks: {{ precision: 0 }}
+	          }},
+	          x: {{ grid: {{ display: false }} }}
+	        }}
+	      }}
+	    }});
+
 	    const paletaGraficoDiario = [
 	      "#17624c",
 	      "#4e9c83",
@@ -2902,6 +2952,132 @@ def gerar_html_dashboard(
 	      graficoDiarioMeta.textContent = `Evolução diária por membro${{contextoGrupo}} entre ${{resumo.intervalo.inicio}} e ${{resumo.intervalo.fim}}, usando a data-base do recorte atual.`;
 	    }}
 
+	    function dataCapturaDentroDoIntervalo(capturadoEm) {{
+	      const data = normalizarTexto(capturadoEm).slice(0, 10);
+	      if (!data) return false;
+	      if (filtroDataInicial.value && data < filtroDataInicial.value) return false;
+	      if (filtroDataFinal.value && data > filtroDataFinal.value) return false;
+	      return true;
+	    }}
+
+	    function formatarRotuloHistorico(capturadoEm, totalPontos) {{
+	      const texto = normalizarTexto(capturadoEm);
+	      if (texto.length < 16) return texto;
+	      const data = texto.slice(8, 10) + "/" + texto.slice(5, 7);
+	      const hora = texto.slice(11, 16);
+	      return totalPontos > 24 ? `${{data}} ${{hora}}` : hora;
+	    }}
+
+	    function agruparHistoricoTecnicos() {{
+	      const usuarioFiltro = normalizarChaveUsuario(filtroUsuario.value);
+	      const mapa = new Map();
+	      const rotulos = new Map();
+
+	      tecnicoHistoryData.forEach((registro) => {{
+	        const capturadoEm = normalizarTexto(registro.capturado_em);
+	        if (!capturadoEm || !dataCapturaDentroDoIntervalo(capturadoEm)) return;
+
+	        const tecnicoKey = normalizarChaveUsuario(registro.tecnico || registro.tecnico_nome);
+	        if (usuarioFiltro && tecnicoKey !== usuarioFiltro) return;
+
+	        if (!mapa.has(capturadoEm)) {{
+	          mapa.set(capturadoEm, {{
+	            totalCarteira: 0,
+	            pendentes: 0,
+	            emExecucao: 0,
+	            encerradasNoPeriodo: 0,
+	            recebidasNoPeriodo: 0,
+	          }});
+	        }}
+
+	        const bucket = mapa.get(capturadoEm);
+	        bucket.totalCarteira += Number(registro.total_carteira || 0);
+	        bucket.pendentes += Number(registro.pendentes || 0);
+	        bucket.emExecucao += Number(registro.em_execucao || 0);
+	        bucket.encerradasNoPeriodo += Number(registro.encerradas_no_periodo || 0);
+	        bucket.recebidasNoPeriodo += Number(registro.recebidas_no_periodo || 0);
+
+	        if (tecnicoKey) {{
+	          rotulos.set(tecnicoKey, normalizarTexto(registro.tecnico_nome) || tecnicoKey);
+	        }}
+	      }});
+
+	      const capturas = [...mapa.keys()].sort((a, b) => a.localeCompare(b, "pt-BR", {{ sensitivity: "base" }}));
+	      const labels = capturas.map((capturadoEm) => formatarRotuloHistorico(capturadoEm, capturas.length));
+	      const resumo = capturas.map((capturadoEm) => mapa.get(capturadoEm));
+	      const tecnicoSelecionado = usuarioFiltro ? normalizarRotuloUsuario(rotulos.get(usuarioFiltro) || filtroUsuario.value, rotulos) : "Equipe";
+
+	      return {{
+	        labels,
+	        tecnicoSelecionado,
+	        totalCapturas: capturas.length,
+	        totalCarteira: resumo.map((item) => item.totalCarteira),
+	        pendentes: resumo.map((item) => item.pendentes),
+	        emExecucao: resumo.map((item) => item.emExecucao),
+	        encerradasNoPeriodo: resumo.map((item) => item.encerradasNoPeriodo),
+	        recebidasNoPeriodo: resumo.map((item) => item.recebidasNoPeriodo),
+	      }};
+	    }}
+
+	    function renderGraficoHistoricoTecnicos() {{
+	      const resumo = agruparHistoricoTecnicos();
+	      graficoHistoricoTecnicos.data.labels = resumo.labels;
+	      graficoHistoricoTecnicos.data.datasets = [
+	        {{
+	          type: "line",
+	          label: "Carteira",
+	          data: resumo.totalCarteira,
+	          borderColor: "#17624c",
+	          backgroundColor: hexParaRgba("#17624c", 0.16),
+	          tension: 0.28,
+	          fill: false,
+	          yAxisID: "y",
+	        }},
+	        {{
+	          type: "line",
+	          label: "Pendentes",
+	          data: resumo.pendentes,
+	          borderColor: "#d18b2c",
+	          backgroundColor: hexParaRgba("#d18b2c", 0.16),
+	          tension: 0.28,
+	          fill: false,
+	          yAxisID: "y",
+	        }},
+	        {{
+	          type: "line",
+	          label: "Em execução",
+	          data: resumo.emExecucao,
+	          borderColor: "#7f5af0",
+	          backgroundColor: hexParaRgba("#7f5af0", 0.16),
+	          tension: 0.28,
+	          fill: false,
+	          yAxisID: "y",
+	        }},
+	        {{
+	          type: "bar",
+	          label: "Recebidas",
+	          data: resumo.recebidasNoPeriodo,
+	          backgroundColor: hexParaRgba("#227c9d", 0.72),
+	          yAxisID: "yEventos",
+	        }},
+	        {{
+	          type: "bar",
+	          label: "Encerradas",
+	          data: resumo.encerradasNoPeriodo,
+	          backgroundColor: hexParaRgba("#4e9c83", 0.72),
+	          yAxisID: "yEventos",
+	        }},
+	      ];
+	      graficoHistoricoTecnicos.update();
+
+	      if (!resumo.labels.length) {{
+	        historicoTecnicosMeta.textContent = "Sem histórico suficiente para montar a evolução dos técnicos no intervalo selecionado.";
+	        return;
+	      }}
+
+	      historicoTecnicosMeta.textContent = `Histórico de ${{resumo.tecnicoSelecionado}} com ${{resumo.totalCapturas}} coleta(s) no intervalo selecionado, usando a série agregada por coleta e os filtros de data e usuário.`;
+	    }}
+
     function atualizarMetas(registrosOperacionais, registrosFinalizados, totalDetalhes, totalVotosValidos, totalVotosDetalhamento, totalDetalhamentoPops) {{
       const partes = [];
       if (filtroDataInicial.value) partes.push(`Data inicial: ${{filtroDataInicial.value}}`);
@@ -2958,6 +3134,7 @@ def gerar_html_dashboard(
 	      renderReincidencias(registrosBaseReincidencias);
 	      renderGrafico(registrosPops);
 	      renderGraficoDiario(registrosPops);
+	      renderGraficoHistoricoTecnicos();
 	      atualizarMetas(registrosOperacionais, registrosFinalizados, registrosAnaliticos.length, registrosVotosUnicos.length, registrosVotos.length, registrosDetalhamentoPops.length);
 	    }}
 

@@ -8,7 +8,13 @@ from pathlib import Path
 import pandas as pd
 
 from gerar_dashboard import gerar_html_dashboard, montar_payload_dashboard
-from processar_os import preparar_dataframe, ranking_finalizadores, resumo_mensal
+from processar_os import (
+    extrair_auxiliares,
+    normalizar_identificador_pessoa,
+    preparar_dataframe,
+    ranking_finalizadores,
+    resumo_mensal,
+)
 from sgp_client import SGPClient
 
 STATUS_ABERTAS = [0, 2, 3]
@@ -18,6 +24,9 @@ CACHE_DIR_NAME = ".cache"
 OS_CACHE_FILENAME = "dashboard_os_cache.json"
 VOTOS_CACHE_FILENAME = "dashboard_votos_cache.json"
 TECNICOS_CACHE_FILENAME = "dashboard_tecnicos_cache.json"
+TECNICOS_HISTORY_FILENAME = "dashboard_tecnicos_history.json"
+OS_ESTADO_ATUAL_FILENAME = "dashboard_os_estado_atual.json"
+TECNICOS_HISTORY_RETENCAO_DIAS = 120
 
 
 MAPA_MES = {
@@ -284,6 +293,217 @@ def _salvar_tecnicos_cache(base: Path, tecnicos: list[dict[str, object]]) -> Non
     )
 
 
+def _texto_limpo(valor: object) -> str:
+    return str(valor or "").strip()
+
+
+def _normalizar_nome_exibicao_tecnico(valor: object, fallback: str = "") -> str:
+    texto = _texto_limpo(valor)
+    return texto or fallback
+
+
+def _resolver_dono_os(registro: dict[str, object]) -> tuple[str, str]:
+    responsavel = _texto_limpo(registro.get("responsavel", ""))
+    responsavel_key = normalizar_identificador_pessoa(responsavel)
+    if responsavel_key:
+        return responsavel_key, responsavel
+
+    for auxiliar in [_texto_limpo(valor) for valor in extrair_auxiliares(registro.get("tecnicos_auxiliares", ""))]:
+        auxiliar_key = normalizar_identificador_pessoa(auxiliar)
+        if auxiliar_key:
+            return auxiliar_key, auxiliar
+
+    finalizador = _texto_limpo(registro.get("finalizado_por_dashboard", ""))
+    finalizador_key = normalizar_identificador_pessoa(finalizador)
+    if finalizador_key:
+        return finalizador_key, finalizador
+
+    return "", ""
+
+
+def _resolver_finalizador_os(registro: dict[str, object]) -> tuple[str, str]:
+    finalizador = _texto_limpo(registro.get("finalizado_por_dashboard", ""))
+    finalizador_key = normalizar_identificador_pessoa(finalizador)
+    return finalizador_key, finalizador
+
+
+def _carregar_tecnicos_history(base: Path) -> list[dict[str, object]]:
+    payload = _ler_json(_caminho_cache(base, TECNICOS_HISTORY_FILENAME))
+    if not payload:
+        return []
+    registros = payload.get("records", [])
+    return registros if isinstance(registros, list) else []
+
+
+def _salvar_tecnicos_history(base: Path, records: list[dict[str, object]]) -> None:
+    _escrever_json(
+        _caminho_cache(base, TECNICOS_HISTORY_FILENAME),
+        {
+            "schema_version": 1,
+            "updated_at": _agora_iso(),
+            "records": records,
+        },
+    )
+
+
+def _carregar_estado_os_atual(base: Path) -> dict[str, dict[str, object]]:
+    payload = _ler_json(_caminho_cache(base, OS_ESTADO_ATUAL_FILENAME))
+    if not payload:
+        return {}
+    registros = payload.get("records", [])
+    if not isinstance(registros, list):
+        return {}
+
+    estado: dict[str, dict[str, object]] = {}
+    for registro in registros:
+        if not isinstance(registro, dict):
+            continue
+        os_id = _texto_limpo(registro.get("os_id", ""))
+        if not os_id:
+            continue
+        estado[os_id] = registro
+    return estado
+
+
+def _salvar_estado_os_atual(base: Path, records: dict[str, dict[str, object]]) -> None:
+    _escrever_json(
+        _caminho_cache(base, OS_ESTADO_ATUAL_FILENAME),
+        {
+            "schema_version": 1,
+            "updated_at": _agora_iso(),
+            "records": list(records.values()),
+        },
+    )
+
+
+def _prunar_tecnicos_history(records: list[dict[str, object]], retention_days: int) -> list[dict[str, object]]:
+    if retention_days <= 0:
+        return records
+
+    limite = datetime.now() - timedelta(days=retention_days)
+    filtrados: list[dict[str, object]] = []
+    for registro in records:
+        captured_at = _texto_limpo(registro.get("capturado_em", ""))
+        try:
+            capturado_em = datetime.fromisoformat(captured_at)
+        except ValueError:
+            continue
+        if capturado_em >= limite:
+            filtrados.append(registro)
+    return filtrados
+
+
+def _atualizar_historico_tecnicos(
+    base: Path,
+    df: pd.DataFrame,
+    refresh_targets: set[str],
+) -> list[dict[str, object]]:
+    history_records = _carregar_tecnicos_history(base)
+    precisa_capturar = "os" in refresh_targets or "all" in refresh_targets or not history_records
+    if not precisa_capturar:
+        return _prunar_tecnicos_history(history_records, TECNICOS_HISTORY_RETENCAO_DIAS)
+
+    captured_at = _agora_iso()
+    previous_state = _carregar_estado_os_atual(base)
+    had_previous_state = bool(previous_state)
+    current_state: dict[str, dict[str, object]] = {}
+    summary_map: dict[str, dict[str, object]] = {}
+
+    def ensure_summary(tecnico_key: str, tecnico_nome: str) -> dict[str, object] | None:
+        if not tecnico_key:
+            return None
+        if tecnico_key not in summary_map:
+            summary_map[tecnico_key] = {
+                "capturado_em": captured_at,
+                "data_snapshot": captured_at[:10],
+                "tecnico": tecnico_key,
+                "tecnico_nome": _normalizar_nome_exibicao_tecnico(tecnico_nome, tecnico_key.upper()),
+                "total_carteira": 0,
+                "abertas": 0,
+                "pendentes": 0,
+                "em_execucao": 0,
+                "encerradas_no_periodo": 0,
+                "recebidas_no_periodo": 0,
+            }
+        else:
+            summary_map[tecnico_key]["tecnico_nome"] = _normalizar_nome_exibicao_tecnico(
+                tecnico_nome,
+                str(summary_map[tecnico_key]["tecnico_nome"]),
+            )
+        return summary_map[tecnico_key]
+
+    if not df.empty:
+        for registro in df.fillna("").to_dict(orient="records"):
+            os_id = _obter_chave_registro_os(registro)
+            if not os_id:
+                continue
+
+            status = _texto_limpo(registro.get("status_dashboard", registro.get("status", "")))
+            dono_key, dono_nome = _resolver_dono_os(registro)
+            finalizador_key, finalizador_nome = _resolver_finalizador_os(registro)
+
+            current_state[os_id] = {
+                "os_id": os_id,
+                "capturado_em": captured_at,
+                "status": status,
+                "tecnico": dono_key,
+                "tecnico_nome": _normalizar_nome_exibicao_tecnico(dono_nome, finalizador_nome),
+                "finalizador": finalizador_key,
+                "finalizador_nome": _normalizar_nome_exibicao_tecnico(finalizador_nome),
+            }
+
+            if status != "Encerrada":
+                summary = ensure_summary(dono_key, dono_nome)
+                if summary is not None:
+                    summary["total_carteira"] += 1
+                    if status == "Aberta":
+                        summary["abertas"] += 1
+                    elif status == "Pendente":
+                        summary["pendentes"] += 1
+                    elif status == "Em execução":
+                        summary["em_execucao"] += 1
+
+            if not had_previous_state:
+                continue
+
+            anterior = previous_state.get(os_id)
+            if status == "Encerrada":
+                if anterior and _texto_limpo(anterior.get("status", "")) != "Encerrada":
+                    encerramento_key = (
+                        dono_key
+                        or _texto_limpo(anterior.get("tecnico", ""))
+                        or finalizador_key
+                        or _texto_limpo(anterior.get("finalizador", ""))
+                    )
+                    encerramento_nome = (
+                        dono_nome
+                        or _texto_limpo(anterior.get("tecnico_nome", ""))
+                        or finalizador_nome
+                        or _texto_limpo(anterior.get("finalizador_nome", ""))
+                    )
+                    summary = ensure_summary(encerramento_key, encerramento_nome)
+                    if summary is not None:
+                        summary["encerradas_no_periodo"] += 1
+                continue
+
+            if anterior is None:
+                continue
+
+            tecnico_anterior = _texto_limpo(anterior.get("tecnico", ""))
+            if dono_key and tecnico_anterior != dono_key:
+                summary = ensure_summary(dono_key, dono_nome)
+                if summary is not None:
+                    summary["recebidas_no_periodo"] += 1
+
+    if summary_map:
+        history_records.extend(summary_map[chave] for chave in sorted(summary_map))
+
+    history_records = _prunar_tecnicos_history(history_records, TECNICOS_HISTORY_RETENCAO_DIAS)
+    _salvar_tecnicos_history(base, history_records)
+    _salvar_estado_os_atual(base, current_state)
+    return history_records
+
+
 def _resolver_tecnicos_classificacao(base: Path, config: dict[str, object]) -> dict[str, object]:
     classificacao = dict(config.get("classificacao", {}) or {})
     tecnicos_manuais = classificacao.get("tecnicos", [])
@@ -407,6 +627,7 @@ def gerar_arquivos_dashboard(
     resumo = resumo_mensal(df_finalizadas)
     ranking = ranking_finalizadores(df_finalizadas)
     votos_df = _carregar_ou_atualizar_votos_df(base, refresh_targets, votos_cache_segundos)
+    historico_tecnicos = _atualizar_historico_tecnicos(base, df, refresh_targets)
 
     dashboard_saida = base / "dashboard_os_sgp.html"
     dashboard_data_saida = base / "dashboard_data.json"
@@ -421,6 +642,7 @@ def gerar_arquivos_dashboard(
         mes_selecionado=mes,
         refresh_seconds=refresh_seconds,
         sgp_base_url=config["url_base"],
+        tecnico_history_records=historico_tecnicos,
     )
     dashboard_data_saida.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
@@ -435,6 +657,7 @@ def gerar_arquivos_dashboard(
             mes_selecionado=mes,
             refresh_seconds=refresh_seconds,
             sgp_base_url=config["url_base"],
+            tecnico_history_records=historico_tecnicos,
             output_html=str(dashboard_saida),
             embutir_dados=False,
         )
