@@ -3078,7 +3078,7 @@ def gerar_html_dashboard(
 	      }}
 	    }}
 
-	    function ocultarZerosEmLinha(valores) {{
+	    function ocultarZerosNoGrafico(valores) {{
 	      return Array.isArray(valores)
 	        ? valores.map((valor) => Number(valor || 0) > 0 ? valor : null)
 	        : [];
@@ -3195,7 +3195,7 @@ def gerar_html_dashboard(
 	        {{
 	          type: "line",
 	          label: "Pendentes",
-	          data: ocultarZerosEmLinha(resumo.pendentes),
+	          data: ocultarZerosNoGrafico(resumo.pendentes),
 	          borderColor: "#f59e0b",
 	          backgroundColor: hexParaRgba("#f59e0b", 0.16),
 	          tension: 0.28,
@@ -3205,7 +3205,7 @@ def gerar_html_dashboard(
 	        {{
 	          type: "line",
 	          label: "Em execução",
-	          data: ocultarZerosEmLinha(resumo.emExecucao),
+	          data: ocultarZerosNoGrafico(resumo.emExecucao),
 	          borderColor: "#c026d3",
 	          backgroundColor: hexParaRgba("#c026d3", 0.16),
 	          tension: 0.28,
@@ -3215,28 +3215,28 @@ def gerar_html_dashboard(
 	        {{
 	          type: "bar",
 	          label: "Entradas na carteira",
-	          data: resumo.entradasCarteira,
+	          data: ocultarZerosNoGrafico(resumo.entradasCarteira),
 	          backgroundColor: hexParaRgba("#16a34a", 0.78),
 	          yAxisID: "yEventos",
 	        }},
 	        {{
 	          type: "bar",
 	          label: "Saídas da carteira",
-	          data: resumo.saidasCarteira,
+	          data: ocultarZerosNoGrafico(resumo.saidasCarteira),
 	          backgroundColor: hexParaRgba("#475569", 0.78),
 	          yAxisID: "yEventos",
 	        }},
 	        {{
 	          type: "bar",
 	          label: "Recebidas",
-	          data: resumo.recebidasNoPeriodo,
+	          data: ocultarZerosNoGrafico(resumo.recebidasNoPeriodo),
 	          backgroundColor: hexParaRgba("#06b6d4", 0.78),
 	          yAxisID: "yEventos",
 	        }},
 	        {{
 	          type: "bar",
 	          label: "Encerradas",
-	          data: resumo.encerradasNoPeriodo,
+	          data: ocultarZerosNoGrafico(resumo.encerradasNoPeriodo),
 	          backgroundColor: hexParaRgba("#dc2626", 0.78),
 	          yAxisID: "yEventos",
 	        }},
