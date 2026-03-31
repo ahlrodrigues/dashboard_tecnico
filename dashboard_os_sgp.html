@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Dashboard de OS SGP - V2.5.3 (c0e783c)</title>
+  <title>Dashboard de OS SGP - V2.5.3 (33061f7)</title>
   <style>
     :root {
       --bg: #eef3f1;
@@ -692,7 +692,7 @@
     <section class="hero">
         <div class="hero-head">
         <div class="hero-titles">
-          <h1 id="dashboardTitleMain">Dashboard de OS SGP<span class="hero-meta-inline"><span class="hero-version" id="dashboardVersionLabel">V2.5.3 (c0e783c)</span><span class="hero-meta-links"><a href="CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></span></span></h1>
+          <h1 id="dashboardTitleMain">Dashboard de OS SGP<span class="hero-meta-inline"><span class="hero-version" id="dashboardVersionLabel">V2.5.3 (33061f7)</span><span class="hero-meta-links"><a href="CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></span></span></h1>
         </div>
         <div class="refresh-badge">
           <strong>Atualiza em</strong>
@@ -755,13 +755,13 @@
 	          <p class="caption">Backlog atual e encerramentos do recorte, sempre respeitando todos os filtros selecionados.</p>
 	        </div>
 	        <div class="metric-grid cols-2">
-	          <div class="metric-item"><span class="metric-label">Total de O.S. do recorte</span><span class="metric-value" id="cardTotalStatus">4676</span></div>
+	          <div class="metric-item"><span class="metric-label">Total de O.S. do recorte</span><span class="metric-value" id="cardTotalStatus">4684</span></div>
 	          <div class="metric-item"><span class="metric-label">Em aberto</span><span class="metric-value" id="cardAberta">44</span></div>
 	          <div class="metric-item"><span class="metric-label">Pendentes</span><span class="metric-value" id="cardPendente">10</span></div>
-	          <div class="metric-item"><span class="metric-label">Em execução</span><span class="metric-value" id="cardEmExecucao">4</span></div>
-	          <div class="metric-item"><span class="metric-label">Total de O.S. encerradas</span><span class="metric-value" id="cardEncerrada">4618</span></div>
-	          <div class="metric-item metric-separator"><span class="metric-label">Encerradas pelo técnico</span><span class="metric-value" id="cardEncerradaTecnicos">2314</span></div>
-	          <div class="metric-item"><span class="metric-label">Encerradas por outros</span><span class="metric-value" id="cardPorOutros">2304</span></div>
+	          <div class="metric-item"><span class="metric-label">Em execução</span><span class="metric-value" id="cardEmExecucao">2</span></div>
+	          <div class="metric-item"><span class="metric-label">Total de O.S. encerradas</span><span class="metric-value" id="cardEncerrada">4628</span></div>
+	          <div class="metric-item metric-separator"><span class="metric-label">Encerradas pelo técnico</span><span class="metric-value" id="cardEncerradaTecnicos">2319</span></div>
+	          <div class="metric-item"><span class="metric-label">Encerradas por outros</span><span class="metric-value" id="cardPorOutros">2309</span></div>
 	        </div>
 	      </div>
 	      <div class="summary-card tertiary">
@@ -772,7 +772,7 @@
 	        <div class="metric-grid flow scrollable" id="movimentacoesGrid">
 	          <div class="metric-item compact"><span class="metric-label">Inviabilidades</span><span class="metric-value" id="cardInviabilidade">34</span></div>
 	          <div class="metric-item compact"><span class="metric-label">Instalação de KIT</span><span class="metric-value" id="cardInstalacoes">609</span></div>
-	          <div class="metric-item compact"><span class="metric-label">Remoção de KIT</span><span class="metric-value" id="cardRemocoes">987</span></div>
+	          <div class="metric-item compact"><span class="metric-label">Remoção de KIT</span><span class="metric-value" id="cardRemocoes">988</span></div>
 	        </div>
 	      </div>
 	      <div class="summary-card quaternary">
@@ -941,8 +941,8 @@
     let dataMaxDisponivel = "";
     let refreshSeconds = 1200;
     let sgpBaseUrl = "https://sgp.net4you.com.br";
-    let dashboardVersion = "V2.5.3 (c0e783c)";
-    let dashboardTitle = "Dashboard de OS SGP - V2.5.3 (c0e783c)";
+    let dashboardVersion = "V2.5.3 (33061f7)";
+    let dashboardTitle = "Dashboard de OS SGP - V2.5.3 (33061f7)";
     let dashboardTitleBase = "Dashboard de OS SGP";
     const filtroDataInicial = document.getElementById("filtroDataInicial");
     const filtroDataFinal = document.getElementById("filtroDataFinal");
@@ -2831,8 +2831,8 @@
 	          type: "line",
 	          label: "Itinerário",
 	          data: resumo.totalCarteira,
-	          borderColor: "#17624c",
-	          backgroundColor: hexParaRgba("#17624c", 0.16),
+	          borderColor: "#1d4ed8",
+	          backgroundColor: hexParaRgba("#1d4ed8", 0.16),
 	          tension: 0.28,
 	          fill: false,
 	          yAxisID: "y",
@@ -2841,8 +2841,8 @@
 	          type: "line",
 	          label: "Pendentes",
 	          data: resumo.pendentes,
-	          borderColor: "#d18b2c",
-	          backgroundColor: hexParaRgba("#d18b2c", 0.16),
+	          borderColor: "#f59e0b",
+	          backgroundColor: hexParaRgba("#f59e0b", 0.16),
 	          tension: 0.28,
 	          fill: false,
 	          yAxisID: "y",
@@ -2851,8 +2851,8 @@
 	          type: "line",
 	          label: "Em execução",
 	          data: resumo.emExecucao,
-	          borderColor: "#7f5af0",
-	          backgroundColor: hexParaRgba("#7f5af0", 0.16),
+	          borderColor: "#c026d3",
+	          backgroundColor: hexParaRgba("#c026d3", 0.16),
 	          tension: 0.28,
 	          fill: false,
 	          yAxisID: "y",
@@ -2861,14 +2861,14 @@
 	          type: "bar",
 	          label: "Recebidas",
 	          data: resumo.recebidasNoPeriodo,
-	          backgroundColor: hexParaRgba("#227c9d", 0.72),
+	          backgroundColor: hexParaRgba("#06b6d4", 0.78),
 	          yAxisID: "yEventos",
 	        },
 	        {
 	          type: "bar",
 	          label: "Encerradas",
 	          data: resumo.encerradasNoPeriodo,
-	          backgroundColor: hexParaRgba("#4e9c83", 0.72),
+	          backgroundColor: hexParaRgba("#dc2626", 0.78),
 	          yAxisID: "yEventos",
 	        },
 	      ];

@@ -542,25 +542,33 @@ def _atualizar_os_cache_incremental(
     inicio_ano, fim_ano = montar_periodo(ano, "Todos")
     ano_atual = date.today().year
     fazer_carga_completa = force_full_os or not cache_atual or ano != ano_atual
+    df_cache = _normalizar_df_cache_os(pd.DataFrame(cache_atual))
 
-    if fazer_carga_completa:
-        raw_data = _buscar_os_periodo(client, inicio_ano, fim_ano)
-        df = _deduplicar_df_os(preparar_dataframe(raw_data, config))
-    else:
-        data_inicio_recente = max(date(ano, 1, 1), date.today() - timedelta(days=max(janela_recente_dias - 1, 0)))
-        raw_data = _buscar_os_periodo(client, data_inicio_recente.isoformat(), fim_ano)
-        df_recente = _deduplicar_df_os(preparar_dataframe(raw_data, config))
-        registros_recentes = _payload_os_cache(df_recente, ano, mes, str(config["url_base"]))
-        chaves_recentes = {_obter_chave_registro_os(registro) for registro in registros_recentes if _obter_chave_registro_os(registro)}
-        cache_filtrado = [
-            registro
-            for registro in cache_atual
-            if not _registro_toca_janela_recente(registro, data_inicio_recente)
-            and _obter_chave_registro_os(registro) not in chaves_recentes
-        ]
-        df = pd.DataFrame(cache_filtrado + registros_recentes)
-        df = _normalizar_df_cache_os(df)
-        df = _deduplicar_df_os(df)
+    try:
+        if fazer_carga_completa:
+            raw_data = _buscar_os_periodo(client, inicio_ano, fim_ano)
+            df = _deduplicar_df_os(preparar_dataframe(raw_data, config))
+        else:
+            data_inicio_recente = max(date(ano, 1, 1), date.today() - timedelta(days=max(janela_recente_dias - 1, 0)))
+            raw_data = _buscar_os_periodo(client, data_inicio_recente.isoformat(), fim_ano)
+            df_recente = _deduplicar_df_os(preparar_dataframe(raw_data, config))
+            registros_recentes = _payload_os_cache(df_recente, ano, mes, str(config["url_base"]))
+            chaves_recentes = {_obter_chave_registro_os(registro) for registro in registros_recentes if _obter_chave_registro_os(registro)}
+            cache_filtrado = [
+                registro
+                for registro in cache_atual
+                if not _registro_toca_janela_recente(registro, data_inicio_recente)
+                and _obter_chave_registro_os(registro) not in chaves_recentes
+            ]
+            df = pd.DataFrame(cache_filtrado + registros_recentes)
+            df = _normalizar_df_cache_os(df)
+            df = _deduplicar_df_os(df)
+    except Exception as exc:
+        if not df_cache.empty:
+            print(f"Aviso: falha ao atualizar O.S. no SGP ({exc}). Usando cache local.")
+            df = df_cache.copy()
+        else:
+            raise
 
     if mes != "Todos" and not df.empty:
         df = df[df["mes_nome"] == mes].copy()

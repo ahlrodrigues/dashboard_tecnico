@@ -21,10 +21,9 @@ LOG_FILE="$BASE_DIR/atualizar_live.log"
     exit 1
   fi
 
-  git fetch origin
+  git fetch --prune origin
   git checkout "$BRANCH"
-  git restore dashboard_os_sgp.html
-  git pull --ff-only origin "$BRANCH"
+  git reset --hard "origin/$BRANCH"
   "$PYTHON_BIN" main.py --rebuild-html
 
   VERSION_LABEL="$("$PYTHON_BIN" -c 'from version import VERSION; print(VERSION)' 2>/dev/null || echo "desconhecida")"
