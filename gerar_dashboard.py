@@ -2232,16 +2232,30 @@ def gerar_html_dashboard(
       document.getElementById("cardPorOutros").textContent = cards.porOutros;
     }}
 
+    function obterMembroGrafico(registro) {{
+      if (ehStatusEncerrada(registro)) {{
+        return obterUsuario(registro);
+      }}
+
+      const responsavel = normalizarTexto(registro.responsavel);
+      if (responsavel) return responsavel;
+
+      const auxiliares = obterTecnicosAuxiliares(registro);
+      if (auxiliares.length) return auxiliares[0];
+
+      return "";
+    }}
+
     function agruparResumo(registros) {{
       return mesesOrdem.map((mes) => {{
         const itens = registros.filter((registro) => obterMes(registro) === mes);
         return {{
           mes_nome: mes,
-          finalizadas: itens.length,
-          tecnicos: itens.filter((registro) => obterGrupoEncerramento(registro) === "Técnicos").length,
-          infra: itens.filter((registro) => obterGrupoEncerramento(registro) === "Infra").length,
-          inviabilidade: itens.filter((registro) => obterGrupo(registro) === "Inviabilidade").length,
-          outros: itens.filter((registro) => obterGrupoEncerramento(registro) === "Outros").length,
+          total: itens.length,
+          tecnicos: itens.filter((registro) => obterGrupoFiltro(registro) === "Técnicos").length,
+          infra: itens.filter((registro) => obterGrupoFiltro(registro) === "Infra").length,
+          inviabilidade: itens.filter((registro) => obterGrupoFiltro(registro) === "Inviabilidade").length,
+          outros: itens.filter((registro) => obterGrupoFiltro(registro) === "Outros").length,
         }};
       }});
     }}
@@ -2738,7 +2752,7 @@ def gerar_html_dashboard(
       data: {{
         labels: mesesOrdem,
         datasets: [
-          {{ label: "Finalizadas", data: [], backgroundColor: "#17624c" }},
+          {{ label: "Total", data: [], backgroundColor: "#17624c" }},
           {{ label: "Técnicos", data: [], backgroundColor: "#4e9c83" }},
           {{ label: "Infra", data: [], backgroundColor: "#7bc6ac" }},
           {{ label: "Inviabilidade", data: [], backgroundColor: "#d18b2c" }},
@@ -2803,7 +2817,7 @@ def gerar_html_dashboard(
 
 	    function renderGrafico(registros) {{
 	      const resumo = agruparResumo(registros);
-	      graficoMensal.data.datasets[0].data = resumo.map((item) => item.finalizadas);
+	      graficoMensal.data.datasets[0].data = resumo.map((item) => item.total);
       graficoMensal.data.datasets[1].data = resumo.map((item) => item.tecnicos);
       graficoMensal.data.datasets[2].data = resumo.map((item) => item.infra);
       graficoMensal.data.datasets[3].data = resumo.map((item) => item.inviabilidade);
@@ -2840,7 +2854,7 @@ def gerar_html_dashboard(
 	        const data = obterDataBaseTexto(registro);
 	        if (!data || !mapaIndices.has(data)) return;
 
-	        const membro = obterUsuario(registro) || "Sem usuário";
+	        const membro = obterMembroGrafico(registro) || "Sem usuário";
 	        const indice = mapaIndices.get(data);
 	        if (!mapaMembros.has(membro)) {{
 	          mapaMembros.set(membro, Array.from({{ length: labels.length }}, () => 0));
@@ -2885,7 +2899,7 @@ def gerar_html_dashboard(
 	      }}
 
 	      const contextoGrupo = filtroGrupo.value ? ` do grupo ${{filtroGrupo.value}}` : "";
-	      graficoDiarioMeta.textContent = `Evolução diária por membro${{contextoGrupo}} entre ${{resumo.intervalo.inicio}} e ${{resumo.intervalo.fim}}, usando a data-base de encerramento da O.S.`;
+	      graficoDiarioMeta.textContent = `Evolução diária por membro${{contextoGrupo}} entre ${{resumo.intervalo.inicio}} e ${{resumo.intervalo.fim}}, usando a data-base do recorte atual.`;
 	    }}
 
     function atualizarMetas(registrosOperacionais, registrosFinalizados, totalDetalhes, totalVotosValidos, totalVotosDetalhamento, totalDetalhamentoPops) {{
@@ -2942,8 +2956,8 @@ def gerar_html_dashboard(
 	      renderRankingVotos(registrosVotos);
 	      renderDetalhes(registrosAnaliticos);
 	      renderReincidencias(registrosBaseReincidencias);
-	      renderGrafico(registrosFinalizados);
-	      renderGraficoDiario(registrosFinalizados);
+	      renderGrafico(registrosPops);
+	      renderGraficoDiario(registrosPops);
 	      atualizarMetas(registrosOperacionais, registrosFinalizados, registrosAnaliticos.length, registrosVotosUnicos.length, registrosVotos.length, registrosDetalhamentoPops.length);
 	    }}
 
