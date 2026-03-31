@@ -25,7 +25,7 @@ VOTOS_CACHE_FILENAME = "dashboard_votos_cache.json"
 TECNICOS_CACHE_FILENAME = "dashboard_tecnicos_cache.json"
 TECNICOS_HISTORY_FILENAME = "dashboard_tecnicos_history.json"
 OS_ESTADO_ATUAL_FILENAME = "dashboard_os_estado_atual.json"
-TECNICOS_HISTORY_RETENCAO_DIAS = 366
+TECNICOS_HISTORY_RETENCAO_DIAS_PADRAO = 366
 TECNICOS_HISTORY_HORA_INICIO_PADRAO = 5
 TECNICOS_HISTORY_HORA_FIM_PADRAO = 20
 
@@ -431,15 +431,16 @@ def _atualizar_historico_tecnicos(
     base: Path,
     df: pd.DataFrame,
     refresh_targets: set[str],
+    retention_days: int,
     hora_inicio: int,
     hora_fim: int,
 ) -> list[dict[str, object]]:
     history_records = _carregar_tecnicos_history(base)
     precisa_capturar = "os" in refresh_targets or "all" in refresh_targets or not history_records
     if not precisa_capturar:
-        return _prunar_tecnicos_history(history_records, TECNICOS_HISTORY_RETENCAO_DIAS)
+        return _prunar_tecnicos_history(history_records, retention_days)
     if not _historico_tecnicos_em_janela_coleta(hora_inicio, hora_fim):
-        return _prunar_tecnicos_history(history_records, TECNICOS_HISTORY_RETENCAO_DIAS)
+        return _prunar_tecnicos_history(history_records, retention_days)
 
     captured_at = _agora_iso()
     previous_state = _carregar_estado_os_atual(base)
@@ -529,7 +530,7 @@ def _atualizar_historico_tecnicos(
         if _normalizar_snapshot_tecnicos(coleta_atual) != _normalizar_snapshot_tecnicos(ultima_coleta):
             history_records.extend(coleta_atual)
 
-    history_records = _prunar_tecnicos_history(history_records, TECNICOS_HISTORY_RETENCAO_DIAS)
+    history_records = _prunar_tecnicos_history(history_records, retention_days)
     _salvar_tecnicos_history(base, history_records)
     _salvar_estado_os_atual(base, current_state)
     return history_records
@@ -647,6 +648,8 @@ def gerar_arquivos_dashboard(
     refresh_seconds = int(config.get("dashboard", {}).get("atualizacao_segundos", 300))
     janela_recente_dias = int(config.get("dashboard", {}).get("janela_recente_dias", 45))
     votos_cache_segundos = int(config.get("dashboard", {}).get("votos_cache_segundos", refresh_seconds))
+    historico_retencao_dias = int(config.get("dashboard", {}).get("tecnicos_history_retencao_dias", TECNICOS_HISTORY_RETENCAO_DIAS_PADRAO))
+    historico_retencao_dias = max(1, historico_retencao_dias)
     historico_hora_inicio = int(config.get("dashboard", {}).get("tecnicos_history_hora_inicio", TECNICOS_HISTORY_HORA_INICIO_PADRAO))
     historico_hora_fim = int(config.get("dashboard", {}).get("tecnicos_history_hora_fim", TECNICOS_HISTORY_HORA_FIM_PADRAO))
     historico_hora_inicio = max(0, min(23, historico_hora_inicio))
@@ -677,6 +680,7 @@ def gerar_arquivos_dashboard(
         base,
         df,
         refresh_targets,
+        historico_retencao_dias,
         historico_hora_inicio,
         historico_hora_fim,
     )

@@ -34,6 +34,7 @@
     "atualizacao_segundos": 300,
     "janela_recente_dias": 45,
     "votos_cache_segundos": 300,
+    "tecnicos_history_retencao_dias": 366,
     "tecnicos_history_hora_inicio": 5,
     "tecnicos_history_hora_fim": 20
   }
