@@ -8,6 +8,7 @@ import pandas as pd
 
 from version import VERSION, get_dashboard_version_label
 
+VERSAO_DASHBOARD_ESTATICA = f"V{VERSION}"
 VERSAO_DASHBOARD = get_dashboard_version_label()
 
 
@@ -205,7 +206,7 @@ def gerar_html_dashboard(
     data_final_padrao = payload["data_final_padrao"]
     data_snapshot_atual = payload["data_snapshot_atual"]
     titulo_periodo = payload["titulo_periodo"]
-    titulo_dashboard = f"Dashboard de OS SGP - {VERSAO_DASHBOARD}"
+    titulo_dashboard = f"Dashboard de OS SGP - {VERSAO_DASHBOARD_ESTATICA}"
     titulo_dashboard_base = "Dashboard de OS SGP"
     dados_embutidos = detalhes_data if embutir_dados else []
     votos_embutidos = votos_data if embutir_dados else []
@@ -920,7 +921,7 @@ def gerar_html_dashboard(
     <section class="hero">
         <div class="hero-head">
         <div class="hero-titles">
-          <h1 id="dashboardTitleMain">{escape(titulo_dashboard_base)}<span class="hero-meta-inline"><span class="hero-version" id="dashboardVersionLabel">{escape(VERSAO_DASHBOARD)}</span><span class="hero-meta-links"><a href="CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></span></span></h1>
+          <h1 id="dashboardTitleMain">{escape(titulo_dashboard_base)}<span class="hero-meta-inline"><span class="hero-version" id="dashboardVersionLabel">{escape(VERSAO_DASHBOARD_ESTATICA)}</span><span class="hero-meta-links"><a href="CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></span></span></h1>
         </div>
         <div class="refresh-badge">
           <strong>Atualiza em</strong>
@@ -1169,8 +1170,8 @@ def gerar_html_dashboard(
     let dataMaxDisponivel = "";
     let refreshSeconds = {refresh_seconds};
     let sgpBaseUrl = {json.dumps(sgp_base_url.rstrip("/"), ensure_ascii=False)};
-    let dashboardVersion = {json.dumps(str(payload["dashboard_version"]), ensure_ascii=False)};
-    let dashboardTitle = {json.dumps(str(payload["dashboard_title"]), ensure_ascii=False)};
+    let dashboardVersion = {json.dumps(VERSAO_DASHBOARD_ESTATICA, ensure_ascii=False)};
+    let dashboardTitle = {json.dumps(titulo_dashboard, ensure_ascii=False)};
     let dashboardTitleBase = {json.dumps(str(payload["dashboard_title_base"]), ensure_ascii=False)};
     const filtroDataInicial = document.getElementById("filtroDataInicial");
     const filtroDataFinal = document.getElementById("filtroDataFinal");
