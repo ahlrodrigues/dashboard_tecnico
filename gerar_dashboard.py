@@ -89,6 +89,8 @@ def montar_payload_dashboard(
     sgp_base_url: str,
     tecnico_history_records: list[dict[str, object]] | None = None,
 ) -> dict[str, object]:
+    titulo_dashboard = f"Dashboard de OS SGP - {VERSAO_DASHBOARD}"
+    titulo_dashboard_base = "Dashboard de OS SGP"
     detalhe_cols: list[str] = []
     for cand in ["id", "ordem_servico", "cliente", "contrato", "pop", "motivo", "status"]:
         if cand in detalhes_df.columns:
@@ -145,6 +147,9 @@ def montar_payload_dashboard(
         "mes_selecionado": mes_selecionado,
         "refresh_seconds": refresh_seconds,
         "sgp_base_url": sgp_base_url.rstrip("/"),
+        "dashboard_version": VERSAO_DASHBOARD,
+        "dashboard_title": titulo_dashboard,
+        "dashboard_title_base": titulo_dashboard_base,
         "titulo_periodo": "Encerramentos e backlog operacional conforme o recorte atual e todos os filtros ativos",
         "detalhe_cols": detalhe_cols,
         "detalhe_labels": detalhe_labels,
@@ -913,9 +918,9 @@ def gerar_html_dashboard(
   </div>
   <div class="wrap">
     <section class="hero">
-      <div class="hero-head">
+        <div class="hero-head">
         <div class="hero-titles">
-          <h1>{escape(titulo_dashboard_base)}<span class="hero-meta-inline"><span class="hero-version">{escape(VERSAO_DASHBOARD)}</span><span class="hero-meta-links"><a href="CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></span></span></h1>
+          <h1 id="dashboardTitleMain">{escape(titulo_dashboard_base)}<span class="hero-meta-inline"><span class="hero-version" id="dashboardVersionLabel">{escape(VERSAO_DASHBOARD)}</span><span class="hero-meta-links"><a href="CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></span></span></h1>
         </div>
         <div class="refresh-badge">
           <strong>Atualiza em</strong>
@@ -1102,7 +1107,7 @@ def gerar_html_dashboard(
 
 	    <div class="panel full">
 	      <h2 class="section-title" id="tituloHistoricoTecnicos">Histórico dos técnicos</h2>
-	      <div class="panel-meta" id="historicoTecnicosMeta">Mostrando a evolução da carteira e dos fechamentos por coleta.</div>
+	      <div class="panel-meta" id="historicoTecnicosMeta">Mostrando a evolução do itinerário e dos fechamentos por coleta.</div>
 	      <canvas id="graficoHistoricoTecnicos"></canvas>
 	    </div>
 
@@ -1164,6 +1169,9 @@ def gerar_html_dashboard(
     let dataMaxDisponivel = "";
     let refreshSeconds = {refresh_seconds};
     let sgpBaseUrl = {json.dumps(sgp_base_url.rstrip("/"), ensure_ascii=False)};
+    let dashboardVersion = {json.dumps(str(payload["dashboard_version"]), ensure_ascii=False)};
+    let dashboardTitle = {json.dumps(str(payload["dashboard_title"]), ensure_ascii=False)};
+    let dashboardTitleBase = {json.dumps(str(payload["dashboard_title_base"]), ensure_ascii=False)};
     const filtroDataInicial = document.getElementById("filtroDataInicial");
     const filtroDataFinal = document.getElementById("filtroDataFinal");
     const filtroUsuario = document.getElementById("filtroUsuario");
@@ -1220,6 +1228,8 @@ def gerar_html_dashboard(
     const tituloHistoricoTecnicos = document.getElementById("tituloHistoricoTecnicos");
     const tituloDetalhamento = document.getElementById("tituloDetalhamento");
     const tituloReincidencia = document.getElementById("tituloReincidencia");
+    const dashboardTitleMain = document.getElementById("dashboardTitleMain");
+    const dashboardVersionLabel = document.getElementById("dashboardVersionLabel");
     const detalhesHead = document.getElementById("detalhesHead");
     const rankingVotosHead = document.getElementById("rankingVotosHead");
     const reincidenciasHead = document.getElementById("reincidenciasHead");
@@ -1271,16 +1281,32 @@ def gerar_html_dashboard(
       restanteRefresh = refreshSeconds;
     }}
 
+    function aplicarVersaoDashboard() {{
+      if (dashboardVersionLabel) {{
+        dashboardVersionLabel.textContent = dashboardVersion;
+      }}
+      if (dashboardTitleMain) {{
+        dashboardTitleMain.childNodes[0].textContent = dashboardTitleBase;
+      }}
+      if (dashboardTitle) {{
+        document.title = dashboardTitle;
+      }}
+    }}
+
     function aplicarPayloadDashboard(payload) {{
       if (!payload || typeof payload !== "object") return;
       detalhes = Array.isArray(payload.detalhes_data) ? payload.detalhes_data : [];
       votosData = Array.isArray(payload.votos_data) ? payload.votos_data : [];
       tecnicoHistoryData = Array.isArray(payload.tecnico_history_data) ? payload.tecnico_history_data : [];
+      dashboardVersion = normalizarTexto(payload.dashboard_version) || dashboardVersion;
+      dashboardTitle = normalizarTexto(payload.dashboard_title) || dashboardTitle;
+      dashboardTitleBase = normalizarTexto(payload.dashboard_title_base) || dashboardTitleBase;
       dataInicialPadrao = normalizarTexto(payload.data_inicial_padrao);
       dataFinalPadrao = normalizarTexto(payload.data_final_padrao);
       dataSnapshotAtual = normalizarTexto(payload.data_snapshot_atual) || dataSnapshotAtual;
       refreshSeconds = Math.max(Number.parseInt(payload.refresh_seconds || refreshSeconds, 10) || refreshSeconds, 30);
       sgpBaseUrl = normalizarTexto(payload.sgp_base_url) || sgpBaseUrl;
+      aplicarVersaoDashboard();
       recalcularMetadadosBase();
     }}
 
@@ -3025,7 +3051,7 @@ def gerar_html_dashboard(
 	      graficoHistoricoTecnicos.data.datasets = [
 	        {{
 	          type: "line",
-	          label: "Carteira",
+	          label: "Itinerário",
 	          data: resumo.totalCarteira,
 	          borderColor: "#17624c",
 	          backgroundColor: hexParaRgba("#17624c", 0.16),

@@ -12,6 +12,8 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
+from version import get_dashboard_version_label
+
 class DashboardRequestHandler(SimpleHTTPRequestHandler):
     refresh_lock = threading.Lock()
     base_dir = Path(__file__).resolve().parent
@@ -137,6 +139,10 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
                 },
             )
             return
+
+        payload["dashboard_version"] = get_dashboard_version_label()
+        payload["dashboard_title_base"] = "Dashboard de OS SGP"
+        payload["dashboard_title"] = f"Dashboard de OS SGP - {payload['dashboard_version']}"
 
         self._responder_json(HTTPStatus.OK, payload)
 

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Dashboard de OS SGP - V2.5.3 (3435e27)</title>
+  <title>Dashboard de OS SGP - V2.5.3 (8f018ef)</title>
   <style>
     :root {
       --bg: #eef3f1;
@@ -690,9 +690,9 @@
   </div>
   <div class="wrap">
     <section class="hero">
-      <div class="hero-head">
+        <div class="hero-head">
         <div class="hero-titles">
-          <h1>Dashboard de OS SGP<span class="hero-meta-inline"><span class="hero-version">V2.5.3 (3435e27)</span><span class="hero-meta-links"><a href="CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></span></span></h1>
+          <h1 id="dashboardTitleMain">Dashboard de OS SGP<span class="hero-meta-inline"><span class="hero-version" id="dashboardVersionLabel">V2.5.3 (8f018ef)</span><span class="hero-meta-links"><a href="CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></span></span></h1>
         </div>
         <div class="refresh-badge">
           <strong>Atualiza em</strong>
@@ -755,12 +755,12 @@
 	          <p class="caption">Backlog atual e encerramentos do recorte, sempre respeitando todos os filtros selecionados.</p>
 	        </div>
 	        <div class="metric-grid cols-2">
-	          <div class="metric-item"><span class="metric-label">Total de O.S. do recorte</span><span class="metric-value" id="cardTotalStatus">4667</span></div>
-	          <div class="metric-item"><span class="metric-label">Em aberto</span><span class="metric-value" id="cardAberta">50</span></div>
+	          <div class="metric-item"><span class="metric-label">Total de O.S. do recorte</span><span class="metric-value" id="cardTotalStatus">4669</span></div>
+	          <div class="metric-item"><span class="metric-label">Em aberto</span><span class="metric-value" id="cardAberta">52</span></div>
 	          <div class="metric-item"><span class="metric-label">Pendentes</span><span class="metric-value" id="cardPendente">6</span></div>
-	          <div class="metric-item"><span class="metric-label">Em execução</span><span class="metric-value" id="cardEmExecucao">2</span></div>
-	          <div class="metric-item"><span class="metric-label">Total de O.S. encerradas</span><span class="metric-value" id="cardEncerrada">4609</span></div>
-	          <div class="metric-item metric-separator"><span class="metric-label">Encerradas pelo técnico</span><span class="metric-value" id="cardEncerradaTecnicos">2309</span></div>
+	          <div class="metric-item"><span class="metric-label">Em execução</span><span class="metric-value" id="cardEmExecucao">1</span></div>
+	          <div class="metric-item"><span class="metric-label">Total de O.S. encerradas</span><span class="metric-value" id="cardEncerrada">4610</span></div>
+	          <div class="metric-item metric-separator"><span class="metric-label">Encerradas pelo técnico</span><span class="metric-value" id="cardEncerradaTecnicos">2310</span></div>
 	          <div class="metric-item"><span class="metric-label">Encerradas por outros</span><span class="metric-value" id="cardPorOutros">2300</span></div>
 	        </div>
 	      </div>
@@ -771,7 +771,7 @@
 	        </div>
 	        <div class="metric-grid flow scrollable" id="movimentacoesGrid">
 	          <div class="metric-item compact"><span class="metric-label">Inviabilidades</span><span class="metric-value" id="cardInviabilidade">34</span></div>
-	          <div class="metric-item compact"><span class="metric-label">Instalação de KIT</span><span class="metric-value" id="cardInstalacoes">608</span></div>
+	          <div class="metric-item compact"><span class="metric-label">Instalação de KIT</span><span class="metric-value" id="cardInstalacoes">609</span></div>
 	          <div class="metric-item compact"><span class="metric-label">Remoção de KIT</span><span class="metric-value" id="cardRemocoes">985</span></div>
 	        </div>
 	      </div>
@@ -879,7 +879,7 @@
 
 	    <div class="panel full">
 	      <h2 class="section-title" id="tituloHistoricoTecnicos">Histórico dos técnicos</h2>
-	      <div class="panel-meta" id="historicoTecnicosMeta">Mostrando a evolução da carteira e dos fechamentos por coleta.</div>
+	      <div class="panel-meta" id="historicoTecnicosMeta">Mostrando a evolução do itinerário e dos fechamentos por coleta.</div>
 	      <canvas id="graficoHistoricoTecnicos"></canvas>
 	    </div>
 
@@ -941,6 +941,9 @@
     let dataMaxDisponivel = "";
     let refreshSeconds = 300;
     let sgpBaseUrl = "https://sgp.net4you.com.br";
+    let dashboardVersion = "V2.5.3 (8f018ef)";
+    let dashboardTitle = "Dashboard de OS SGP - V2.5.3 (8f018ef)";
+    let dashboardTitleBase = "Dashboard de OS SGP";
     const filtroDataInicial = document.getElementById("filtroDataInicial");
     const filtroDataFinal = document.getElementById("filtroDataFinal");
     const filtroUsuario = document.getElementById("filtroUsuario");
@@ -997,6 +1000,8 @@
     const tituloHistoricoTecnicos = document.getElementById("tituloHistoricoTecnicos");
     const tituloDetalhamento = document.getElementById("tituloDetalhamento");
     const tituloReincidencia = document.getElementById("tituloReincidencia");
+    const dashboardTitleMain = document.getElementById("dashboardTitleMain");
+    const dashboardVersionLabel = document.getElementById("dashboardVersionLabel");
     const detalhesHead = document.getElementById("detalhesHead");
     const rankingVotosHead = document.getElementById("rankingVotosHead");
     const reincidenciasHead = document.getElementById("reincidenciasHead");
@@ -1048,16 +1053,32 @@
       restanteRefresh = refreshSeconds;
     }
 
+    function aplicarVersaoDashboard() {
+      if (dashboardVersionLabel) {
+        dashboardVersionLabel.textContent = dashboardVersion;
+      }
+      if (dashboardTitleMain) {
+        dashboardTitleMain.childNodes[0].textContent = dashboardTitleBase;
+      }
+      if (dashboardTitle) {
+        document.title = dashboardTitle;
+      }
+    }
+
     function aplicarPayloadDashboard(payload) {
       if (!payload || typeof payload !== "object") return;
       detalhes = Array.isArray(payload.detalhes_data) ? payload.detalhes_data : [];
       votosData = Array.isArray(payload.votos_data) ? payload.votos_data : [];
       tecnicoHistoryData = Array.isArray(payload.tecnico_history_data) ? payload.tecnico_history_data : [];
+      dashboardVersion = normalizarTexto(payload.dashboard_version) || dashboardVersion;
+      dashboardTitle = normalizarTexto(payload.dashboard_title) || dashboardTitle;
+      dashboardTitleBase = normalizarTexto(payload.dashboard_title_base) || dashboardTitleBase;
       dataInicialPadrao = normalizarTexto(payload.data_inicial_padrao);
       dataFinalPadrao = normalizarTexto(payload.data_final_padrao);
       dataSnapshotAtual = normalizarTexto(payload.data_snapshot_atual) || dataSnapshotAtual;
       refreshSeconds = Math.max(Number.parseInt(payload.refresh_seconds || refreshSeconds, 10) || refreshSeconds, 30);
       sgpBaseUrl = normalizarTexto(payload.sgp_base_url) || sgpBaseUrl;
+      aplicarVersaoDashboard();
       recalcularMetadadosBase();
     }
 
@@ -2802,7 +2823,7 @@
 	      graficoHistoricoTecnicos.data.datasets = [
 	        {
 	          type: "line",
-	          label: "Carteira",
+	          label: "Itinerário",
 	          data: resumo.totalCarteira,
 	          borderColor: "#17624c",
 	          backgroundColor: hexParaRgba("#17624c", 0.16),
