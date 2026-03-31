@@ -2925,30 +2925,36 @@ def gerar_html_dashboard(
 	        cursor.setDate(cursor.getDate() + 1);
 	      }}
 	      const mapaMembros = new Map();
+	      const mapaRotulos = construirMapaRotulosUsuarios(registros);
 
 	      registros.forEach((registro) => {{
 	        const data = obterDataBaseTexto(registro);
 	        if (!data || !mapaIndices.has(data)) return;
 
-	        const membro = obterMembroGrafico(registro) || "Sem usuário";
+	        const membroBruto = obterMembroGrafico(registro) || "Sem usuário";
+	        const membro = normalizarChaveUsuario(membroBruto) || membroBruto;
 	        const indice = mapaIndices.get(data);
 	        if (!mapaMembros.has(membro)) {{
-	          mapaMembros.set(membro, Array.from({{ length: labels.length }}, () => 0));
+	          mapaMembros.set(membro, {{
+	            label: normalizarRotuloUsuario(membroBruto, mapaRotulos) || membroBruto,
+	            valores: Array.from({{ length: labels.length }}, () => 0),
+	          }});
 	        }}
-	        mapaMembros.get(membro)[indice] += 1;
+	        mapaMembros.get(membro).valores[indice] += 1;
 	      }});
 
 	      const datasets = [...mapaMembros.entries()]
-	        .map(([membro, valores]) => ({{
+	        .map(([membro, item]) => ({{
 	          membro,
-	          valores,
-	          total: valores.reduce((acc, valor) => acc + valor, 0),
+	          label: item.label,
+	          valores: item.valores,
+	          total: item.valores.reduce((acc, valor) => acc + valor, 0),
 	        }}))
-	        .sort((a, b) => b.total - a.total || a.membro.localeCompare(b.membro, "pt-BR", {{ sensitivity: "base" }}))
+	        .sort((a, b) => b.total - a.total || a.label.localeCompare(b.label, "pt-BR", {{ sensitivity: "base" }}))
 	        .map((item, indice) => {{
 	          const cor = paletaGraficoDiario[indice % paletaGraficoDiario.length];
 	          return {{
-	            label: item.membro,
+	            label: item.label,
 	            data: item.valores,
 	            borderColor: cor,
 	            backgroundColor: hexParaRgba(cor, 0.14),

@@ -9,7 +9,6 @@ import pandas as pd
 
 from gerar_dashboard import gerar_html_dashboard, montar_payload_dashboard
 from processar_os import (
-    extrair_auxiliares,
     normalizar_identificador_pessoa,
     preparar_dataframe,
     ranking_finalizadores,
@@ -308,16 +307,6 @@ def _resolver_dono_os(registro: dict[str, object]) -> tuple[str, str]:
     if responsavel_key:
         return responsavel_key, responsavel
 
-    for auxiliar in [_texto_limpo(valor) for valor in extrair_auxiliares(registro.get("tecnicos_auxiliares", ""))]:
-        auxiliar_key = normalizar_identificador_pessoa(auxiliar)
-        if auxiliar_key:
-            return auxiliar_key, auxiliar
-
-    finalizador = _texto_limpo(registro.get("finalizado_por_dashboard", ""))
-    finalizador_key = normalizar_identificador_pessoa(finalizador)
-    if finalizador_key:
-        return finalizador_key, finalizador
-
     return "", ""
 
 
@@ -469,18 +458,8 @@ def _atualizar_historico_tecnicos(
             anterior = previous_state.get(os_id)
             if status == "Encerrada":
                 if anterior and _texto_limpo(anterior.get("status", "")) != "Encerrada":
-                    encerramento_key = (
-                        dono_key
-                        or _texto_limpo(anterior.get("tecnico", ""))
-                        or finalizador_key
-                        or _texto_limpo(anterior.get("finalizador", ""))
-                    )
-                    encerramento_nome = (
-                        dono_nome
-                        or _texto_limpo(anterior.get("tecnico_nome", ""))
-                        or finalizador_nome
-                        or _texto_limpo(anterior.get("finalizador_nome", ""))
-                    )
+                    encerramento_key = finalizador_key
+                    encerramento_nome = finalizador_nome
                     summary = ensure_summary(encerramento_key, encerramento_nome)
                     if summary is not None:
                         summary["encerradas_no_periodo"] += 1
