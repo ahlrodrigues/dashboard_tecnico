@@ -1110,6 +1110,24 @@ def gerar_html_dashboard(
 	      <h2 class="section-title" id="tituloHistoricoTecnicos">Histórico dos técnicos</h2>
 	      <div class="panel-meta" id="historicoTecnicosMeta">Mostrando a evolução do itinerário e dos fechamentos por coleta.</div>
 	      <canvas id="graficoHistoricoTecnicos"></canvas>
+	      <div class="panel-meta" id="historicoTecnicosEventosMeta">Lista fixa dos eventos registrados no período mostrado no gráfico.</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Coleta</th>
+              <th>Evento</th>
+              <th>O.S.</th>
+              <th>Cliente</th>
+              <th>POP</th>
+              <th>Detalhes</th>
+            </tr>
+          </thead>
+          <tbody id="historicoTecnicosEventosBody">
+            <tr><td colspan="6" class="empty">Os eventos registrados no período aparecerão aqui automaticamente.</td></tr>
+          </tbody>
+        </table>
+      </div>
 	    </div>
 
 	    <div class="panel full">
@@ -1163,6 +1181,7 @@ def gerar_html_dashboard(
     let votosData = {json.dumps(votos_embutidos, ensure_ascii=False)};
     let tecnicoHistoryData = {json.dumps(tecnico_history_embutido, ensure_ascii=False)};
     let resumoHistoricoTecnicosAtual = null;
+    let historicoTecnicosIndiceSelecionado = -1;
     let dataInicialPadrao = "{data_inicial_padrao}";
     let dataFinalPadrao = "{data_final_padrao}";
     let dataSnapshotAtual = "{data_snapshot_atual}";
@@ -1214,6 +1233,8 @@ def gerar_html_dashboard(
     const rankingVotosMeta = document.getElementById("rankingVotosMeta");
 	    const graficoDiarioMeta = document.getElementById("graficoDiarioMeta");
     const historicoTecnicosMeta = document.getElementById("historicoTecnicosMeta");
+    const historicoTecnicosEventosMeta = document.getElementById("historicoTecnicosEventosMeta");
+    const historicoTecnicosEventosBody = document.getElementById("historicoTecnicosEventosBody");
     const detalheMeta = document.getElementById("detalheMeta");
     const reincidenciaMeta = document.getElementById("reincidenciaMeta");
     const tituloStatusOperacional = document.getElementById("tituloStatusOperacional");
@@ -1301,6 +1322,7 @@ def gerar_html_dashboard(
       votosData = Array.isArray(payload.votos_data) ? payload.votos_data : [];
       tecnicoHistoryData = Array.isArray(payload.tecnico_history_data) ? payload.tecnico_history_data : [];
       resumoHistoricoTecnicosAtual = null;
+      historicoTecnicosIndiceSelecionado = -1;
       dashboardVersion = normalizarTexto(payload.dashboard_version) || dashboardVersion;
       dashboardTitle = normalizarTexto(payload.dashboard_title) || dashboardTitle;
       dashboardTitleBase = normalizarTexto(payload.dashboard_title_base) || dashboardTitleBase;
@@ -2835,6 +2857,10 @@ def gerar_html_dashboard(
 	        responsive: true,
 	        maintainAspectRatio: false,
 	        interaction: {{ mode: "index", intersect: false }},
+	        onClick(evento, elementos, chart) {{
+	          if (!Array.isArray(elementos) || !elementos.length) return;
+	          selecionarHistoricoTecnicosIndice(elementos[0].index, chart);
+	        }},
 	        plugins: {{
 	          legend: {{ position: "top" }}
 	        }},
@@ -3078,10 +3104,128 @@ def gerar_html_dashboard(
 	      }}
 	    }}
 
+	    function formatarTipoEventoCarteira(evento) {{
+	      switch (normalizarTexto(evento?.tipo)) {{
+	        case "entrada_nova":
+	          return "Nova na carteira";
+	        case "entrada_transferencia":
+	          return "Entrada por transferência";
+	        case "saida_transferencia":
+	          return "Saída por transferência";
+	        case "saida_encerramento":
+	          return "Saída por encerramento";
+	        case "entrada_reabertura":
+	          return "Entrada por reabertura";
+	        default:
+	          return "Variação da carteira";
+	      }}
+	    }}
+
+	    function formatarDetalhesEventoCarteira(evento) {{
+	      if (!evento || typeof evento !== "object") return "";
+	      const partes = [];
+	      const deTecnico = normalizarTexto(evento.de_tecnico);
+	      const paraTecnico = normalizarTexto(evento.para_tecnico);
+	      const finalizador = normalizarTexto(evento.finalizador);
+	      const statusAnterior = normalizarTexto(evento.status_anterior);
+	      const statusAtual = normalizarTexto(evento.status_atual);
+
+	      if (deTecnico) partes.push(`de ${{deTecnico}}`);
+	      if (paraTecnico) partes.push(`para ${{paraTecnico}}`);
+	      if (finalizador) partes.push(`finalizada por ${{finalizador}}`);
+	      if (statusAnterior || statusAtual) {{
+	        partes.push(`status: ${{statusAnterior || "-"}} -> ${{statusAtual || "-"}}`);
+	      }}
+	      return partes.join(" | ");
+	    }}
+
 	    function ocultarZerosNoGrafico(valores) {{
 	      return Array.isArray(valores)
 	        ? valores.map((valor) => Number(valor || 0) > 0 ? valor : null)
 	        : [];
+	    }}
+
+	    function renderHistoricoTecnicosEventos() {{
+	      if (!historicoTecnicosEventosMeta || !historicoTecnicosEventosBody) return;
+	      const resumo = resumoHistoricoTecnicosAtual;
+	      if (!resumo || !Array.isArray(resumo.labels) || !resumo.labels.length) {{
+	        historicoTecnicosEventosMeta.textContent = "Sem histórico suficiente para detalhar os eventos por coleta.";
+	        historicoTecnicosEventosBody.innerHTML = `<tr><td colspan="6" class="empty">Sem eventos para exibir.</td></tr>`;
+	        return;
+	      }}
+	      const linhas = [];
+	      let totalEventos = 0;
+	      let totalColetasComEvento = 0;
+	      resumo.eventosCarteira.forEach((evento, indice) => {{
+	        const coleta = normalizarTexto(evento?.capturadoEm) || normalizarTexto(resumo.labels[indice]);
+	        const detalhes = Array.isArray(evento?.detalhes) ? evento.detalhes : [];
+	        const temVariacao = Number(evento?.deltaCarteira || 0) !== 0;
+	        if (!detalhes.length && !temVariacao) return;
+	        totalColetasComEvento += 1;
+
+	        if (detalhes.length) {{
+	          detalhes.forEach((item) => {{
+	            totalEventos += 1;
+	            linhas.push([
+	              coleta,
+	              formatarTipoEventoCarteira(item),
+	              normalizarTexto(item.os_id) || "-",
+	              normalizarTexto(item.cliente) || "-",
+	              normalizarTexto(item.pop) || "-",
+	              formatarDetalhesEventoCarteira(item) || formatarEventoCarteira(item) || "-",
+	            ]);
+	          }});
+	          return;
+	        }}
+
+	        totalEventos += 1;
+	        const partes = [];
+	        if (temVariacao) {{
+	          const delta = Number(evento.deltaCarteira || 0);
+	          partes.push(`delta do itinerário ${{delta > 0 ? "+" : ""}}${{delta}}`);
+	        }}
+	        if (Number(evento?.entradasCarteira || 0) > 0) partes.push(`${{evento.entradasCarteira}} entrada(s)`);
+	        if (Number(evento?.saidasCarteira || 0) > 0) partes.push(`${{evento.saidasCarteira}} saída(s)`);
+	        if (Number(evento?.lacunaMinutos || 0) > 10) partes.push(`lacuna de ${{evento.lacunaMinutos}} min entre coletas`);
+	        linhas.push([
+	          coleta,
+	          "Variação agregada",
+	          "-",
+	          "-",
+	          "-",
+	          partes.length ? `${{partes.join(" | ")}} | detalhe por O.S. indisponível neste ponto do histórico legado.` : "Detalhe por O.S. indisponível neste ponto do histórico legado.",
+	        ]);
+	      }});
+
+	      historicoTecnicosEventosMeta.textContent = `Lista fixa com ${{totalEventos}} evento(s) em ${{totalColetasComEvento}} coleta(s) do período mostrado no gráfico.`;
+	      if (!linhas.length) {{
+	        historicoTecnicosEventosBody.innerHTML = `<tr><td colspan="6" class="empty">Nenhum evento com valor acima de zero no período filtrado.</td></tr>`;
+	        return;
+	      }}
+	      historicoTecnicosEventosBody.innerHTML = "";
+	      linhas.forEach((colunas) => {{
+	        const tr = document.createElement("tr");
+	        colunas.forEach((valor) => {{
+	          const td = document.createElement("td");
+	          td.textContent = valor;
+	          tr.appendChild(td);
+	        }});
+	        historicoTecnicosEventosBody.appendChild(tr);
+	      }});
+	    }}
+
+	    function selecionarHistoricoTecnicosIndice(indice, chart = null) {{
+	      if (!resumoHistoricoTecnicosAtual || indice < 0 || indice >= resumoHistoricoTecnicosAtual.labels.length) return;
+	      historicoTecnicosIndiceSelecionado = indice;
+	      const grafico = chart || graficoHistoricoTecnicos;
+	      if (grafico) {{
+	        grafico.setActiveElements(grafico.data.datasets.map((_, datasetIndex) => ({{
+	          datasetIndex,
+	          index: indice,
+	        }})));
+	        grafico.update();
+	      }}
+	      renderHistoricoTecnicosEventos();
 	    }}
 
 	    function agruparHistoricoTecnicos() {{
@@ -3148,6 +3292,7 @@ def gerar_html_dashboard(
 	        const saidasCarteira = item.saidasCarteira || (deltaFallback < 0 ? Math.abs(deltaFallback) : 0);
 	        const deltaCarteira = Number(item.deltaCarteira || 0) || deltaFallback;
 	        return {{
+	        capturadoEm: capturas[indice],
 	        entradasCarteira,
 	        saidasCarteira,
 	        novasOs: item.novasOs,
@@ -3180,6 +3325,9 @@ def gerar_html_dashboard(
 	    function renderGraficoHistoricoTecnicos() {{
 	      const resumo = agruparHistoricoTecnicos();
 	      resumoHistoricoTecnicosAtual = resumo;
+	      if (historicoTecnicosIndiceSelecionado >= resumo.labels.length) {{
+	        historicoTecnicosIndiceSelecionado = resumo.labels.length - 1;
+	      }}
 	      graficoHistoricoTecnicos.data.labels = resumo.labels;
 	      graficoHistoricoTecnicos.data.datasets = [
 	        {{
@@ -3245,12 +3393,14 @@ def gerar_html_dashboard(
 
 	      if (!resumo.labels.length) {{
 	        historicoTecnicosMeta.textContent = "Sem histórico suficiente para montar a evolução dos técnicos no intervalo selecionado.";
+	        renderHistoricoTecnicosEventos();
 	        return;
 	      }}
 
 	      const totalLacunas = resumo.eventosCarteira.filter((item) => Number(item.lacunaMinutos || 0) > 10).length;
 	      const complementoLacunas = totalLacunas ? ` Há ${{totalLacunas}} lacuna(s) de coleta destacadas no tooltip.` : "";
 	      historicoTecnicosMeta.textContent = `Histórico de ${{resumo.tecnicoSelecionado}} com ${{resumo.totalCapturas}} coleta(s) no intervalo selecionado; passe o mouse nos pontos para ver entradas, saídas, transferências e encerramentos de cada mudança do itinerário.${{complementoLacunas}}`;
+	      renderHistoricoTecnicosEventos();
 	    }}
 
     function atualizarMetas(registrosOperacionais, registrosFinalizados, totalDetalhes, totalVotosValidos, totalVotosDetalhamento, totalDetalhamentoPops) {{
