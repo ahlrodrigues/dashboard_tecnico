@@ -8,6 +8,45 @@ BRANCH="${1:-feature/dashboard-live-api}"
 PYTHON_BIN="$BASE_DIR/.venv/bin/python"
 LOG_FILE="$BASE_DIR/atualizar_live.log"
 
+require_clean_worktree() {
+  if ! git diff --quiet || ! git diff --cached --quiet; then
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Ha alteracoes locais no worktree ou no staging. Limpe ou salve antes de executar o deploy."
+    exit 1
+  fi
+}
+
+ensure_remote_branch_exists() {
+  if ! git show-ref --verify --quiet "refs/remotes/origin/$BRANCH"; then
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] A branch origin/$BRANCH nao foi encontrada."
+    exit 1
+  fi
+}
+
+update_branch_safely() {
+  local local_sha remote_sha base_sha
+  local_sha="$(git rev-parse HEAD)"
+  remote_sha="$(git rev-parse "origin/$BRANCH")"
+  base_sha="$(git merge-base HEAD "origin/$BRANCH")"
+
+  if [[ "$local_sha" == "$remote_sha" ]]; then
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Branch $BRANCH ja esta atualizada."
+    return
+  fi
+
+  if [[ "$local_sha" == "$base_sha" ]]; then
+    git merge --ff-only "origin/$BRANCH"
+    return
+  fi
+
+  if [[ "$remote_sha" == "$base_sha" ]]; then
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] A branch local $BRANCH esta a frente do remoto. Envie ou alinhe os commits antes do deploy."
+    exit 1
+  fi
+
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] A branch local $BRANCH divergiu de origin/$BRANCH. Resolva a divergencia antes do deploy."
+  exit 1
+}
+
 {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] Iniciando deploy da branch $BRANCH"
 
@@ -21,9 +60,12 @@ LOG_FILE="$BASE_DIR/atualizar_live.log"
     exit 1
   fi
 
+  require_clean_worktree
   git fetch --prune origin
+  ensure_remote_branch_exists
   git checkout "$BRANCH"
-  git reset --hard "origin/$BRANCH"
+  require_clean_worktree
+  update_branch_safely
   "$PYTHON_BIN" main.py --rebuild-html
 
   VERSION_LABEL="$("$PYTHON_BIN" -c 'from version import VERSION; print(VERSION)' 2>/dev/null || echo "desconhecida")"

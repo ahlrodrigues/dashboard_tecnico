@@ -29,6 +29,48 @@ require_clean_index() {
   fi
 }
 
+current_branch() {
+  git branch --show-current
+}
+
+fetch_remote_state() {
+  git fetch --prune origin
+}
+
+ensure_branch_tracks_remote() {
+  local branch="$1"
+  if ! git show-ref --verify --quiet "refs/remotes/origin/$branch"; then
+    echo "A branch origin/$branch nao foi encontrada. Crie a branch remota ou configure o tracking antes de usar o release_dashboard.sh."
+    exit 1
+  fi
+}
+
+ensure_branch_up_to_date() {
+  local branch="$1"
+  local local_sha remote_sha base_sha
+
+  local_sha="$(git rev-parse HEAD)"
+  remote_sha="$(git rev-parse "origin/$branch")"
+  base_sha="$(git merge-base HEAD "origin/$branch")"
+
+  if [[ "$local_sha" == "$remote_sha" ]]; then
+    return
+  fi
+
+  if [[ "$local_sha" == "$base_sha" ]]; then
+    echo "A branch local $branch esta atras de origin/$branch. Atualize com merge/rebase antes de gerar um release."
+    exit 1
+  fi
+
+  if [[ "$remote_sha" == "$base_sha" ]]; then
+    echo "A branch local $branch tem commits nao enviados. O release pode prosseguir, mas faca isso conscientemente."
+    return
+  fi
+
+  echo "A branch local $branch divergiu de origin/$branch. Resolva a divergencia antes de gerar um release."
+  exit 1
+}
+
 collect_changed_files() {
   git status --short --untracked-files=all | awk '{print $2}'
 }
@@ -154,6 +196,14 @@ if [[ ! -x "$PYTHON_BIN" ]]; then
 fi
 
 require_clean_index
+BRANCH="$(current_branch)"
+if [[ -z "$BRANCH" ]]; then
+  echo "Nao foi possivel identificar a branch atual."
+  exit 1
+fi
+fetch_remote_state
+ensure_branch_tracks_remote "$BRANCH"
+ensure_branch_up_to_date "$BRANCH"
 
 CHANGED_FILES="$(collect_changed_files)"
 if [[ -z "$CHANGED_FILES" ]]; then
@@ -178,6 +228,9 @@ git add dashboard_os_sgp.html version.py
 git commit --amend --no-edit
 
 if [[ "$PUSH" == true ]]; then
+  fetch_remote_state
+  ensure_branch_tracks_remote "$BRANCH"
+  ensure_branch_up_to_date "$BRANCH"
   git push
 fi
 
