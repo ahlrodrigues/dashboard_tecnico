@@ -3596,7 +3596,7 @@ def gerar_html_dashboard(
       const filtros = obterEstadoFiltros();
       const registros = filtrarDetalhes(filtros);
       const registrosStatusOperacional = filtrarBaseStatusOperacional(filtros);
-      const registrosOperacionais = filtrarBaseOperacional(filtros);
+      const registrosOperacionais = registrosStatusOperacional;
       const registrosAnaliticos = filtrarBaseAnalitica(filtros);
       const registrosPops = filtrarBasePops(filtros);
       const registrosDetalhamentoPops = filtrarDetalhamentoPops(registrosPops);
