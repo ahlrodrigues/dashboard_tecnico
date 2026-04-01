@@ -3091,6 +3091,39 @@
 	      };
 	    }
 
+	    function compactarResumoHistoricoTecnicos(resumo) {
+	      if (!resumo || !Array.isArray(resumo.totalCarteira) || !resumo.totalCarteira.length) {
+	        return resumo;
+	      }
+
+	      const indicesMantidos = [];
+	      let valorAnterior = null;
+	      resumo.totalCarteira.forEach((valor, indice) => {
+	        if (indice === 0 || Number(valor) !== Number(valorAnterior)) {
+	          indicesMantidos.push(indice);
+	        }
+	        valorAnterior = valor;
+	      });
+
+	      const filtrarPorIndices = (valores) =>
+	        Array.isArray(valores) ? indicesMantidos.map((indice) => valores[indice]) : [];
+
+	      return {
+	        ...resumo,
+	        totalCapturasOriginais: resumo.totalCapturas,
+	        totalCapturas: indicesMantidos.length,
+	        labels: filtrarPorIndices(resumo.labels),
+	        totalCarteira: filtrarPorIndices(resumo.totalCarteira),
+	        pendentes: filtrarPorIndices(resumo.pendentes),
+	        emExecucao: filtrarPorIndices(resumo.emExecucao),
+	        encerradasNoPeriodo: filtrarPorIndices(resumo.encerradasNoPeriodo),
+	        recebidasNoPeriodo: filtrarPorIndices(resumo.recebidasNoPeriodo),
+	        entradasCarteira: filtrarPorIndices(resumo.entradasCarteira),
+	        saidasCarteira: filtrarPorIndices(resumo.saidasCarteira),
+	        eventosCarteira: filtrarPorIndices(resumo.eventosCarteira),
+	      };
+	    }
+
 	    function renderHistoricoTecnicosEventos() {
 	      if (!historicoTecnicosEventosMeta || !historicoTecnicosEventosBody) return;
 	      const resumo = resumoHistoricoTecnicosAtual;
@@ -3281,7 +3314,7 @@
 	    }
 
 	    function renderGraficoHistoricoTecnicos() {
-	      const resumo = agruparHistoricoTecnicos();
+	      const resumo = compactarResumoHistoricoTecnicos(agruparHistoricoTecnicos());
 	      const serieHistorico = prepararSerieHistoricoTecnicos(resumo.totalCarteira);
 	      resumoHistoricoTecnicosAtual = resumo;
 	      resumoHistoricoTecnicosAtual.escalaVisual = serieHistorico.escalaVisual;
@@ -3330,7 +3363,9 @@
 	      const descricaoEscala = serieHistorico.escalaVisual === "variacao"
 	        ? "com poucas coletas, a linha mostra apenas as mudanças entre as coletas e mantém o nível anterior quando não há alteração; cada ponto exibe o valor real coletado"
 	        : "a linha usa a escala real dos valores observados no período";
-	      historicoTecnicosMeta.textContent = `Histórico de ${resumo.tecnicoSelecionado} com ${resumo.totalCapturas} coleta(s) no intervalo selecionado; cada ponto da linha representa uma coleta real do itinerário e ${descricaoEscala}. Terminou com ${itinerarioFinal} O.S.${complementoLacunas}`;
+	      const totalCapturasOriginais = Number(resumo.totalCapturasOriginais || resumo.totalCapturas || 0);
+	      const totalAlteracoes = Math.max(0, Number(resumo.totalCapturas || 0) - 1);
+	      historicoTecnicosMeta.textContent = `Histórico de ${resumo.tecnicoSelecionado} com ${totalCapturasOriginais} coleta(s) no intervalo selecionado; o gráfico mostra apenas o ponto inicial e ${totalAlteracoes} alteração(ões) do itinerário. Terminou com ${itinerarioFinal} O.S.; ${descricaoEscala}.${complementoLacunas}`;
 	      renderHistoricoTecnicosEventos();
 	    }
 
