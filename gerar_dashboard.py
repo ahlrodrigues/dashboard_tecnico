@@ -2984,12 +2984,6 @@ def gerar_html_dashboard(
 	        }},
 	        scales: {{
 	          y: {{ beginAtZero: true, ticks: {{ precision: 0 }} }},
-	          yEventos: {{
-	            beginAtZero: true,
-	            position: "right",
-	            grid: {{ drawOnChartArea: false }},
-	            ticks: {{ precision: 0 }}
-	          }},
 	          x: {{ grid: {{ display: false }} }}
 	        }}
 	      }}
@@ -3425,20 +3419,6 @@ def gerar_html_dashboard(
 	          tension: 0.28,
 	          fill: false,
 	          yAxisID: "y",
-	        }},
-	        {{
-	          type: "bar",
-	          label: "Inclusões no itinerário",
-	          data: ocultarZerosNoGrafico(resumo.entradasCarteira),
-	          backgroundColor: hexParaRgba("#06b6d4", 0.78),
-	          yAxisID: "yEventos",
-	        }},
-	        {{
-	          type: "bar",
-	          label: "Encerramentos",
-	          data: ocultarZerosNoGrafico(resumo.encerradasNoPeriodo),
-	          backgroundColor: hexParaRgba("#dc2626", 0.78),
-	          yAxisID: "yEventos",
 	        }},
 	      ];
 	      graficoHistoricoTecnicos.update();
