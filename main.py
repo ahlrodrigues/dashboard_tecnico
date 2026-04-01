@@ -120,7 +120,7 @@ def _parse_data_texto(valor: object) -> date | None:
 
 
 def _registro_toca_janela_recente(registro: dict[str, object], data_inicio: date) -> bool:
-    for campo in ("data_base_dashboard", "data_finalizacao_dashboard", "data_criacao_dashboard"):
+    for campo in ("data_agendamento", "data_base_dashboard", "data_finalizacao_dashboard", "data_criacao_dashboard"):
         data_registro = _parse_data_texto(registro.get(campo, ""))
         if data_registro and data_registro >= data_inicio:
             return True
@@ -143,6 +143,32 @@ def _normalizar_df_cache_os(df: pd.DataFrame) -> pd.DataFrame:
         if coluna_data in df.columns:
             df[coluna_data] = pd.to_datetime(df[coluna_data], errors="coerce")
     return df
+
+
+def _mesclar_registros_os(registros: list[dict[str, object]]) -> list[dict[str, object]]:
+    if not registros:
+        return []
+
+    mesclados: dict[str, dict[str, object]] = {}
+    ordem_chaves: list[str] = []
+
+    for registro in registros:
+        if not isinstance(registro, dict):
+            continue
+        chave = _obter_chave_registro_os(registro)
+        if not chave:
+            continue
+        if chave not in mesclados:
+            mesclados[chave] = dict(registro)
+            ordem_chaves.append(chave)
+            continue
+
+        atual = mesclados[chave]
+        for campo, valor in registro.items():
+            if campo not in atual or atual[campo] in ("", None, [], {}):
+                atual[campo] = valor
+
+    return [mesclados[chave] for chave in ordem_chaves]
 
 
 def _payload_os_cache(df: pd.DataFrame, ano: int, mes: str, url_base: str) -> list[dict[str, object]]:
@@ -666,7 +692,14 @@ def _buscar_os_periodo(client: SGPClient, data_inicio: str, data_fim: str) -> li
         data_finalizacao_inicio=data_inicio,
         data_finalizacao_fim=data_fim,
     )
-    return raw_abertas + raw_encerradas
+    raw_agendadas = client.listar_ordens_servico_statuses(
+        statuses=STATUS_ABERTAS + STATUS_ENCERRADAS,
+        extra_params={
+            "data_agendamento_inicio": data_inicio,
+            "data_agendamento_fim": data_fim,
+        },
+    )
+    return _mesclar_registros_os(raw_abertas + raw_encerradas + raw_agendadas)
 
 
 def _atualizar_os_cache_incremental(

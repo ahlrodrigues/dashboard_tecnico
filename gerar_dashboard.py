@@ -2194,18 +2194,29 @@ def gerar_html_dashboard(
       let aberta = 0;
       let pendente = 0;
       let emExecucao = 0;
+      let encerrada = 0;
+      let encerradaTecnicos = 0;
+      let encerradaOutros = 0;
 
       registros.forEach((registro) => {{
         const status = obterStatus(registro);
         if (status === "Aberta") aberta += 1;
         else if (status === "Pendente") pendente += 1;
         else if (status === "Em execução") emExecucao += 1;
+        else if (status === "Encerrada") {{
+          encerrada += 1;
+          if (obterGrupoEncerramento(registro) === "Técnicos") encerradaTecnicos += 1;
+          else encerradaOutros += 1;
+        }}
       }});
 
       document.getElementById("cardTotalStatus").textContent = registros.length;
       document.getElementById("cardAberta").textContent = aberta;
       document.getElementById("cardPendente").textContent = pendente;
       document.getElementById("cardEmExecucao").textContent = emExecucao;
+      document.getElementById("cardEncerrada").textContent = encerrada;
+      document.getElementById("cardEncerradaTecnicos").textContent = encerradaTecnicos;
+      document.getElementById("cardPorOutros").textContent = encerradaOutros;
     }}
 
 	    function renderMotivoCards(registros) {{
@@ -3602,7 +3613,6 @@ def gerar_html_dashboard(
 	      renderMotivoCards(registrosPops);
 	      renderPopCards(registrosPops);
 	      renderDetalhamentoPops(registrosDetalhamentoPops);
-	      renderCardsEncerramentos(registrosBaseEncerramentos);
 	      renderTempoBacklog(registrosOperacionais, registrosFinalizados);
 	      renderRanking(registrosRanking, registrosBaseRanking);
 	      renderRankingVotosResumo(registrosVotos);
