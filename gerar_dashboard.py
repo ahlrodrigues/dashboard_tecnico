@@ -1586,6 +1586,14 @@ def gerar_html_dashboard(
       return obterDataBaseTexto(registro);
     }}
 
+    function obterDataIntervaloAgendamento(registro) {{
+      return obterDataAgendamentoTexto(registro);
+    }}
+
+    function obterDataIntervaloFinalizacao(registro) {{
+      return normalizarTexto(registro.data_finalizacao_dashboard);
+    }}
+
     function obterDataFiltroTexto(registro) {{
       if (ehStatusEncerrada(registro)) {{
         return obterDataBaseTexto(registro);
@@ -1622,6 +1630,13 @@ def gerar_html_dashboard(
 	      const data = new Date(`${{valor}}T00:00:00`);
 	      return Number.isNaN(data.getTime()) ? null : data;
 	    }}
+
+    function obterMesPorDataTexto(data) {{
+      const texto = normalizarTexto(data);
+      if (!texto || texto.length < 7) return "";
+      const indice = Number(texto.slice(5, 7)) - 1;
+      return mesesOrdem[indice] || "";
+    }}
 
     function obterTextoBusca(registro) {{
       return detalheCols
@@ -1818,6 +1833,7 @@ def gerar_html_dashboard(
 
     const FILTER_CAPABILITIES = {{
       detalhes: ["data", "usuario", "grupo", "pop", "agendamento", "status", "busca"],
+      statusOperacional: ["data", "usuario", "grupo", "pop", "agendamento", "status", "busca"],
       operacional: ["data", "usuario", "grupo", "pop", "agendamento", "status", "busca"],
       pops: ["data", "usuario", "grupo", "pop", "agendamento", "status", "busca"],
       analitica: ["data", "usuario", "grupo", "pop", "agendamento", "status", "busca"],
@@ -1893,6 +1909,7 @@ def gerar_html_dashboard(
       const {{
         obterData = null,
         somenteEncerradas = null,
+        exigirAgendamento = false,
         textoBusca = obterTextoBusca(registro),
       }} = opcoes;
 
@@ -1900,6 +1917,7 @@ def gerar_html_dashboard(
         const data = typeof obterData === "function" ? obterData(registro) : obterDataIntervaloDetalhe(registro);
         if (!dataEstaNoIntervalo(data, filtros)) return false;
       }}
+      if (exigirAgendamento && !registroEhAgendado(registro)) return false;
       if (somenteEncerradas === true && !ehStatusEncerrada(registro)) return false;
       if (somenteEncerradas === false && ehStatusEncerrada(registro)) return false;
       if (capacidadesIncluem(capacidades, "usuario") && !usuarioCorrespondeAoFiltro(registro, filtros.usuario)) return false;
@@ -1919,10 +1937,20 @@ def gerar_html_dashboard(
       );
     }}
 
+    function filtrarBaseStatusOperacional(filtros = obterEstadoFiltros()) {{
+      return detalhes.filter((registro) =>
+        registroCorrespondeAEstadoFiltros(registro, filtros, FILTER_CAPABILITIES.statusOperacional, {{
+          obterData: obterDataIntervaloAgendamento,
+          exigirAgendamento: true,
+        }})
+      );
+    }}
+
     function filtrarBaseOperacional(filtros = obterEstadoFiltros()) {{
       return detalhes.filter((registro) =>
         registroCorrespondeAEstadoFiltros(registro, filtros, FILTER_CAPABILITIES.operacional, {{
-          obterData: obterDataIntervaloBase,
+          obterData: obterDataIntervaloAgendamento,
+          exigirAgendamento: true,
           somenteEncerradas: false,
         }})
       );
@@ -1931,7 +1959,8 @@ def gerar_html_dashboard(
     function filtrarBasePops(filtros = obterEstadoFiltros()) {{
       return detalhes.filter((registro) =>
         registroCorrespondeAEstadoFiltros(registro, filtros, FILTER_CAPABILITIES.pops, {{
-          obterData: obterDataIntervaloBase,
+          obterData: obterDataIntervaloAgendamento,
+          exigirAgendamento: true,
         }})
       );
     }}
@@ -1939,7 +1968,7 @@ def gerar_html_dashboard(
     function filtrarBaseAnalitica(filtros = obterEstadoFiltros()) {{
       return detalhes.filter((registro) =>
         registroCorrespondeAEstadoFiltros(registro, filtros, FILTER_CAPABILITIES.analitica, {{
-          obterData: obterDataIntervaloDetalhe,
+          obterData: obterDataIntervaloFinalizacao,
           somenteEncerradas: true,
         }})
       );
@@ -1948,7 +1977,7 @@ def gerar_html_dashboard(
     function filtrarBaseRanking(filtros = obterEstadoFiltros()) {{
       return detalhes.filter((registro) =>
         registroCorrespondeAEstadoFiltros(registro, filtros, FILTER_CAPABILITIES.ranking, {{
-          obterData: obterDataFiltroTexto,
+          obterData: obterDataIntervaloFinalizacao,
           somenteEncerradas: true,
         }})
       );
@@ -2121,7 +2150,7 @@ def gerar_html_dashboard(
     function filtrarBaseReincidencias(filtros = obterEstadoFiltros()) {{
       return detalhes.filter((registro) =>
         registroCorrespondeAEstadoFiltros(registro, filtros, FILTER_CAPABILITIES.analitica, {{
-          obterData: obterDataIntervaloDetalhe,
+          obterData: obterDataIntervaloFinalizacao,
           somenteEncerradas: true,
         }})
       );
@@ -2161,7 +2190,7 @@ def gerar_html_dashboard(
       }};
     }}
 
-    function renderStatusCards(registros, registrosEncerrados) {{
+    function renderStatusCards(registros) {{
       let aberta = 0;
       let pendente = 0;
       let emExecucao = 0;
@@ -2173,7 +2202,7 @@ def gerar_html_dashboard(
         else if (status === "Em execução") emExecucao += 1;
       }});
 
-      document.getElementById("cardTotalStatus").textContent = registros.length + registrosEncerrados.length;
+      document.getElementById("cardTotalStatus").textContent = registros.length;
       document.getElementById("cardAberta").textContent = aberta;
       document.getElementById("cardPendente").textContent = pendente;
       document.getElementById("cardEmExecucao").textContent = emExecucao;
@@ -2295,7 +2324,7 @@ def gerar_html_dashboard(
       linhas.forEach((registro) => {{
         const tr = document.createElement("tr");
         tr.innerHTML = `
-          <td>${{obterDataBaseTexto(registro)}}</td>
+          <td>${{obterDataAgendamentoTexto(registro) || obterDataBaseTexto(registro)}}</td>
           <td>${{obterPop(registro)}}</td>
           <td>${{normalizarTexto(registro.id || registro.ordem_servico)}}</td>
           <td>${{normalizarTexto(registro.cliente)}}</td>
@@ -2318,8 +2347,8 @@ def gerar_html_dashboard(
       }}
 
       const linhas = [...registros].sort((a, b) => {{
-        const dataA = obterDataBaseTexto(a);
-        const dataB = obterDataBaseTexto(b);
+        const dataA = obterDataAgendamentoTexto(a) || obterDataBaseTexto(a);
+        const dataB = obterDataAgendamentoTexto(b) || obterDataBaseTexto(b);
         const comparacaoData = dataB.localeCompare(dataA, "pt-BR", {{ sensitivity: "base" }});
         if (comparacaoData !== 0) return comparacaoData;
         return obterPop(a).localeCompare(obterPop(b), "pt-BR", {{ sensitivity: "base" }});
@@ -2328,7 +2357,7 @@ def gerar_html_dashboard(
       linhas.forEach((registro) => {{
         const tr = document.createElement("tr");
         tr.innerHTML = `
-          <td>${{normalizarTexto(obterDataBaseTexto(registro))}}</td>
+          <td>${{normalizarTexto(obterDataAgendamentoTexto(registro) || obterDataBaseTexto(registro))}}</td>
           <td>${{obterPop(registro)}}</td>
           <td>${{normalizarTexto(registro.id || registro.ordem_servico)}}</td>
           <td>${{normalizarTexto(registro.cliente)}}</td>
@@ -2363,10 +2392,10 @@ def gerar_html_dashboard(
       return "";
     }}
 
-    function agruparResumo(registros) {{
-      return mesesOrdem.map((mes) => {{
-        const itens = registros.filter((registro) => obterMes(registro) === mes);
-        return {{
+	    function agruparResumo(registros) {{
+	      return mesesOrdem.map((mes) => {{
+	        const itens = registros.filter((registro) => obterMesPorDataTexto(obterDataIntervaloFinalizacao(registro)) === mes);
+	        return {{
           mes_nome: mes,
           total: itens.length,
           tecnicos: itens.filter((registro) => obterGrupoFiltro(registro) === "Técnicos").length,
@@ -2610,7 +2639,7 @@ def gerar_html_dashboard(
       tituloRankingVotosResumo.textContent = `Ranking de votação | ${{resumo}}`;
       tituloRankingVotos.textContent = `Detalhamento dos votos | ${{resumo}}`;
       tituloGraficoMensal.textContent = `Gráfico mensal | ${{resumo}}`;
-      tituloGraficoDiario.textContent = `Evolução diária dos grupos | ${{resumo}}`;
+      tituloGraficoDiario.textContent = `Evolução do itinerário | ${{resumo}}`;
       tituloHistoricoTecnicos.textContent = "Histórico dos técnicos";
       tituloDetalhamento.textContent = `Detalhamento | ${{resumo}}`;
       tituloReincidencia.textContent = `Reincidência por cliente/contrato | ${{resumo}}`;
@@ -3066,68 +3095,47 @@ def gerar_html_dashboard(
 	    }}
 
 	    function agruparResumoDiario(registros) {{
-	      const intervalo = obterIntervaloSelecionado();
-	      if (!intervalo) {{
-	        return {{ labels: [], datasets: [], intervalo: null }};
+	      const resumo = agruparHistoricoTecnicos();
+	      if (!Array.isArray(resumo.labels) || !resumo.labels.length) {{
+	        return {{ labels: [], datasets: [], intervalo: null, totalCapturas: 0, totalMudancas: 0 }};
 	      }}
 
 	      const labels = [];
-	      const mapaIndices = new Map();
-	      const cursor = new Date(`${{intervalo.inicio}}T00:00:00`);
-	      const fim = new Date(`${{intervalo.fim}}T00:00:00`);
-	      while (cursor <= fim) {{
-	        const data = `${{cursor.getFullYear()}}-${{String(cursor.getMonth() + 1).padStart(2, "0")}}-${{String(cursor.getDate()).padStart(2, "0")}}`;
-	        mapaIndices.set(data, labels.length);
-	        labels.push(data.slice(8, 10) + "/" + data.slice(5, 7));
-	        cursor.setDate(cursor.getDate() + 1);
-	      }}
-	      const mapaMembros = new Map();
-	      const mapaRotulos = construirMapaRotulosUsuarios(registros);
+	      const valores = [];
+	      let valorAnterior = null;
 
-	      registros.forEach((registro) => {{
-	        const data = obterDataBaseTexto(registro);
-	        if (!data || !mapaIndices.has(data)) return;
-
-	        const membroBruto = obterMembroGrafico(registro) || "Sem usuário";
-	        const membro = normalizarChaveUsuario(membroBruto) || membroBruto;
-	        const indice = mapaIndices.get(data);
-	        if (!mapaMembros.has(membro)) {{
-	          mapaMembros.set(membro, {{
-	            label: normalizarRotuloUsuario(membroBruto, mapaRotulos) || membroBruto,
-	            valores: Array.from({{ length: labels.length }}, () => 0),
-	          }});
+	      resumo.labels.forEach((label, indice) => {{
+	        const valorAtual = Number(resumo.totalCarteira?.[indice] || 0);
+	        if (indice === 0 || valorAtual !== valorAnterior) {{
+	          labels.push(label);
+	          valores.push(valorAtual);
 	        }}
-	        mapaMembros.get(membro).valores[indice] += 1;
+	        valorAnterior = valorAtual;
 	      }});
 
-	      const datasets = [...mapaMembros.entries()]
-	        .map(([membro, item]) => ({{
-	          membro,
-	          label: item.label,
-	          valores: item.valores,
-	          total: item.valores.reduce((acc, valor) => acc + valor, 0),
-	        }}))
-	        .sort((a, b) => b.total - a.total || a.label.localeCompare(b.label, "pt-BR", {{ sensitivity: "base" }}))
-	        .map((item, indice) => {{
-	          const cor = paletaGraficoDiario[indice % paletaGraficoDiario.length];
-	          return {{
-	            label: item.label,
-	            data: item.valores,
-	            borderColor: cor,
-	            backgroundColor: hexParaRgba(cor, 0.14),
-	            tension: 0.28,
-	            fill: false,
-	          }};
-	        }});
-
-	      return {{ labels, datasets, intervalo }};
+	      return {{
+	        labels,
+	        datasets: [{{
+	          label: "Itinerário",
+	          data: valores,
+	          borderColor: "#17624c",
+	          backgroundColor: hexParaRgba("#17624c", 0.16),
+	          tension: 0.18,
+	          fill: false,
+	          pointRadius: 4,
+	          pointHoverRadius: 6,
+	          pointBackgroundColor: "#17624c",
+	          pointBorderColor: "#ffffff",
+	          pointBorderWidth: 2,
+	        }}],
+	        intervalo: obterIntervaloSelecionado(),
+	        totalCapturas: resumo.totalCapturas,
+	        totalMudancas: valores.length,
+	      }};
 	    }}
 
-	    function renderGraficoDiario(registros) {{
-	      const registrosBase = filtroGrupo.value
-	        ? registros.filter((registro) => obterGrupoFiltro(registro) === filtroGrupo.value)
-	        : registros;
-	      const resumo = agruparResumoDiario(registrosBase);
+	    function renderGraficoDiario() {{
+	      const resumo = agruparResumoDiario();
 	      graficoDiario.data.labels = resumo.labels;
 	      graficoDiario.data.datasets = resumo.datasets;
 	      graficoDiario.update();
@@ -3137,8 +3145,8 @@ def gerar_html_dashboard(
 	        return;
 	      }}
 
-	      const contextoGrupo = filtroGrupo.value ? ` do grupo ${{filtroGrupo.value}}` : "";
-	      graficoDiarioMeta.textContent = `Evolução diária por membro${{contextoGrupo}} entre ${{resumo.intervalo.inicio}} e ${{resumo.intervalo.fim}}, usando a data-base do recorte atual.`;
+	      const contextoUsuario = filtroUsuario.value ? ` para ${{filtroUsuario.value}}` : " da equipe";
+	      graficoDiarioMeta.textContent = `Itinerário${{contextoUsuario}} entre ${{resumo.intervalo.inicio}} e ${{resumo.intervalo.fim}}, com ${{resumo.totalMudancas}} marcação(ões) em ${{resumo.totalCapturas}} coleta(s); pontos sem mudança não são repetidos no gráfico.`;
 	    }}
 
 	    function dataCapturaDentroDoIntervalo(capturadoEm) {{
@@ -3558,9 +3566,9 @@ def gerar_html_dashboard(
 
       const textoFiltro = partes.length ? partes.join(" | ") : "Todos";
       atualizarTitulosPaineis();
-      painelTempoMeta.textContent = `Tempo médio e backlog para o recorte: ${{textoFiltro}}.`;
-      backlogOperacionalMeta.textContent = `Tabela com ${{registrosOperacionais.length}} O.S. abertas, pendentes ou em execução no snapshot do dia filtrado.`;
-      detalhamentoPopsMeta.textContent = `Tabela de POPs com ${{totalDetalhamentoPops}} O.S. no recorte atual, considerando os filtros aplicados na página.`;
+      painelTempoMeta.textContent = `Tempo médio de encerramento e visão operacional para o recorte: ${{textoFiltro}}.`;
+      backlogOperacionalMeta.textContent = `Tabela com ${{registrosOperacionais.length}} O.S. agendadas no recorte de data, refinadas pelos demais filtros da página.`;
+      detalhamentoPopsMeta.textContent = `Tabela de POPs com ${{totalDetalhamentoPops}} O.S. agendadas no recorte atual, considerando os filtros aplicados na página.`;
       rankingMeta.textContent = `Ranking atualizado com ${{registrosFinalizados.length}} OS encerradas no recorte atual.`;
       rankingVotosResumoMeta.textContent = `Ranking atualizado com ${{totalVotosValidos}} voto(s) válido(s), considerando apenas 1 voto por IP e data no recorte atual.`;
       rankingVotosMeta.textContent = `Tabela de votos atualizada com ${{totalVotosDetalhamento}} registro(s) do recorte atual; duplicidades por IP e data e IPs fora dos ranges permitidos deixam a linha inteira em vermelho.`;
@@ -3577,6 +3585,7 @@ def gerar_html_dashboard(
 	      salvarFiltros();
       const filtros = obterEstadoFiltros();
       const registros = filtrarDetalhes(filtros);
+      const registrosStatusOperacional = filtrarBaseStatusOperacional(filtros);
       const registrosOperacionais = filtrarBaseOperacional(filtros);
       const registrosAnaliticos = filtrarBaseAnalitica(filtros);
       const registrosPops = filtrarBasePops(filtros);
@@ -3588,7 +3597,7 @@ def gerar_html_dashboard(
 	      const registrosBaseEncerramentos = filtrarBaseEncerramentos(filtros);
       const registrosBaseRanking = filtrarBaseRankingComparativo(filtros);
       const registrosBaseReincidencias = filtrarBaseReincidencias(filtros);
-	      renderStatusCards(registrosOperacionais, registrosBaseEncerramentos);
+	      renderStatusCards(registrosStatusOperacional);
 	      renderBacklogOperacional(registrosOperacionais);
 	      renderMotivoCards(registrosPops);
 	      renderPopCards(registrosPops);
@@ -3600,8 +3609,8 @@ def gerar_html_dashboard(
 	      renderRankingVotos(registrosVotos);
 	      renderDetalhes(registrosAnaliticos);
 	      renderReincidencias(registrosBaseReincidencias);
-	      renderGrafico(registrosPops);
-	      renderGraficoDiario(registrosPops);
+	      renderGrafico(registrosFinalizados);
+	      renderGraficoDiario();
 	      renderGraficoHistoricoTecnicos();
 	      atualizarMetas(registrosOperacionais, registrosFinalizados, registrosAnaliticos.length, registrosVotosUnicos.length, registrosVotos.length, registrosDetalhamentoPops.length);
 	    }}
