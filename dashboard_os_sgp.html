@@ -2741,13 +2741,14 @@
 	      options: {
 	        responsive: true,
 	        maintainAspectRatio: false,
-	        interaction: { mode: "index", intersect: false },
+	        interaction: { mode: "nearest", intersect: false },
 	        onClick(evento, elementos, chart) {
 	          if (!Array.isArray(elementos) || !elementos.length) return;
 	          selecionarHistoricoTecnicosIndice(elementos[0].index, chart);
 	        },
 	        plugins: {
-	          legend: { position: "top" }
+	          legend: { position: "top" },
+	          tooltip: { mode: "nearest", intersect: false }
 	        },
 	        scales: {
 	          y: { beginAtZero: true, ticks: { precision: 0, maxTicksLimit: 6 } },
@@ -2922,18 +2923,12 @@
 	    function agruparResumoDiario() {
 	      const usuarioFiltro = normalizarChaveUsuario(filtroUsuario.value);
 	      const capturas = [];
-	      const mapaIndices = new Map();
 	      const mapaTecnicos = new Map();
 	      const rotulos = new Map();
 
 	      tecnicoHistoryData.forEach((registro) => {
 	        const capturadoEm = normalizarTexto(registro.capturado_em);
 	        if (!capturadoEm || !dataCapturaDentroDoIntervalo(capturadoEm)) return;
-
-	        if (!mapaIndices.has(capturadoEm)) {
-	          mapaIndices.set(capturadoEm, capturas.length);
-	          capturas.push(capturadoEm);
-	        }
 
 	        const tecnicoKey = normalizarChaveUsuario(registro.tecnico || registro.tecnico_nome);
 	        if (!tecnicoKey) return;
@@ -2943,27 +2938,45 @@
 	        if (!mapaTecnicos.has(tecnicoKey)) {
 	          mapaTecnicos.set(tecnicoKey, {
 	            label: normalizarTexto(registro.tecnico_nome) || tecnicoKey,
-	            valores: [],
+	            valoresPorCaptura: new Map(),
 	          });
 	        }
-	        mapaTecnicos.get(tecnicoKey).valores[mapaIndices.get(capturadoEm)] = Number(registro.total_carteira || 0);
+	        mapaTecnicos.get(tecnicoKey).valoresPorCaptura.set(capturadoEm, Number(registro.total_carteira || 0));
 	        rotulos.set(tecnicoKey, normalizarTexto(registro.tecnico_nome) || tecnicoKey);
+	        capturas.push(capturadoEm);
 	      });
 
-	      if (!capturas.length || !mapaTecnicos.size) {
+	      const capturasOrdenadas = [...new Set(capturas)].sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }));
+	      if (!capturasOrdenadas.length || !mapaTecnicos.size) {
 	        return { labels: [], datasets: [], intervalo: null, totalCapturas: 0, totalMudancas: 0, totalTecnicos: 0 };
 	      }
 
-	      const labels = capturas.map((capturadoEm) => formatarRotuloHistorico(capturadoEm, capturas.length));
+	      const tecnicosOrdenados = [...mapaTecnicos.entries()]
+	        .sort((a, b) => (rotulos.get(a[0]) || a[0]).localeCompare(rotulos.get(b[0]) || b[0], "pt-BR", { sensitivity: "base" }));
+
+	      const valoresPorTecnico = tecnicosOrdenados.map(([_, item]) =>
+	        capturasOrdenadas.map((capturadoEm) => {
+	          const valor = item.valoresPorCaptura.get(capturadoEm);
+	          return Number.isFinite(valor) ? valor : null;
+	        })
+	      );
+
+	      const indicesMantidos = capturasOrdenadas.reduce((acc, _, indice) => {
+	        if (indice === 0) {
+	          acc.push(indice);
+	          return acc;
+	        }
+	        const houveMudanca = valoresPorTecnico.some((valores) => valores[indice] !== valores[indice - 1]);
+	        if (houveMudanca) acc.push(indice);
+	        return acc;
+	      }, []);
+
+	      const capturasCompactadas = indicesMantidos.map((indice) => capturasOrdenadas[indice]);
+	      const labels = capturasCompactadas.map((capturadoEm) => formatarRotuloHistorico(capturadoEm, capturasCompactadas.length));
 	      let totalMudancas = 0;
-	      const datasets = [...mapaTecnicos.entries()]
-	        .sort((a, b) => (rotulos.get(a[0]) || a[0]).localeCompare(rotulos.get(b[0]) || b[0], "pt-BR", { sensitivity: "base" }))
-	        .map(([tecnicoKey, item], indice) => {
-	          const cor = paletaGraficoDiario[indice % paletaGraficoDiario.length];
-	          const valores = labels.map((_, posicao) => {
-	            const valor = item.valores[posicao];
-	            return Number.isFinite(valor) ? valor : null;
-	          });
+	      const datasets = tecnicosOrdenados.map(([tecnicoKey, item], indiceTecnico) => {
+	          const cor = paletaGraficoDiario[indiceTecnico % paletaGraficoDiario.length];
+	          const valores = indicesMantidos.map((indiceCaptura) => valoresPorTecnico[indiceTecnico][indiceCaptura]);
 
 	          let valorAnterior = null;
 	          const pointRadius = valores.map((valor, posicao) => {
@@ -2997,7 +3010,8 @@
 	        labels,
 	        datasets,
 	        intervalo: obterIntervaloSelecionado(),
-	        totalCapturas: capturas.length,
+	        totalCapturas: capturasCompactadas.length,
+	        totalCapturasOriginais: capturasOrdenadas.length,
 	        totalMudancas,
 	        totalTecnicos: datasets.length,
 	      };
@@ -3015,11 +3029,11 @@
 	      }
 
 	      if (filtroUsuario.value) {
-	        graficoDiarioMeta.textContent = `Itinerário para ${filtroUsuario.value} entre ${resumo.intervalo.inicio} e ${resumo.intervalo.fim}, com ${resumo.totalMudancas} marcação(ões) em ${resumo.totalCapturas} coleta(s); pontos sem mudança não são repetidos no gráfico.`;
+	      graficoDiarioMeta.textContent = `Itinerário para ${filtroUsuario.value} entre ${resumo.intervalo.inicio} e ${resumo.intervalo.fim}, com ${resumo.totalMudancas} marcação(ões) em ${resumo.totalCapturas} coleta(s) destacadas de ${resumo.totalCapturasOriginais || resumo.totalCapturas}; horários sem mudança não são exibidos no gráfico.`;
 	        return;
 	      }
 
-	      graficoDiarioMeta.textContent = `Itinerário de ${resumo.totalTecnicos} técnico(s) entre ${resumo.intervalo.inicio} e ${resumo.intervalo.fim}, com ${resumo.totalMudancas} marcação(ões) distribuídas nas ${resumo.totalCapturas} coleta(s); pontos sem mudança não são repetidos no gráfico.`;
+	      graficoDiarioMeta.textContent = `Itinerário de ${resumo.totalTecnicos} técnico(s) entre ${resumo.intervalo.inicio} e ${resumo.intervalo.fim}, com ${resumo.totalMudancas} marcação(ões) distribuídas em ${resumo.totalCapturas} coleta(s) destacadas de ${resumo.totalCapturasOriginais || resumo.totalCapturas}; horários sem mudança não são exibidos no gráfico.`;
 	    }
 
 	    function dataCapturaDentroDoIntervalo(capturadoEm) {
