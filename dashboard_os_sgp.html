@@ -2712,7 +2712,7 @@
 	        maintainAspectRatio: false,
 	        interaction: { mode: "index", intersect: false },
 	        plugins: {
-	          legend: { position: "top" },
+	          legend: { display: false },
 	          tooltip: {
 	            callbacks: {
 	              afterBody(items) {
@@ -2748,14 +2748,37 @@
 	                if (!detalhes.length && Number(evento.deltaCarteira || 0) !== 0) {
 	                  linhas.push("Detalhe por O.S. indisponível neste ponto do histórico legado.");
 	                }
+	                if (!linhas.length) {
+	                  linhas.push("Sem alteração no itinerário nesta coleta.");
+	                }
 	                return linhas;
 	              }
 	            }
 	          }
 	        },
 	        scales: {
-	          y: { beginAtZero: true, ticks: { precision: 0 } },
-	          x: { grid: { display: false } }
+	          y: {
+	            beginAtZero: true,
+	            grid: { color: "rgba(88, 113, 102, 0.14)" },
+	            border: { color: "rgba(88, 113, 102, 0.24)" },
+	            ticks: {
+	              precision: 0,
+	              maxTicksLimit: 5,
+	              color: "#3f5b4f",
+	              font: { size: 12, weight: "600" },
+	            }
+	          },
+	          x: {
+	            grid: { display: false },
+	            border: { color: "rgba(88, 113, 102, 0.24)" },
+	            ticks: {
+	              color: "#3f5b4f",
+	              font: { size: 12, weight: "600" },
+	              maxRotation: 0,
+	              autoSkip: true,
+	              maxTicksLimit: 6,
+	            }
+	          }
 	        }
 	      }
 	    });
@@ -2989,7 +3012,7 @@
 	        ? valores.map((valor) => Number(valor)).filter((valor) => Number.isFinite(valor))
 	        : [];
 	      if (!numeros.length) {
-	        return { beginAtZero: true, min: 0, max: 5 };
+	        return { beginAtZero: true, min: 0, max: 5, maxTicksLimit: 5, stepSize: 1 };
 	      }
 
 	      const minimo = Math.min(...numeros);
@@ -2998,14 +3021,23 @@
 	        const margemBase = maximo >= 10 ? 1 : 0.5;
 	        const min = Math.max(0, minimo - margemBase);
 	        const max = Math.max(min + 1, maximo + margemBase);
-	        return { beginAtZero: false, min, max };
+	        return { beginAtZero: false, min, max, maxTicksLimit: 3, stepSize: 1 };
 	      }
 
 	      const amplitude = maximo - minimo;
 	      const margem = Math.max(0.5, Math.ceil(amplitude * 0.1));
 	      const min = Math.max(0, minimo - margem);
 	      const max = Math.max(min + 1, maximo + margem);
-	      return { beginAtZero: false, min, max };
+	      return { beginAtZero: false, min, max, maxTicksLimit: 5, stepSize: 1 };
+	    }
+
+	    function calcularMarcadoresHistoricoTecnicos(eventosCarteira) {
+	      return Array.isArray(eventosCarteira)
+	        ? eventosCarteira.map((item, indice) => {
+	            if (indice === 0) return 0;
+	            return Number(item?.deltaCarteira || 0) !== 0 ? 4 : 0;
+	          })
+	        : [];
 	    }
 
 	    function renderHistoricoTecnicosEventos() {
@@ -3200,6 +3232,10 @@
 	    function renderGraficoHistoricoTecnicos() {
 	      const resumo = agruparHistoricoTecnicos();
 	      const escalaY = calcularEscalaHistoricoTecnicos(resumo.totalCarteira);
+	      const pontosAlteracao = calcularMarcadoresHistoricoTecnicos(resumo.eventosCarteira);
+	      const houveMudanca = Array.isArray(resumo.eventosCarteira)
+	        ? resumo.eventosCarteira.some((item) => Number(item?.deltaCarteira || 0) !== 0)
+	        : false;
 	      resumoHistoricoTecnicosAtual = resumo;
 	      if (historicoTecnicosIndiceSelecionado >= resumo.labels.length) {
 	        historicoTecnicosIndiceSelecionado = resumo.labels.length - 1;
@@ -3212,14 +3248,22 @@
 	          data: resumo.totalCarteira,
 	          borderColor: "#1d4ed8",
 	          backgroundColor: hexParaRgba("#1d4ed8", 0.16),
-	          tension: 0.28,
+	          tension: 0.18,
+	          borderWidth: 2,
 	          fill: false,
+	          pointRadius: pontosAlteracao,
+	          pointHoverRadius: pontosAlteracao.map((valor) => (valor ? valor + 2 : 3)),
+	          pointBackgroundColor: pontosAlteracao.map((valor) => valor ? "#1d4ed8" : "rgba(29, 78, 216, 0)"),
+	          pointBorderColor: pontosAlteracao.map((valor) => valor ? "#ffffff" : "rgba(29, 78, 216, 0)"),
+	          pointBorderWidth: pontosAlteracao.map((valor) => valor ? 2 : 0),
 	          yAxisID: "y",
 	        },
 	      ];
 	      graficoHistoricoTecnicos.options.scales.y.beginAtZero = escalaY.beginAtZero;
 	      graficoHistoricoTecnicos.options.scales.y.min = escalaY.min;
 	      graficoHistoricoTecnicos.options.scales.y.max = escalaY.max;
+	      graficoHistoricoTecnicos.options.scales.y.ticks.maxTicksLimit = escalaY.maxTicksLimit;
+	      graficoHistoricoTecnicos.options.scales.y.ticks.stepSize = escalaY.stepSize;
 	      graficoHistoricoTecnicos.update();
 
 	      if (!resumo.labels.length) {
@@ -3231,7 +3275,10 @@
 	      const totalLacunas = resumo.eventosCarteira.filter((item) => Number(item.lacunaMinutos || 0) > 10).length;
 	      const complementoLacunas = totalLacunas ? ` Há ${totalLacunas} lacuna(s) de coleta destacadas no tooltip.` : "";
 	      const itinerarioFinal = resumo.totalCarteira.length ? resumo.totalCarteira[resumo.totalCarteira.length - 1] : 0;
-	      historicoTecnicosMeta.textContent = `Histórico de ${resumo.tecnicoSelecionado} com ${resumo.totalCapturas} coleta(s) no intervalo selecionado; o gráfico mostra como o itinerário variou no período e terminou com ${itinerarioFinal} O.S.${complementoLacunas}`;
+	      const descricaoVariacao = houveMudanca
+	        ? `o gráfico destaca apenas os pontos em que o itinerário mudou no período`
+	        : `não houve alteração no itinerário no período; o gráfico foi mantido estável em ${itinerarioFinal} O.S.`;
+	      historicoTecnicosMeta.textContent = `Histórico de ${resumo.tecnicoSelecionado} com ${resumo.totalCapturas} coleta(s) no intervalo selecionado; ${descricaoVariacao}.${complementoLacunas}`;
 	      renderHistoricoTecnicosEventos();
 	    }
 
