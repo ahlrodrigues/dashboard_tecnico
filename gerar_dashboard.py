@@ -3012,7 +3012,7 @@ def gerar_html_dashboard(
 	      options: {{
 	        responsive: true,
 	        maintainAspectRatio: false,
-	        interaction: {{ mode: "nearest", intersect: false }},
+	        interaction: {{ mode: "index", intersect: false, axis: "x" }},
 	        onClick(evento, elementos, chart) {{
 	          if (!Array.isArray(elementos) || !elementos.length) return;
 	          selecionarHistoricoTecnicosIndice(elementos[0].index, chart);
@@ -3732,6 +3732,7 @@ def gerar_html_dashboard(
 	          borderRadius: 0,
 	          categoryPercentage: 1,
 	          barPercentage: 1,
+	          inflateAmount: 12,
 	          maxBarThickness: 48,
 	          yAxisID: "y",
 	        }},
