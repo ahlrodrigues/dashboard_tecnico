@@ -2930,12 +2930,37 @@ def gerar_html_dashboard(
 	      }}
 	    }});
 
+	    const pluginRotulosGraficoHistoricoTecnicos = {{
+	      id: "rotulosGraficoHistoricoTecnicos",
+	      afterDatasetsDraw(chart) {{
+	        if (resumoHistoricoTecnicosAtual?.escalaVisual !== "relativa") return;
+	        const dataset = chart.data.datasets?.[0];
+	        const meta = chart.getDatasetMeta(0);
+	        if (!dataset || !meta?.data?.length) return;
+
+	        const ctx = chart.ctx;
+	        ctx.save();
+	        ctx.fillStyle = "#173229";
+	        ctx.font = "600 12px Segoe UI";
+	        ctx.textAlign = "center";
+	        ctx.textBaseline = "bottom";
+
+	        meta.data.forEach((ponto, indice) => {{
+	          const valorReal = resumoHistoricoTecnicosAtual?.totalCarteira?.[indice];
+	          if (valorReal === undefined || valorReal === null) return;
+	          ctx.fillText(String(valorReal), ponto.x, ponto.y - 10);
+	        }});
+	        ctx.restore();
+	      }},
+	    }};
+
 	    const graficoHistoricoTecnicos = new Chart(document.getElementById("graficoHistoricoTecnicos"), {{
 	      type: "bar",
 	      data: {{
 	        labels: [],
 	        datasets: []
 	      }},
+	      plugins: [pluginRotulosGraficoHistoricoTecnicos],
 	      options: {{
 	        responsive: true,
 	        maintainAspectRatio: false,
@@ -2990,6 +3015,7 @@ def gerar_html_dashboard(
 	            beginAtZero: false,
 	            grid: {{ color: "rgba(88, 113, 102, 0.14)" }},
 	            border: {{ color: "rgba(88, 113, 102, 0.24)" }},
+	            display: true,
 	            ticks: {{
 	              precision: 0,
 	              color: "#3f5b4f",
@@ -3491,6 +3517,7 @@ def gerar_html_dashboard(
 	        }},
 	      ];
 	      graficoHistoricoTecnicos.options.scales.y.beginAtZero = serieHistorico.eixoY.beginAtZero;
+	      graficoHistoricoTecnicos.options.scales.y.display = serieHistorico.escalaVisual !== "relativa";
 	      if (serieHistorico.eixoY.min === undefined) delete graficoHistoricoTecnicos.options.scales.y.min;
 	      else graficoHistoricoTecnicos.options.scales.y.min = serieHistorico.eixoY.min;
 	      if (serieHistorico.eixoY.max === undefined) delete graficoHistoricoTecnicos.options.scales.y.max;
@@ -3509,7 +3536,7 @@ def gerar_html_dashboard(
 	      const complementoLacunas = totalLacunas ? ` Há ${{totalLacunas}} lacuna(s) de coleta destacadas no tooltip.` : "";
 	      const itinerarioFinal = resumo.totalCarteira.length ? resumo.totalCarteira[resumo.totalCarteira.length - 1] : 0;
 	      const descricaoEscala = serieHistorico.escalaVisual === "relativa"
-	        ? "com poucas coletas, a altura dos pontos mostra a posição relativa entre os valores observados"
+	        ? "com poucas coletas, a linha mostra a posição relativa entre os valores observados e cada ponto exibe o valor real coletado"
 	        : "a linha usa a escala real dos valores observados no período";
 	      historicoTecnicosMeta.textContent = `Histórico de ${{resumo.tecnicoSelecionado}} com ${{resumo.totalCapturas}} coleta(s) no intervalo selecionado; cada ponto da linha representa uma coleta real do itinerário e ${{descricaoEscala}}. Terminou com ${{itinerarioFinal}} O.S.${{complementoLacunas}}`;
 	      renderHistoricoTecnicosEventos();
