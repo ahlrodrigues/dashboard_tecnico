@@ -2924,7 +2924,7 @@ def gerar_html_dashboard(
 	          legend: {{ position: "top" }}
 	        }},
 	        scales: {{
-	          y: {{ beginAtZero: true, ticks: {{ precision: 0 }} }},
+	          y: {{ beginAtZero: true, ticks: {{ precision: 0, maxTicksLimit: 6 }} }},
 	          x: {{ grid: {{ display: false }} }}
 	        }}
 	      }}
@@ -3224,16 +3224,16 @@ def gerar_html_dashboard(
 	      const minimo = Math.min(...numeros);
 	      const maximo = Math.max(...numeros);
 	      if (minimo === maximo) {{
-	        const margemBase = Math.max(2, Math.ceil(Math.abs(maximo || 1) * 0.08));
+	        const margemBase = maximo >= 10 ? 1 : 0.5;
 	        const min = Math.max(0, minimo - margemBase);
-	        const max = Math.max(min + 2, maximo + margemBase);
+	        const max = Math.max(min + 1, maximo + margemBase);
 	        return {{ beginAtZero: false, min, max }};
 	      }}
 
 	      const amplitude = maximo - minimo;
-	      const margem = Math.max(1, Math.ceil(amplitude * 0.2));
+	      const margem = Math.max(0.5, Math.ceil(amplitude * 0.1));
 	      const min = Math.max(0, minimo - margem);
-	      const max = Math.max(min + 2, maximo + margem);
+	      const max = Math.max(min + 1, maximo + margem);
 	      return {{ beginAtZero: false, min, max }};
 	    }}
 
