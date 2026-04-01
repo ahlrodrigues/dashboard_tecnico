@@ -3138,7 +3138,7 @@ def gerar_html_dashboard(
 	      return {{
 	        labels,
 	        datasets: [{{
-	          label: "Itinerário",
+	          label: filtroUsuario.value ? `Itinerário - ${{filtroUsuario.value}}` : "Itinerário - Todos os técnicos",
 	          data: valores,
 	          borderColor: "#17624c",
 	          backgroundColor: hexParaRgba("#17624c", 0.16),
@@ -3167,7 +3167,7 @@ def gerar_html_dashboard(
 	        return;
 	      }}
 
-	      const contextoUsuario = filtroUsuario.value ? ` para ${{filtroUsuario.value}}` : " da equipe";
+	      const contextoUsuario = filtroUsuario.value ? ` para ${{filtroUsuario.value}}` : " de todos os técnicos";
 	      graficoDiarioMeta.textContent = `Itinerário${{contextoUsuario}} entre ${{resumo.intervalo.inicio}} e ${{resumo.intervalo.fim}}, com ${{resumo.totalMudancas}} marcação(ões) em ${{resumo.totalCapturas}} coleta(s); pontos sem mudança não são repetidos no gráfico.`;
 	    }}
 
