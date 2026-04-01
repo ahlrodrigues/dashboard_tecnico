@@ -2704,7 +2704,7 @@
 	    const pluginRotulosGraficoHistoricoTecnicos = {
 	      id: "rotulosGraficoHistoricoTecnicos",
 	      afterDatasetsDraw(chart) {
-	        if (resumoHistoricoTecnicosAtual?.escalaVisual !== "relativa") return;
+	        if (resumoHistoricoTecnicosAtual?.escalaVisual === "real") return;
 	        const dataset = chart.data.datasets?.[0];
 	        const meta = chart.getDatasetMeta(0);
 	        if (!dataset || !meta?.data?.length) return;
@@ -2792,7 +2792,7 @@
 	              color: "#3f5b4f",
 	              font: { size: 12, weight: "600" },
 	              callback(valor) {
-	                if (resumoHistoricoTecnicosAtual?.escalaVisual === "relativa") return "";
+	                if (resumoHistoricoTecnicosAtual?.escalaVisual !== "real") return "";
 	                return Number(valor);
 	              },
 	            }
@@ -3044,30 +3044,47 @@
 	          dados: [],
 	          escalaVisual: "real",
 	          eixoY: { beginAtZero: false, min: undefined, max: undefined, stepSize: undefined },
+	          stepped: false,
+	          tension: 0.18,
 	        };
 	      }
 
-	      const usarEscalaRelativa = numeros.length <= 5;
-	      if (!usarEscalaRelativa) {
+	      const usarEscalaVariacao = numeros.length <= 5;
+	      if (!usarEscalaVariacao) {
 	        return {
 	          dados: numeros,
 	          escalaVisual: "real",
 	          eixoY: { beginAtZero: false, min: undefined, max: undefined, stepSize: undefined },
+	          stepped: false,
+	          tension: 0.18,
 	        };
 	      }
 
-	      const unicosOrdenados = [...new Set(numeros)].sort((a, b) => a - b);
-	      const mapaNiveis = new Map(unicosOrdenados.map((valor, indice) => [valor, indice + 1]));
-	      const dados = numeros.map((valor) => mapaNiveis.get(valor));
+	      const dados = [];
+	      let nivelAtual = 1;
+	      numeros.forEach((valor, indice) => {
+	        if (indice === 0) {
+	          dados.push(nivelAtual);
+	          return;
+	        }
+	        const anterior = numeros[indice - 1];
+	        if (valor > anterior) nivelAtual += 1;
+	        else if (valor < anterior) nivelAtual -= 1;
+	        dados.push(nivelAtual);
+	      });
+	      const minimo = Math.min(...dados);
+	      const maximo = Math.max(...dados);
 	      return {
 	        dados,
-	        escalaVisual: "relativa",
+	        escalaVisual: "variacao",
 	        eixoY: {
 	          beginAtZero: false,
-	          min: 0.5,
-	          max: unicosOrdenados.length + 0.5,
+	          min: minimo - 0.5,
+	          max: maximo + 0.5,
 	          stepSize: 1,
 	        },
+	        stepped: true,
+	        tension: 0,
 	      };
 	    }
 
@@ -3276,7 +3293,8 @@
 	          data: serieHistorico.dados,
 	          borderColor: "#1d4ed8",
 	          backgroundColor: hexParaRgba("#1d4ed8", 0.16),
-	          tension: 0.18,
+	          tension: serieHistorico.tension,
+	          stepped: serieHistorico.stepped,
 	          borderWidth: 2,
 	          fill: false,
 	          pointRadius: 4,
@@ -3288,7 +3306,7 @@
 	        },
 	      ];
 	      graficoHistoricoTecnicos.options.scales.y.beginAtZero = serieHistorico.eixoY.beginAtZero;
-	      graficoHistoricoTecnicos.options.scales.y.display = serieHistorico.escalaVisual !== "relativa";
+	      graficoHistoricoTecnicos.options.scales.y.display = serieHistorico.escalaVisual === "real";
 	      if (serieHistorico.eixoY.min === undefined) delete graficoHistoricoTecnicos.options.scales.y.min;
 	      else graficoHistoricoTecnicos.options.scales.y.min = serieHistorico.eixoY.min;
 	      if (serieHistorico.eixoY.max === undefined) delete graficoHistoricoTecnicos.options.scales.y.max;
@@ -3306,8 +3324,8 @@
 	      const totalLacunas = resumo.eventosCarteira.filter((item) => Number(item.lacunaMinutos || 0) > 10).length;
 	      const complementoLacunas = totalLacunas ? ` Há ${totalLacunas} lacuna(s) de coleta destacadas no tooltip.` : "";
 	      const itinerarioFinal = resumo.totalCarteira.length ? resumo.totalCarteira[resumo.totalCarteira.length - 1] : 0;
-	      const descricaoEscala = serieHistorico.escalaVisual === "relativa"
-	        ? "com poucas coletas, a linha mostra a posição relativa entre os valores observados e cada ponto exibe o valor real coletado"
+	      const descricaoEscala = serieHistorico.escalaVisual === "variacao"
+	        ? "com poucas coletas, a linha mostra apenas as mudanças entre as coletas e mantém o nível anterior quando não há alteração; cada ponto exibe o valor real coletado"
 	        : "a linha usa a escala real dos valores observados no período";
 	      historicoTecnicosMeta.textContent = `Histórico de ${resumo.tecnicoSelecionado} com ${resumo.totalCapturas} coleta(s) no intervalo selecionado; cada ponto da linha representa uma coleta real do itinerário e ${descricaoEscala}. Terminou com ${itinerarioFinal} O.S.${complementoLacunas}`;
 	      renderHistoricoTecnicosEventos();
