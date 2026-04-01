@@ -2984,6 +2984,30 @@
 	        : [];
 	    }
 
+	    function calcularEscalaHistoricoTecnicos(valores) {
+	      const numeros = Array.isArray(valores)
+	        ? valores.map((valor) => Number(valor)).filter((valor) => Number.isFinite(valor))
+	        : [];
+	      if (!numeros.length) {
+	        return { beginAtZero: true, min: 0, max: 5 };
+	      }
+
+	      const minimo = Math.min(...numeros);
+	      const maximo = Math.max(...numeros);
+	      if (minimo === maximo) {
+	        const margemBase = Math.max(2, Math.ceil(Math.abs(maximo || 1) * 0.08));
+	        const min = Math.max(0, minimo - margemBase);
+	        const max = Math.max(min + 2, maximo + margemBase);
+	        return { beginAtZero: false, min, max };
+	      }
+
+	      const amplitude = maximo - minimo;
+	      const margem = Math.max(1, Math.ceil(amplitude * 0.2));
+	      const min = Math.max(0, minimo - margem);
+	      const max = Math.max(min + 2, maximo + margem);
+	      return { beginAtZero: false, min, max };
+	    }
+
 	    function renderHistoricoTecnicosEventos() {
 	      if (!historicoTecnicosEventosMeta || !historicoTecnicosEventosBody) return;
 	      const resumo = resumoHistoricoTecnicosAtual;
@@ -3175,6 +3199,7 @@
 
 	    function renderGraficoHistoricoTecnicos() {
 	      const resumo = agruparHistoricoTecnicos();
+	      const escalaY = calcularEscalaHistoricoTecnicos(resumo.totalCarteira);
 	      resumoHistoricoTecnicosAtual = resumo;
 	      if (historicoTecnicosIndiceSelecionado >= resumo.labels.length) {
 	        historicoTecnicosIndiceSelecionado = resumo.labels.length - 1;
@@ -3192,6 +3217,9 @@
 	          yAxisID: "y",
 	        },
 	      ];
+	      graficoHistoricoTecnicos.options.scales.y.beginAtZero = escalaY.beginAtZero;
+	      graficoHistoricoTecnicos.options.scales.y.min = escalaY.min;
+	      graficoHistoricoTecnicos.options.scales.y.max = escalaY.max;
 	      graficoHistoricoTecnicos.update();
 
 	      if (!resumo.labels.length) {
