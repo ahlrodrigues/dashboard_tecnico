@@ -10,6 +10,8 @@ LOG_FILE="$BASE_DIR/atualizar_live.log"
 ALLOWED_DIRTY_PATHS=(
   "dashboard_os_sgp.html"
   "dashboard_data.json"
+  ".cache/dashboard_os_estado_atual.json"
+  ".cache/dashboard_tecnicos_history.json"
 )
 
 list_tracked_changes() {
