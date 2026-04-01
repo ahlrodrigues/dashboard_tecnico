@@ -920,7 +920,6 @@ def gerar_html_dashboard(
     .chartjs-html-tooltip {{
       position: absolute;
       pointer-events: none;
-      transform: translate(-50%, calc(-100% - 10px));
       background: rgba(23, 50, 41, 0.96);
       color: #f7fffb;
       border-radius: 10px;
@@ -1390,6 +1389,15 @@ def gerar_html_dashboard(
 
     function normalizarTexto(valor) {{
       return String(valor || "").trim();
+    }}
+
+    function formatarDataHoraTooltip(valor) {{
+      const texto = normalizarTexto(valor);
+      if (!texto) return "";
+      if (texto.includes("T")) {{
+        return texto.replace("T", " ");
+      }}
+      return texto;
     }}
 
     function recalcularMetadadosBase() {{
@@ -3093,12 +3101,23 @@ def gerar_html_dashboard(
 	      const indice = tooltip.dataPoints[0].dataIndex;
 	      const conteudo = obterLinhasTooltipHistoricoTecnicos(indice);
 	      historicoTecnicosTooltip.innerHTML = `
-	        <div class="chartjs-html-tooltip-title">${{conteudo.titulo}}</div>
+	        <div class="chartjs-html-tooltip-title">${{formatarDataHoraTooltip(conteudo.titulo)}}</div>
 	        ${{conteudo.linhas.map((linha) => `<div class="chartjs-html-tooltip-line">${{linha}}</div>`).join("")}}
 	      `;
 
-	      const left = tooltip.caretX;
-	      const top = tooltip.caretY;
+	      const margem = 8;
+	      const largura = historicoTecnicosTooltip.offsetWidth;
+	      const altura = historicoTecnicosTooltip.offsetHeight;
+	      const larguraHost = host.clientWidth;
+	      const alturaHost = host.clientHeight;
+	      const leftDesejado = tooltip.caretX - largura / 2;
+	      const topAcima = tooltip.caretY - altura - 12;
+	      const topAbaixo = tooltip.caretY + 12;
+	      const left = Math.min(Math.max(leftDesejado, margem), Math.max(margem, larguraHost - largura - margem));
+	      const top = topAcima >= margem
+	        ? topAcima
+	        : Math.min(topAbaixo, Math.max(margem, alturaHost - altura - margem));
+
 	      historicoTecnicosTooltip.style.left = `${{left}}px`;
 	      historicoTecnicosTooltip.style.top = `${{top}}px`;
 	      historicoTecnicosTooltip.classList.add("visible");
@@ -3911,11 +3930,10 @@ def gerar_html_dashboard(
         }}
 
         if (payload.ok) {{
-          updateOverlayStatus.textContent = payload.message || "Dados atualizados com sucesso. Recarregando a página...";
+          updateOverlayStatus.textContent = payload.message || "Dados atualizados com sucesso. Atualizando painel...";
           encerrarEstadoAtualizacao();
-          window.setTimeout(() => {{
-            window.location.reload();
-          }}, 700);
+          await recarregarDashboardSemReload();
+          atualizarVisibilidadeOverlay(false);
           return;
         }}
 
@@ -3933,6 +3951,26 @@ def gerar_html_dashboard(
         );
         encerrarEstadoAtualizacao();
       }}
+    }}
+
+    async function recarregarDashboardSemReload() {{
+      const estadoAtual = obterEstadoFiltros();
+      const carregou = await carregarDadosDashboardRemotos();
+      if (!carregou) {{
+        throw new Error("Não foi possível recarregar os dados do dashboard sem reload.");
+      }}
+      popularFiltros();
+      filtroDataInicial.value = estadoAtual.dataInicial || filtroDataInicial.value;
+      filtroDataFinal.value = estadoAtual.dataFinal || filtroDataFinal.value;
+      filtroUsuario.value = estadoAtual.usuario || "";
+      filtroGrupo.value = estadoAtual.grupo || "";
+      filtroPop.value = estadoAtual.pop || "";
+      filtroAgendamento.value = estadoAtual.agendamento || "";
+      filtroStatusOs.value = estadoAtual.status || "";
+      filtroBusca.value = estadoAtual.busca || "";
+      normalizarPeriodoSelecionado();
+      salvarFiltros();
+      aplicarFiltros();
     }}
 
     function iniciarPollingAtualizacao() {{
