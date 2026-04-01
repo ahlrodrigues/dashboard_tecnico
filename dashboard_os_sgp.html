@@ -685,6 +685,38 @@
       width: 100% !important;
       height: 360px !important;
     }
+    .chart-tooltip-host {
+      position: relative;
+    }
+    .chartjs-html-tooltip {
+      position: absolute;
+      pointer-events: none;
+      transform: translate(-50%, calc(-100% - 10px));
+      background: rgba(23, 50, 41, 0.96);
+      color: #f7fffb;
+      border-radius: 10px;
+      padding: 10px 12px;
+      box-shadow: 0 14px 30px rgba(23, 50, 41, 0.24);
+      min-width: 0;
+      max-width: min(320px, calc(100vw - 32px));
+      white-space: normal;
+      z-index: 20;
+      opacity: 0;
+      transition: opacity 0.08s ease;
+    }
+    .chartjs-html-tooltip.visible {
+      opacity: 1;
+    }
+    .chartjs-html-tooltip-title {
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .chartjs-html-tooltip-line {
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1.35;
+    }
     @media (max-width: 1100px) {
       .toolbar,
 	      .cards-stack {
@@ -932,10 +964,11 @@
 	      <canvas id="graficoDiario"></canvas>
 	    </div>
 
-	    <div class="panel full">
+	    <div class="panel full chart-tooltip-host">
 	      <h2 class="section-title" id="tituloHistoricoTecnicos">Histórico dos técnicos</h2>
 	      <div class="panel-meta" id="historicoTecnicosMeta">Mostrando a evolução do itinerário no período filtrado.</div>
 	      <canvas id="graficoHistoricoTecnicos"></canvas>
+	      <div class="chartjs-html-tooltip" id="historicoTecnicosTooltip" aria-hidden="true"></div>
 	      <div class="panel-meta" id="historicoTecnicosEventosMeta">Lista fixa da evolução do itinerário e dos eventos registrados no período mostrado no gráfico.</div>
       <div class="table-wrap">
         <table>
@@ -1082,6 +1115,7 @@
     const tituloReincidencia = document.getElementById("tituloReincidencia");
     const dashboardTitleMain = document.getElementById("dashboardTitleMain");
     const dashboardVersionLabel = document.getElementById("dashboardVersionLabel");
+    const historicoTecnicosTooltip = document.getElementById("historicoTecnicosTooltip");
     const detalhesHead = document.getElementById("detalhesHead");
     const rankingVotosHead = document.getElementById("rankingVotosHead");
     const reincidenciasHead = document.getElementById("reincidenciasHead");
@@ -2781,6 +2815,67 @@
 	      },
 	    };
 
+	    function obterLinhasTooltipHistoricoTecnicos(indice) {
+	      if (!resumoHistoricoTecnicosAtual) return { titulo: "", linhas: [] };
+	      const evento = Array.isArray(resumoHistoricoTecnicosAtual.eventosCarteira)
+	        ? resumoHistoricoTecnicosAtual.eventosCarteira[indice]
+	        : null;
+	      if (!evento) {
+	        return {
+	          titulo: resumoHistoricoTecnicosAtual?.labels?.[indice] || "",
+	          linhas: [],
+	        };
+	      }
+
+	      const valorReal = resumoHistoricoTecnicosAtual?.totalCarteira?.[indice];
+	      const linhas = [`Itinerário: ${valorReal ?? 0} O.S.`];
+	      if (Number(evento.lacunaMinutos || 0) > 10) {
+	        linhas.push(`Lacuna entre coletas: ${evento.lacunaMinutos} min`);
+	      }
+	      if (Number(evento.deltaCarteira || 0) !== 0) {
+	        const delta = Number(evento.deltaCarteira || 0);
+	        linhas.push(`Delta do itinerário: ${delta > 0 ? "+" : ""}${delta}`);
+	      }
+	      if (Number(evento.novasOs || 0) > 0) linhas.push(`Novas O.S.: ${evento.novasOs}`);
+	      if (Number(evento.transferenciasEntrada || 0) > 0) linhas.push(`Transferências recebidas: ${evento.transferenciasEntrada}`);
+	      if (Number(evento.transferenciasSaida || 0) > 0) linhas.push(`Transferências cedidas: ${evento.transferenciasSaida}`);
+	      if (Number(evento.encerradasDaCarteira || 0) > 0) linhas.push(`Saídas por encerramento: ${evento.encerradasDaCarteira}`);
+	      if (Number(evento.reabertas || 0) > 0) linhas.push(`Reaberturas recebidas: ${evento.reabertas}`);
+	      if (linhas.length === 1) linhas.push("Sem alteração no itinerário nesta coleta.");
+
+	      return {
+	        titulo: evento.capturadoEm || resumoHistoricoTecnicosAtual?.labels?.[indice] || "",
+	        linhas,
+	      };
+	    }
+
+	    function renderTooltipHistoricoTecnicos(context) {
+	      const tooltip = context.tooltip;
+	      const canvas = context.chart?.canvas;
+	      const host = canvas?.parentNode;
+	      if (!historicoTecnicosTooltip || !tooltip || !canvas || !host) return;
+
+	      if (tooltip.opacity === 0 || !tooltip.dataPoints?.length) {
+	        historicoTecnicosTooltip.classList.remove("visible");
+	        historicoTecnicosTooltip.setAttribute("aria-hidden", "true");
+	        return;
+	      }
+
+	      const indice = tooltip.dataPoints[0].dataIndex;
+	      const conteudo = obterLinhasTooltipHistoricoTecnicos(indice);
+	      historicoTecnicosTooltip.innerHTML = `
+	        <div class="chartjs-html-tooltip-title">${conteudo.titulo}</div>
+	        ${conteudo.linhas.map((linha) => `<div class="chartjs-html-tooltip-line">${linha}</div>`).join("")}
+	      `;
+
+	      const left = tooltip.caretX;
+	      const top = tooltip.caretY;
+	      historicoTecnicosTooltip.style.left = `${left}px`;
+	      historicoTecnicosTooltip.style.top = `${top}px`;
+	      historicoTecnicosTooltip.classList.add("visible");
+	      historicoTecnicosTooltip.setAttribute("aria-hidden", "false");
+	    }
+
 	    const graficoHistoricoTecnicos = new Chart(document.getElementById("graficoHistoricoTecnicos"), {
 	      type: "bar",
 	      data: {
@@ -2795,54 +2890,8 @@
 	        plugins: {
 	          legend: { display: false },
 	          tooltip: {
-	            displayColors: false,
-	            padding: 10,
-	            caretPadding: 8,
-	            titleFont: { size: 12, weight: "700" },
-	            bodyFont: { size: 12, weight: "600" },
-	            callbacks: {
-	              title(items) {
-	                if (!items.length || !resumoHistoricoTecnicosAtual) return "";
-	                const indice = items[0].dataIndex;
-	                const evento = Array.isArray(resumoHistoricoTecnicosAtual.eventosCarteira)
-	                  ? resumoHistoricoTecnicosAtual.eventosCarteira[indice]
-	                  : null;
-	                return evento?.capturadoEm || items[0].label || "";
-	              },
-	              label(item) {
-	                if (!resumoHistoricoTecnicosAtual) return "";
-	                const indice = item.dataIndex;
-	                const valorReal = resumoHistoricoTecnicosAtual?.totalCarteira?.[indice];
-	                return `Itinerário: ${valorReal ?? item.formattedValue} O.S.`;
-	              },
-	              afterBody(items) {
-	                if (!items.length || !resumoHistoricoTecnicosAtual) return [];
-	                const indice = items[0].dataIndex;
-	                const evento = Array.isArray(resumoHistoricoTecnicosAtual.eventosCarteira)
-	                  ? resumoHistoricoTecnicosAtual.eventosCarteira[indice]
-	                  : null;
-	                if (!evento) return [];
-
-	                const linhas = [];
-	                if (Number(evento.lacunaMinutos || 0) > 10) {
-	                  linhas.push(`Lacuna entre coletas: ${evento.lacunaMinutos} min`);
-	                }
-	                if (Number(evento.deltaCarteira || 0) !== 0) {
-	                  const delta = Number(evento.deltaCarteira || 0);
-	                  linhas.push(`Delta do itinerário: ${delta > 0 ? "+" : ""}${delta}`);
-	                }
-	                if (Number(evento.novasOs || 0) > 0) linhas.push(`Novas O.S.: ${evento.novasOs}`);
-	                if (Number(evento.transferenciasEntrada || 0) > 0) linhas.push(`Transferências recebidas: ${evento.transferenciasEntrada}`);
-	                if (Number(evento.transferenciasSaida || 0) > 0) linhas.push(`Transferências cedidas: ${evento.transferenciasSaida}`);
-	                if (Number(evento.encerradasDaCarteira || 0) > 0) linhas.push(`Saídas por encerramento: ${evento.encerradasDaCarteira}`);
-	                if (Number(evento.reabertas || 0) > 0) linhas.push(`Reaberturas recebidas: ${evento.reabertas}`);
-
-	                if (!linhas.length) {
-	                  linhas.push("Sem alteração no itinerário nesta coleta.");
-	                }
-	                return linhas;
-	              }
-	            }
+	            enabled: false,
+	            external: renderTooltipHistoricoTecnicos,
 	          }
 	        },
 	        scales: {
