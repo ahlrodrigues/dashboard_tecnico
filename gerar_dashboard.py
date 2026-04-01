@@ -3118,6 +3118,14 @@ def gerar_html_dashboard(
 
 	    function agruparResumoDiario() {{
 	      const usuarioFiltro = normalizarChaveUsuario(filtroUsuario.value);
+	      const tecnicosPermitidos = new Set(
+	        detalhesData
+	          .filter((registro) => normalizarTexto(registro.grupo_dashboard) === "Técnicos")
+	          .map((registro) => normalizarChaveUsuario(
+	            registro.responsavel || registro.finalizado_por_dashboard || registro.tecnico || registro.tecnico_nome
+	          ))
+	          .filter(Boolean)
+	      );
 	      const capturas = [];
 	      const mapaIndices = new Map();
 	      const mapaTecnicos = new Map();
@@ -3134,6 +3142,7 @@ def gerar_html_dashboard(
 
 	        const tecnicoKey = normalizarChaveUsuario(registro.tecnico || registro.tecnico_nome);
 	        if (!tecnicoKey) return;
+	        if (tecnicosPermitidos.size && !tecnicosPermitidos.has(tecnicoKey)) return;
 	        if (usuarioFiltro && tecnicoKey !== usuarioFiltro) return;
 
 	        if (!mapaTecnicos.has(tecnicoKey)) {{
