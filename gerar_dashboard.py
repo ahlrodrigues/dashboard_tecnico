@@ -2948,7 +2948,7 @@ def gerar_html_dashboard(
 	    }};
 
 	    const graficoHistoricoTecnicos = new Chart(document.getElementById("graficoHistoricoTecnicos"), {{
-	      type: "bar",
+	      type: "line",
 	      data: {{
 	        labels: [],
 	        datasets: []
@@ -3022,6 +3022,7 @@ def gerar_html_dashboard(
 	          x: {{
 	            grid: {{ display: false }},
 	            border: {{ color: "rgba(88, 113, 102, 0.24)" }},
+	            offset: false,
 	            ticks: {{
 	              color: "#3f5b4f",
 	              font: {{ size: 12, weight: "600" }},
@@ -3546,10 +3547,19 @@ def gerar_html_dashboard(
 	      const totalLacunas = resumo.eventosCarteira.filter((item) => Number(item.lacunaMinutos || 0) > 10).length;
 	      const complementoLacunas = totalLacunas ? ` Há ${{totalLacunas}} lacuna(s) de coleta destacadas no tooltip.` : "";
 	      const itinerarioFinal = resumo.totalCarteira.length ? resumo.totalCarteira[resumo.totalCarteira.length - 1] : 0;
+	      const filtrosNaoSuportados = [];
+	      if (filtroGrupo.value) filtrosNaoSuportados.push("grupo");
+	      if (filtroPop.value) filtrosNaoSuportados.push("POP");
+	      if (filtroAgendamento.value) filtrosNaoSuportados.push("agendamento");
+	      if (filtroStatusOs.value) filtrosNaoSuportados.push("status");
+	      if (filtroBusca.value.trim()) filtrosNaoSuportados.push("busca");
 	      const descricaoEscala = serieHistorico.escalaVisual === "variacao"
 	        ? "com poucas coletas, a linha mostra apenas as mudanças entre as coletas e mantém o nível anterior quando não há alteração; cada ponto exibe o valor real coletado"
 	        : "a linha usa a escala real dos valores observados no período";
-	      historicoTecnicosMeta.textContent = `Histórico de ${{resumo.tecnicoSelecionado}} com ${{resumo.totalCapturas}} coleta(s) no intervalo selecionado; cada ponto da linha representa uma coleta real do itinerário e ${{descricaoEscala}}. Terminou com ${{itinerarioFinal}} O.S.${{complementoLacunas}}`;
+	      const complementoFiltros = filtrosNaoSuportados.length
+	        ? ` O histórico de coletas respeita diretamente data e usuário; ${{filtrosNaoSuportados.join(", ")}} ainda não estão disponíveis na base histórica agregada.`
+	        : "";
+	      historicoTecnicosMeta.textContent = `Histórico de ${{resumo.tecnicoSelecionado}} com ${{resumo.totalCapturas}} coleta(s) no intervalo selecionado; cada ponto da linha representa uma coleta real do itinerário e ${{descricaoEscala}}. Terminou com ${{itinerarioFinal}} O.S.${{complementoLacunas}}${{complementoFiltros}}`;
 	      renderHistoricoTecnicosEventos();
 	    }}
 
