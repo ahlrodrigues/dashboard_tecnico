@@ -3039,6 +3039,12 @@ def gerar_html_dashboard(
 	            grid: {{ color: "rgba(88, 113, 102, 0.14)" }},
 	            border: {{ color: "rgba(88, 113, 102, 0.24)" }},
 	            display: true,
+	            title: {{
+	              display: true,
+	              text: "Número total",
+	              color: "#173229",
+	              font: {{ size: 12, weight: "700" }},
+	            }},
 	            ticks: {{
 	              precision: 0,
 	              color: "#3f5b4f",
@@ -3053,6 +3059,12 @@ def gerar_html_dashboard(
 	            grid: {{ display: false }},
 	            border: {{ color: "rgba(88, 113, 102, 0.24)" }},
 	            offset: false,
+	            title: {{
+	              display: true,
+	              text: "Técnicos",
+	              color: "#173229",
+	              font: {{ size: 12, weight: "700" }},
+	            }},
 	            ticks: {{
 	              color: "#3f5b4f",
 	              font: {{ size: 12, weight: "600" }},
@@ -3562,8 +3574,14 @@ def gerar_html_dashboard(
 	          stepped: serieHistorico.stepped,
 	          borderWidth: 2,
 	          fill: false,
-	          pointRadius: 4,
-	          pointHoverRadius: 6,
+	          pointRadius: (contexto) => {{
+	            const evento = resumo.eventosCarteira?.[contexto.dataIndex];
+	            return Number(evento?.deltaCarteira || 0) !== 0 ? 4 : 0;
+	          }},
+	          pointHoverRadius: (contexto) => {{
+	            const evento = resumo.eventosCarteira?.[contexto.dataIndex];
+	            return Number(evento?.deltaCarteira || 0) !== 0 ? 6 : 0;
+	          }},
 	          pointBackgroundColor: "#1d4ed8",
 	          pointBorderColor: "#ffffff",
 	          pointBorderWidth: 2,
@@ -3572,6 +3590,7 @@ def gerar_html_dashboard(
 	      ];
 	      graficoHistoricoTecnicos.options.scales.y.beginAtZero = serieHistorico.eixoY.beginAtZero;
 	      graficoHistoricoTecnicos.options.scales.y.display = serieHistorico.escalaVisual === "real";
+	      graficoHistoricoTecnicos.options.scales.x.title.text = resumo.tecnicoSelecionado || "Técnicos";
 	      if (serieHistorico.eixoY.min === undefined) delete graficoHistoricoTecnicos.options.scales.y.min;
 	      else graficoHistoricoTecnicos.options.scales.y.min = serieHistorico.eixoY.min;
 	      if (serieHistorico.eixoY.max === undefined) delete graficoHistoricoTecnicos.options.scales.y.max;
