@@ -528,20 +528,6 @@ def gerar_html_dashboard(
       background: #f8fbf9;
       color: var(--text);
     }}
-    .filter-card select:disabled,
-    .filter-card input:disabled {{
-      background: #eef3f1;
-      color: #8aa095;
-      cursor: not-allowed;
-    }}
-    .panel-filter-toolbar {{
-      margin: 14px 0 12px;
-    }}
-    .panel-filter-note {{
-      margin: -2px 0 10px;
-      font-size: 12px;
-      color: var(--muted);
-    }}
     .quick-range {{
       display: flex;
       flex-wrap: wrap;
@@ -1178,37 +1164,6 @@ def gerar_html_dashboard(
 	    <div class="panel full">
 	      <h2 class="section-title" id="tituloHistoricoTecnicos">Histórico dos técnicos</h2>
 	      <div class="panel-meta" id="historicoTecnicosMeta">Mostrando a evolução do itinerário no período filtrado.</div>
-	      <section class="toolbar panel-filter-toolbar">
-	        <div class="filter-card">
-	          <label for="historicoFiltroDataInicial">Data inicial</label>
-	          <input id="historicoFiltroDataInicial" type="date"/>
-	        </div>
-	        <div class="filter-card">
-	          <label for="historicoFiltroDataFinal">Data final</label>
-	          <input id="historicoFiltroDataFinal" type="date"/>
-	        </div>
-	        <div class="filter-card">
-	          <label for="historicoFiltroUsuario">Usuário</label>
-	          <select id="historicoFiltroUsuario"></select>
-	        </div>
-	        <div class="filter-card">
-	          <label for="historicoFiltroGrupo">Grupo</label>
-	          <select id="historicoFiltroGrupo" disabled><option>Não suportado</option></select>
-	        </div>
-	        <div class="filter-card">
-	          <label for="historicoFiltroPop">POP</label>
-	          <select id="historicoFiltroPop" disabled><option>Não suportado</option></select>
-	        </div>
-	        <div class="filter-card">
-	          <label for="historicoFiltroAgendamento">Agendamento</label>
-	          <select id="historicoFiltroAgendamento" disabled><option>Não suportado</option></select>
-	        </div>
-	        <div class="filter-card">
-	          <label for="historicoFiltroStatus">Status da O.S.</label>
-	          <select id="historicoFiltroStatus" disabled><option>Não suportado</option></select>
-	        </div>
-	      </section>
-	      <div class="panel-filter-note">Este painel usa filtros locais de data e usuário. Grupo, POP, agendamento, status e busca ainda não existem na base histórica agregada.</div>
 	      <canvas id="graficoHistoricoTecnicos"></canvas>
 	      <div class="panel-meta" id="historicoTecnicosEventosMeta">Lista fixa da evolução do itinerário e dos eventos registrados no período mostrado no gráfico.</div>
       <div class="table-wrap">
@@ -1304,9 +1259,6 @@ def gerar_html_dashboard(
     const filtroAgendamento = document.getElementById("filtroAgendamento");
     const filtroStatusOs = document.getElementById("filtroStatusOs");
     const filtroBusca = document.getElementById("filtroBusca");
-    const historicoFiltroDataInicial = document.getElementById("historicoFiltroDataInicial");
-    const historicoFiltroDataFinal = document.getElementById("historicoFiltroDataFinal");
-    const historicoFiltroUsuario = document.getElementById("historicoFiltroUsuario");
     const quickRangeButtons = Array.from(document.querySelectorAll("[data-range]"));
     const refreshCountdown = document.getElementById("refreshCountdown");
     const refreshNowButton = document.getElementById("refreshNowButton");
@@ -1862,54 +1814,6 @@ def gerar_html_dashboard(
       }}
 
       normalizarPeriodoSelecionado();
-    }}
-
-    function popularFiltrosHistoricoTecnicos() {{
-      const usuariosHistorico = [...new Set(tecnicoHistoryData
-        .map((registro) => normalizarTexto(registro.tecnico_nome) || normalizarTexto(registro.tecnico))
-        .filter(Boolean))]
-        .sort((a, b) => a.localeCompare(b, "pt-BR", {{ sensitivity: "base" }}));
-
-      preencherSelect(historicoFiltroUsuario, usuariosHistorico, "Todos os usuários");
-
-      if (dataMinDisponivel) {{
-        historicoFiltroDataInicial.min = dataMinDisponivel;
-        historicoFiltroDataFinal.min = dataMinDisponivel;
-      }}
-      if (dataMaxDisponivel) {{
-        historicoFiltroDataInicial.max = dataMaxDisponivel;
-        historicoFiltroDataFinal.max = dataMaxDisponivel;
-      }}
-
-      if (!historicoFiltroDataInicial.value) {{
-        historicoFiltroDataInicial.value = filtroDataInicial.value || dataInicialPadrao || dataMinDisponivel || "";
-      }}
-      if (!historicoFiltroDataFinal.value) {{
-        historicoFiltroDataFinal.value = filtroDataFinal.value || dataFinalPadrao || dataMaxDisponivel || "";
-      }}
-      if (!historicoFiltroUsuario.value && filtroUsuario.value) {{
-        historicoFiltroUsuario.value = filtroUsuario.value;
-      }}
-
-      normalizarPeriodoHistoricoTecnicos();
-    }}
-
-    function normalizarPeriodoHistoricoTecnicos() {{
-      const fallbackInicial = historicoFiltroDataInicial.value || filtroDataInicial.value || dataInicialPadrao || dataMinDisponivel || "";
-      const fallbackFinal = historicoFiltroDataFinal.value || filtroDataFinal.value || dataFinalPadrao || dataMaxDisponivel || fallbackInicial;
-      historicoFiltroDataInicial.value = limitarDataAoIntervalo(historicoFiltroDataInicial.value, fallbackInicial);
-      historicoFiltroDataFinal.value = limitarDataAoIntervalo(historicoFiltroDataFinal.value, fallbackFinal);
-      if (historicoFiltroDataInicial.value && historicoFiltroDataFinal.value && historicoFiltroDataInicial.value > historicoFiltroDataFinal.value) {{
-        historicoFiltroDataFinal.value = historicoFiltroDataInicial.value;
-      }}
-    }}
-
-    function obterFiltrosHistoricoTecnicos() {{
-      return {{
-        dataInicial: historicoFiltroDataInicial.value || filtroDataInicial.value || dataInicialPadrao || "",
-        dataFinal: historicoFiltroDataFinal.value || filtroDataFinal.value || dataFinalPadrao || "",
-        usuario: normalizarChaveUsuario(historicoFiltroUsuario.value || filtroUsuario.value),
-      }};
     }}
 
     function dataDentroDoIntervalo(registro) {{
@@ -3247,11 +3151,10 @@ def gerar_html_dashboard(
 	    }}
 
 	    function dataCapturaDentroDoIntervalo(capturadoEm) {{
-	      const filtrosHistorico = obterFiltrosHistoricoTecnicos();
 	      const data = normalizarTexto(capturadoEm).slice(0, 10);
 	      if (!data) return false;
-	      if (filtrosHistorico.dataInicial && data < filtrosHistorico.dataInicial) return false;
-	      if (filtrosHistorico.dataFinal && data > filtrosHistorico.dataFinal) return false;
+	      if (filtroDataInicial.value && data < filtroDataInicial.value) return false;
+	      if (filtroDataFinal.value && data > filtroDataFinal.value) return false;
 	      return true;
 	    }}
 
@@ -3503,8 +3406,7 @@ def gerar_html_dashboard(
 	    }}
 
 	    function agruparHistoricoTecnicos() {{
-	      const filtrosHistorico = obterFiltrosHistoricoTecnicos();
-	      const usuarioFiltro = filtrosHistorico.usuario;
+	      const usuarioFiltro = normalizarChaveUsuario(filtroUsuario.value);
 	      const mapa = new Map();
 	      const rotulos = new Map();
 
@@ -3581,7 +3483,7 @@ def gerar_html_dashboard(
 	        lacunaMinutos: indice > 0 ? diferencaMinutosEntreCapturas(capturas[indice - 1], capturas[indice]) : 0,
 	      }};
 	      }});
-	      const tecnicoSelecionado = usuarioFiltro ? normalizarRotuloUsuario(rotulos.get(usuarioFiltro) || historicoFiltroUsuario.value, rotulos) : "Equipe";
+	      const tecnicoSelecionado = usuarioFiltro ? normalizarRotuloUsuario(rotulos.get(usuarioFiltro) || filtroUsuario.value, rotulos) : "Equipe";
 
 	      return {{
 	        labels,
@@ -3651,11 +3553,6 @@ def gerar_html_dashboard(
 	      historicoTecnicosMeta.textContent = `Histórico de ${{resumo.tecnicoSelecionado}} com ${{resumo.totalCapturas}} coleta(s) no intervalo selecionado; cada ponto da linha representa uma coleta real do itinerário e ${{descricaoEscala}}. Terminou com ${{itinerarioFinal}} O.S.${{complementoLacunas}}`;
 	      renderHistoricoTecnicosEventos();
 	    }}
-
-    function aplicarFiltrosHistoricoTecnicos() {{
-      normalizarPeriodoHistoricoTecnicos();
-      renderGraficoHistoricoTecnicos();
-    }}
 
     function atualizarMetas(registrosOperacionais, registrosFinalizados, totalDetalhes, totalVotosValidos, totalVotosDetalhamento, totalDetalhamentoPops) {{
       const partes = [];
@@ -3751,10 +3648,6 @@ def gerar_html_dashboard(
 
     [filtroDataInicial, filtroDataFinal, filtroUsuario, filtroGrupo, filtroPop, filtroAgendamento, filtroStatusOs].forEach((select) => {{
       select.addEventListener("change", aplicarFiltros);
-    }});
-
-    [historicoFiltroDataInicial, historicoFiltroDataFinal, historicoFiltroUsuario].forEach((select) => {{
-      select.addEventListener("change", aplicarFiltrosHistoricoTecnicos);
     }});
 
     filtroBusca.addEventListener("input", aplicarFiltros);
@@ -3951,7 +3844,6 @@ def gerar_html_dashboard(
     carregarDadosDashboardRemotos().finally(() => {{
       popularFiltros();
       restaurarFiltros();
-      popularFiltrosHistoricoTecnicos();
       aplicarFiltros();
       iniciarAutoRefresh();
     }});
