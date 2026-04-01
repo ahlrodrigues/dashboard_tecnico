@@ -3011,7 +3011,7 @@ def gerar_html_dashboard(
 	    }};
 
 	    const graficoHistoricoTecnicos = new Chart(document.getElementById("graficoHistoricoTecnicos"), {{
-	      type: "line",
+	      type: "bar",
 	      data: {{
 	        labels: [],
 	        datasets: []
@@ -3020,7 +3020,7 @@ def gerar_html_dashboard(
 	      options: {{
 	        responsive: true,
 	        maintainAspectRatio: false,
-	        interaction: {{ mode: "index", intersect: false }},
+	        interaction: {{ mode: "nearest", intersect: false }},
 	        plugins: {{
 	          legend: {{ display: false }},
 	          tooltip: {{
@@ -3659,26 +3659,14 @@ def gerar_html_dashboard(
 	      graficoHistoricoTecnicos.data.labels = resumo.labels;
 	      graficoHistoricoTecnicos.data.datasets = [
 	        {{
-	          type: "line",
+	          type: "bar",
 	          label: "Itinerário",
 	          data: serieHistorico.dados,
 	          borderColor: "#1d4ed8",
-	          backgroundColor: hexParaRgba("#1d4ed8", 0.16),
-	          tension: serieHistorico.tension,
-	          stepped: serieHistorico.stepped,
-	          borderWidth: 2,
-	          fill: false,
-	          pointRadius: (contexto) => {{
-	            const evento = resumo.eventosCarteira?.[contexto.dataIndex];
-	            return Number(evento?.deltaCarteira || 0) !== 0 ? 4 : 0;
-	          }},
-	          pointHoverRadius: (contexto) => {{
-	            const evento = resumo.eventosCarteira?.[contexto.dataIndex];
-	            return Number(evento?.deltaCarteira || 0) !== 0 ? 6 : 0;
-	          }},
-	          pointBackgroundColor: "#1d4ed8",
-	          pointBorderColor: "#ffffff",
-	          pointBorderWidth: 2,
+	          backgroundColor: hexParaRgba("#1d4ed8", 0.78),
+	          borderWidth: 1,
+	          borderRadius: 4,
+	          maxBarThickness: 36,
 	          yAxisID: "y",
 	        }},
 	      ];
