@@ -2992,7 +2992,6 @@ def gerar_html_dashboard(
 	            border: {{ color: "rgba(88, 113, 102, 0.24)" }},
 	            ticks: {{
 	              precision: 0,
-	              maxTicksLimit: 5,
 	              color: "#3f5b4f",
 	              font: {{ size: 12, weight: "600" }},
 	            }}
@@ -3004,8 +3003,7 @@ def gerar_html_dashboard(
 	              color: "#3f5b4f",
 	              font: {{ size: 12, weight: "600" }},
 	              maxRotation: 0,
-	              autoSkip: true,
-	              maxTicksLimit: 6,
+	              autoSkip: false,
 	            }}
 	          }}
 	        }}
@@ -3236,39 +3234,6 @@ def gerar_html_dashboard(
 	        : [];
 	    }}
 
-	    function calcularEscalaHistoricoTecnicos(valores) {{
-	      const numeros = Array.isArray(valores)
-	        ? valores.map((valor) => Number(valor)).filter((valor) => Number.isFinite(valor))
-	        : [];
-	      if (!numeros.length) {{
-	        return {{ beginAtZero: true, min: 0, max: 5, maxTicksLimit: 5, stepSize: 1 }};
-	      }}
-
-	      const minimo = Math.min(...numeros);
-	      const maximo = Math.max(...numeros);
-	      if (minimo === maximo) {{
-	        const margemBase = maximo >= 10 ? 1 : 0.5;
-	        const min = Math.max(0, minimo - margemBase);
-	        const max = Math.max(min + 1, maximo + margemBase);
-	        return {{ beginAtZero: false, min, max, maxTicksLimit: 3, stepSize: 1 }};
-	      }}
-
-	      const amplitude = maximo - minimo;
-	      const margem = Math.max(0.5, Math.ceil(amplitude * 0.1));
-	      const min = Math.max(0, minimo - margem);
-	      const max = Math.max(min + 1, maximo + margem);
-	      return {{ beginAtZero: false, min, max, maxTicksLimit: 5, stepSize: 1 }};
-	    }}
-
-	    function calcularMarcadoresHistoricoTecnicos(eventosCarteira) {{
-	      return Array.isArray(eventosCarteira)
-	        ? eventosCarteira.map((item, indice) => {{
-	            if (indice === 0) return 0;
-	            return Number(item?.deltaCarteira || 0) !== 0 ? 4 : 0;
-	          }})
-	        : [];
-	    }}
-
 	    function renderHistoricoTecnicosEventos() {{
 	      if (!historicoTecnicosEventosMeta || !historicoTecnicosEventosBody) return;
 	      const resumo = resumoHistoricoTecnicosAtual;
@@ -3460,11 +3425,6 @@ def gerar_html_dashboard(
 
 	    function renderGraficoHistoricoTecnicos() {{
 	      const resumo = agruparHistoricoTecnicos();
-	      const escalaY = calcularEscalaHistoricoTecnicos(resumo.totalCarteira);
-	      const pontosAlteracao = calcularMarcadoresHistoricoTecnicos(resumo.eventosCarteira);
-	      const houveMudanca = Array.isArray(resumo.eventosCarteira)
-	        ? resumo.eventosCarteira.some((item) => Number(item?.deltaCarteira || 0) !== 0)
-	        : false;
 	      resumoHistoricoTecnicosAtual = resumo;
 	      if (historicoTecnicosIndiceSelecionado >= resumo.labels.length) {{
 	        historicoTecnicosIndiceSelecionado = resumo.labels.length - 1;
@@ -3480,19 +3440,19 @@ def gerar_html_dashboard(
 	          tension: 0.18,
 	          borderWidth: 2,
 	          fill: false,
-	          pointRadius: pontosAlteracao,
-	          pointHoverRadius: pontosAlteracao.map((valor) => (valor ? valor + 2 : 3)),
-	          pointBackgroundColor: pontosAlteracao.map((valor) => valor ? "#1d4ed8" : "rgba(29, 78, 216, 0)"),
-	          pointBorderColor: pontosAlteracao.map((valor) => valor ? "#ffffff" : "rgba(29, 78, 216, 0)"),
-	          pointBorderWidth: pontosAlteracao.map((valor) => valor ? 2 : 0),
+	          pointRadius: 4,
+	          pointHoverRadius: 6,
+	          pointBackgroundColor: "#1d4ed8",
+	          pointBorderColor: "#ffffff",
+	          pointBorderWidth: 2,
 	          yAxisID: "y",
 	        }},
 	      ];
-	      graficoHistoricoTecnicos.options.scales.y.beginAtZero = escalaY.beginAtZero;
-	      graficoHistoricoTecnicos.options.scales.y.min = escalaY.min;
-	      graficoHistoricoTecnicos.options.scales.y.max = escalaY.max;
-	      graficoHistoricoTecnicos.options.scales.y.ticks.maxTicksLimit = escalaY.maxTicksLimit;
-	      graficoHistoricoTecnicos.options.scales.y.ticks.stepSize = escalaY.stepSize;
+	      graficoHistoricoTecnicos.options.scales.y.beginAtZero = false;
+	      delete graficoHistoricoTecnicos.options.scales.y.min;
+	      delete graficoHistoricoTecnicos.options.scales.y.max;
+	      delete graficoHistoricoTecnicos.options.scales.y.ticks.maxTicksLimit;
+	      delete graficoHistoricoTecnicos.options.scales.y.ticks.stepSize;
 	      graficoHistoricoTecnicos.update();
 
 	      if (!resumo.labels.length) {{
@@ -3504,10 +3464,7 @@ def gerar_html_dashboard(
 	      const totalLacunas = resumo.eventosCarteira.filter((item) => Number(item.lacunaMinutos || 0) > 10).length;
 	      const complementoLacunas = totalLacunas ? ` Há ${{totalLacunas}} lacuna(s) de coleta destacadas no tooltip.` : "";
 	      const itinerarioFinal = resumo.totalCarteira.length ? resumo.totalCarteira[resumo.totalCarteira.length - 1] : 0;
-	      const descricaoVariacao = houveMudanca
-	        ? `o gráfico destaca apenas os pontos em que o itinerário mudou no período`
-	        : `não houve alteração no itinerário no período; o gráfico foi mantido estável em ${{itinerarioFinal}} O.S.`;
-	      historicoTecnicosMeta.textContent = `Histórico de ${{resumo.tecnicoSelecionado}} com ${{resumo.totalCapturas}} coleta(s) no intervalo selecionado; ${{descricaoVariacao}}.${{complementoLacunas}}`;
+	      historicoTecnicosMeta.textContent = `Histórico de ${{resumo.tecnicoSelecionado}} com ${{resumo.totalCapturas}} coleta(s) no intervalo selecionado; cada ponto da linha representa uma coleta real do itinerário e o gráfico usa apenas os valores observados no período. Terminou com ${{itinerarioFinal}} O.S.${{complementoLacunas}}`;
 	      renderHistoricoTecnicosEventos();
 	    }}
 
