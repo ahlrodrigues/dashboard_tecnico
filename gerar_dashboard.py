@@ -1951,7 +1951,6 @@ def gerar_html_dashboard(
         registroCorrespondeAEstadoFiltros(registro, filtros, FILTER_CAPABILITIES.operacional, {{
           obterData: obterDataIntervaloAgendamento,
           exigirAgendamento: true,
-          somenteEncerradas: false,
         }})
       );
     }}
