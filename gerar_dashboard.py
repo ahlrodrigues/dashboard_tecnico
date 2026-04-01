@@ -3124,13 +3124,7 @@ def gerar_html_dashboard(
 	            border: {{ color: "rgba(88, 113, 102, 0.24)" }},
 	            display: true,
 	            ticks: {{
-	              precision: 0,
-	              color: "#3f5b4f",
-	              font: {{ size: 12, weight: "600" }},
-	              callback(valor) {{
-	                if (resumoHistoricoTecnicosAtual?.escalaVisual !== "real") return "";
-	                return Number(valor);
-	              }},
+	              display: false,
 	            }}
 	          }},
 	          x: {{
@@ -3138,10 +3132,7 @@ def gerar_html_dashboard(
 	            border: {{ color: "rgba(88, 113, 102, 0.24)" }},
 	            offset: false,
 	            ticks: {{
-	              color: "#3f5b4f",
-	              font: {{ size: 12, weight: "600" }},
-	              maxRotation: 0,
-	              autoSkip: false,
+	              display: false,
 	            }}
 	          }}
 	        }}
