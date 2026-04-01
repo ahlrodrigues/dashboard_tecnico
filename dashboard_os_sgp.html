@@ -1587,28 +1587,51 @@
       normalizarPeriodoSelecionado();
     }
 
-    function dataDentroDoIntervalo(registro) {
-      const data = obterDataIntervaloDetalhe(registro);
+    const FILTER_CAPABILITIES = {
+      detalhes: ["data", "usuario", "grupo", "pop", "agendamento", "status", "busca"],
+      operacional: ["data", "usuario", "grupo", "pop", "agendamento", "status", "busca"],
+      pops: ["data", "usuario", "grupo", "pop", "agendamento", "status", "busca"],
+      analitica: ["data", "usuario", "grupo", "pop", "agendamento", "status", "busca"],
+      ranking: ["data", "usuario", "grupo", "pop", "agendamento", "status", "busca"],
+      rankingComparativo: ["usuario", "grupo", "pop", "agendamento", "status", "busca"],
+      votos: ["data", "usuario", "grupo", "pop", "agendamento", "status", "busca"],
+      historicoColetas: ["data", "usuario"],
+    };
+
+    function obterEstadoFiltros() {
+      return {
+        dataInicial: filtroDataInicial.value,
+        dataFinal: filtroDataFinal.value,
+        usuario: filtroUsuario.value,
+        grupo: filtroGrupo.value,
+        pop: filtroPop.value,
+        agendamento: filtroAgendamento.value,
+        status: filtroStatusOs.value,
+        busca: normalizarTexto(filtroBusca.value).toLowerCase(),
+      };
+    }
+
+    function capacidadesIncluem(capacidades, chave) {
+      return capacidades.includes(chave);
+    }
+
+    function dataEstaNoIntervalo(data, filtros) {
       if (!data) return false;
-      if (filtroDataInicial.value && data < filtroDataInicial.value) return false;
-      if (filtroDataFinal.value && data > filtroDataFinal.value) return false;
+      if (filtros.dataInicial && data < filtros.dataInicial) return false;
+      if (filtros.dataFinal && data > filtros.dataFinal) return false;
       return true;
     }
 
-    function dataDentroDoIntervaloRanking(registro) {
-      const data = obterDataFiltroTexto(registro);
-      if (!data) return false;
-      if (filtroDataInicial.value && data < filtroDataInicial.value) return false;
-      if (filtroDataFinal.value && data > filtroDataFinal.value) return false;
-      return true;
+    function dataDentroDoIntervalo(registro, filtros = obterEstadoFiltros()) {
+      return dataEstaNoIntervalo(obterDataIntervaloDetalhe(registro), filtros);
     }
 
-    function dataBaseDentroDoIntervalo(registro) {
-      const data = obterDataIntervaloBase(registro);
-      if (!data) return false;
-      if (filtroDataInicial.value && data < filtroDataInicial.value) return false;
-      if (filtroDataFinal.value && data > filtroDataFinal.value) return false;
-      return true;
+    function dataDentroDoIntervaloRanking(registro, filtros = obterEstadoFiltros()) {
+      return dataEstaNoIntervalo(obterDataFiltroTexto(registro), filtros);
+    }
+
+    function dataBaseDentroDoIntervalo(registro, filtros = obterEstadoFiltros()) {
+      return dataEstaNoIntervalo(obterDataIntervaloBase(registro), filtros);
     }
 
     function usuarioCorrespondeAoFiltro(registro, usuarioFiltro) {
@@ -1624,124 +1647,99 @@
       return Boolean(normalizarTexto(registro.data_agendamento) || normalizarTexto(registro.hora_agendamento));
     }
 
-    function agendamentoCorrespondeAoFiltro(registro) {
-      if (!filtroAgendamento.value) return true;
+    function agendamentoCorrespondeAoFiltro(registro, valorFiltro = filtroAgendamento.value) {
+      if (!valorFiltro) return true;
       const agendado = registroEhAgendado(registro);
-      if (filtroAgendamento.value === "Agendadas") return agendado;
-      if (filtroAgendamento.value === "Não agendadas") return !agendado;
+      if (valorFiltro === "Agendadas") return agendado;
+      if (valorFiltro === "Não agendadas") return !agendado;
       return true;
     }
 
-    function statusCorrespondeAoFiltro(registro) {
-      if (!filtroStatusOs.value) return true;
-      return obterStatus(registro) === filtroStatusOs.value;
+    function statusCorrespondeAoFiltro(registro, valorFiltro = filtroStatusOs.value) {
+      if (!valorFiltro) return true;
+      return obterStatus(registro) === valorFiltro;
     }
 
-    function filtrarDetalhes() {
-      const busca = normalizarTexto(filtroBusca.value).toLowerCase();
+    function registroCorrespondeAEstadoFiltros(registro, filtros, capacidades, opcoes = {}) {
+      const {
+        obterData = null,
+        somenteEncerradas = null,
+        textoBusca = obterTextoBusca(registro),
+      } = opcoes;
 
-      return detalhes.filter((registro) => {
-        if (!dataDentroDoIntervalo(registro)) return false;
-        if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
-        if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
-        if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
-        if (!agendamentoCorrespondeAoFiltro(registro)) return false;
-        if (!statusCorrespondeAoFiltro(registro)) return false;
-        if (busca && !obterTextoBusca(registro).includes(busca)) return false;
-        return true;
-      });
+      if (capacidadesIncluem(capacidades, "data")) {
+        const data = typeof obterData === "function" ? obterData(registro) : obterDataIntervaloDetalhe(registro);
+        if (!dataEstaNoIntervalo(data, filtros)) return false;
+      }
+      if (somenteEncerradas === true && !ehStatusEncerrada(registro)) return false;
+      if (somenteEncerradas === false && ehStatusEncerrada(registro)) return false;
+      if (capacidadesIncluem(capacidades, "usuario") && !usuarioCorrespondeAoFiltro(registro, filtros.usuario)) return false;
+      if (capacidadesIncluem(capacidades, "grupo") && filtros.grupo && obterGrupoFiltro(registro) !== filtros.grupo) return false;
+      if (capacidadesIncluem(capacidades, "pop") && filtros.pop && obterPop(registro) !== filtros.pop) return false;
+      if (capacidadesIncluem(capacidades, "agendamento") && !agendamentoCorrespondeAoFiltro(registro, filtros.agendamento)) return false;
+      if (capacidadesIncluem(capacidades, "status") && !statusCorrespondeAoFiltro(registro, filtros.status)) return false;
+      if (capacidadesIncluem(capacidades, "busca") && filtros.busca && !textoBusca.includes(filtros.busca)) return false;
+      return true;
     }
 
-    function filtrarBaseOperacional() {
-      const busca = normalizarTexto(filtroBusca.value).toLowerCase();
-
-      return detalhes.filter((registro) => {
-        if (!dataBaseDentroDoIntervalo(registro)) return false;
-        if (ehStatusEncerrada(registro)) return false;
-        if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
-        if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
-        if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
-        if (!agendamentoCorrespondeAoFiltro(registro)) return false;
-        if (!statusCorrespondeAoFiltro(registro)) return false;
-        if (busca && !obterTextoBusca(registro).includes(busca)) return false;
-        return true;
-      });
+    function filtrarDetalhes(filtros = obterEstadoFiltros()) {
+      return detalhes.filter((registro) =>
+        registroCorrespondeAEstadoFiltros(registro, filtros, FILTER_CAPABILITIES.detalhes, {
+          obterData: obterDataIntervaloDetalhe,
+        })
+      );
     }
 
-    function filtrarBasePops() {
-      const busca = normalizarTexto(filtroBusca.value).toLowerCase();
-
-      return detalhes.filter((registro) => {
-        if (!dataBaseDentroDoIntervalo(registro)) return false;
-        if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
-        if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
-        if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
-        if (!agendamentoCorrespondeAoFiltro(registro)) return false;
-        if (!statusCorrespondeAoFiltro(registro)) return false;
-        if (busca && !obterTextoBusca(registro).includes(busca)) return false;
-        return true;
-      });
+    function filtrarBaseOperacional(filtros = obterEstadoFiltros()) {
+      return detalhes.filter((registro) =>
+        registroCorrespondeAEstadoFiltros(registro, filtros, FILTER_CAPABILITIES.operacional, {
+          obterData: obterDataIntervaloBase,
+          somenteEncerradas: false,
+        })
+      );
     }
 
-    function filtrarBaseAnalitica() {
-      const busca = normalizarTexto(filtroBusca.value).toLowerCase();
-
-      return detalhes.filter((registro) => {
-        if (!dataDentroDoIntervalo(registro)) return false;
-        if (!ehStatusEncerrada(registro)) return false;
-        if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
-        if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
-        if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
-        if (!agendamentoCorrespondeAoFiltro(registro)) return false;
-        if (!statusCorrespondeAoFiltro(registro)) return false;
-        if (busca && !obterTextoBusca(registro).includes(busca)) return false;
-        return true;
-      });
+    function filtrarBasePops(filtros = obterEstadoFiltros()) {
+      return detalhes.filter((registro) =>
+        registroCorrespondeAEstadoFiltros(registro, filtros, FILTER_CAPABILITIES.pops, {
+          obterData: obterDataIntervaloBase,
+        })
+      );
     }
 
-    function filtrarBaseRanking() {
-      const busca = normalizarTexto(filtroBusca.value).toLowerCase();
-
-      return detalhes.filter((registro) => {
-        if (!dataDentroDoIntervaloRanking(registro)) return false;
-        if (!ehStatusEncerrada(registro)) return false;
-        if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
-        if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
-        if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
-        if (!agendamentoCorrespondeAoFiltro(registro)) return false;
-        if (!statusCorrespondeAoFiltro(registro)) return false;
-        if (busca && !obterTextoBusca(registro).includes(busca)) return false;
-        return true;
-      });
+    function filtrarBaseAnalitica(filtros = obterEstadoFiltros()) {
+      return detalhes.filter((registro) =>
+        registroCorrespondeAEstadoFiltros(registro, filtros, FILTER_CAPABILITIES.analitica, {
+          obterData: obterDataIntervaloDetalhe,
+          somenteEncerradas: true,
+        })
+      );
     }
 
-    function filtrarBaseRankingComparativo() {
-      const busca = normalizarTexto(filtroBusca.value).toLowerCase();
-
-      return detalhes.filter((registro) => {
-        if (!ehStatusEncerrada(registro)) return false;
-        if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
-        if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
-        if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
-        if (!agendamentoCorrespondeAoFiltro(registro)) return false;
-        if (!statusCorrespondeAoFiltro(registro)) return false;
-        if (busca && !obterTextoBusca(registro).includes(busca)) return false;
-        return true;
-      });
+    function filtrarBaseRanking(filtros = obterEstadoFiltros()) {
+      return detalhes.filter((registro) =>
+        registroCorrespondeAEstadoFiltros(registro, filtros, FILTER_CAPABILITIES.ranking, {
+          obterData: obterDataFiltroTexto,
+          somenteEncerradas: true,
+        })
+      );
     }
 
-    function obterUsuariosPermitidosParaVotos() {
-      const busca = normalizarTexto(filtroBusca.value).toLowerCase();
+    function filtrarBaseRankingComparativo(filtros = obterEstadoFiltros()) {
+      return detalhes.filter((registro) =>
+        registroCorrespondeAEstadoFiltros(registro, filtros, FILTER_CAPABILITIES.rankingComparativo, {
+          somenteEncerradas: true,
+        })
+      );
+    }
+
+    function obterUsuariosPermitidosParaVotos(filtros = obterEstadoFiltros()) {
       const usuarios = new Set();
 
       detalhes.forEach((registro) => {
-        if (!dataDentroDoIntervalo(registro)) return;
-        if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
-        if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return;
-        if (filtroPop.value && obterPop(registro) !== filtroPop.value) return;
-        if (!agendamentoCorrespondeAoFiltro(registro)) return;
-        if (!statusCorrespondeAoFiltro(registro)) return;
-        if (busca && !obterTextoBusca(registro).includes(busca)) return;
+        if (!registroCorrespondeAEstadoFiltros(registro, filtros, FILTER_CAPABILITIES.votos, {
+          obterData: obterDataIntervaloDetalhe,
+        })) return;
 
         const usuario = obterUsuario(registro);
         const responsavel = normalizarTexto(registro.responsavel);
@@ -1864,24 +1862,24 @@
       return voto;
     }
 
-    function filtrarVotosPorData() {
-      const busca = normalizarTexto(filtroBusca.value).toLowerCase();
-      const usuarioFiltro = normalizarTexto(filtroUsuario.value);
-      const usuariosPermitidos = obterUsuariosPermitidosParaVotos();
-      const restringirPorDetalhes = Boolean(filtroUsuario.value || filtroGrupo.value || filtroPop.value || filtroAgendamento.value || filtroStatusOs.value || busca);
+    function filtrarVotosPorData(filtros = obterEstadoFiltros()) {
+      const usuarioFiltro = normalizarTexto(filtros.usuario);
+      const usuariosPermitidos = obterUsuariosPermitidosParaVotos(filtros);
+      const restringirPorDetalhes = Boolean(
+        filtros.usuario || filtros.grupo || filtros.pop || filtros.agendamento || filtros.status || filtros.busca
+      );
       const mapaDuplas = construirMapaDuplasPorDia();
 
       return votosData.flatMap((registro) => {
         const data = obterDataVotoTexto(registro);
         if (!data) return [];
-        if (filtroDataInicial.value && data < filtroDataInicial.value) return [];
-        if (filtroDataFinal.value && data > filtroDataFinal.value) return [];
+        if (!dataEstaNoIntervalo(data, filtros)) return [];
 
         const voto = enriquecerVotoComDupla(registro, mapaDuplas);
         const tecnico = obterUsuarioVoto(voto);
         const tecnicoConsolidado = obterUsuarioVotoConsolidado(voto);
         if (usuarioFiltro && !usuariosSaoEquivalentes(tecnico, usuarioFiltro) && !usuariosSaoEquivalentes(tecnicoConsolidado, usuarioFiltro)) return [];
-        if (busca && !obterTextoBuscaVoto(voto).includes(busca)) return [];
+        if (filtros.busca && !obterTextoBuscaVoto(voto).includes(filtros.busca)) return [];
         if (restringirPorDetalhes) {
           if (!tecnico) return [];
           if (!usuariosPermitidos.has(normalizarChaveUsuario(tecnico)) && !usuariosPermitidos.has(normalizarChaveUsuario(tecnicoConsolidado))) return [];
@@ -1891,28 +1889,21 @@
       });
     }
 
-    function filtrarBaseReincidencias() {
-      const busca = normalizarTexto(filtroBusca.value).toLowerCase();
-
-      return detalhes.filter((registro) => {
-        if (!dataDentroDoIntervalo(registro)) return false;
-        if (!ehStatusEncerrada(registro)) return false;
-        if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
-        if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
-        if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
-        if (!agendamentoCorrespondeAoFiltro(registro)) return false;
-        if (!statusCorrespondeAoFiltro(registro)) return false;
-        if (busca && !obterTextoBusca(registro).includes(busca)) return false;
-        return true;
-      });
+    function filtrarBaseReincidencias(filtros = obterEstadoFiltros()) {
+      return detalhes.filter((registro) =>
+        registroCorrespondeAEstadoFiltros(registro, filtros, FILTER_CAPABILITIES.analitica, {
+          obterData: obterDataIntervaloDetalhe,
+          somenteEncerradas: true,
+        })
+      );
     }
 
     function filtrarDetalhamentoPops(registros) {
       return registros;
     }
 
-	    function filtrarBaseEncerramentos() {
-	      return filtrarBaseAnalitica();
+	    function filtrarBaseEncerramentos(filtros = obterEstadoFiltros()) {
+	      return filtrarBaseAnalitica(filtros);
 	    }
 
     function ehStatusEncerrada(registro) {
@@ -3355,18 +3346,19 @@
 	    function aplicarFiltros() {
 	      normalizarPeriodoSelecionado();
 	      salvarFiltros();
-      const registros = filtrarDetalhes();
-      const registrosOperacionais = filtrarBaseOperacional();
-      const registrosAnaliticos = filtrarBaseAnalitica();
-      const registrosPops = filtrarBasePops();
+      const filtros = obterEstadoFiltros();
+      const registros = filtrarDetalhes(filtros);
+      const registrosOperacionais = filtrarBaseOperacional(filtros);
+      const registrosAnaliticos = filtrarBaseAnalitica(filtros);
+      const registrosPops = filtrarBasePops(filtros);
       const registrosDetalhamentoPops = filtrarDetalhamentoPops(registrosPops);
       const registrosFinalizados = registrosAnaliticos;
-      const registrosRanking = filtrarBaseRanking();
-      const registrosVotos = filtrarVotosPorData();
+      const registrosRanking = filtrarBaseRanking(filtros);
+      const registrosVotos = filtrarVotosPorData(filtros);
       const registrosVotosUnicos = deduplicarVotosPorIpEData(registrosVotos);
-	      const registrosBaseEncerramentos = filtrarBaseEncerramentos();
-      const registrosBaseRanking = filtrarBaseRankingComparativo();
-      const registrosBaseReincidencias = filtrarBaseReincidencias();
+	      const registrosBaseEncerramentos = filtrarBaseEncerramentos(filtros);
+      const registrosBaseRanking = filtrarBaseRankingComparativo(filtros);
+      const registrosBaseReincidencias = filtrarBaseReincidencias(filtros);
 	      renderStatusCards(registrosOperacionais, registrosBaseEncerramentos);
 	      renderBacklogOperacional(registrosOperacionais);
 	      renderMotivoCards(registrosPops);
