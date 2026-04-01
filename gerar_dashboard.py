@@ -1579,18 +1579,10 @@ def gerar_html_dashboard(
     }}
 
     function obterDataIntervaloDetalhe(registro) {{
-      if (filtroAgendamento.value === "Agendadas") {{
-        const dataAgendamento = obterDataAgendamentoTexto(registro);
-        if (dataAgendamento) return dataAgendamento;
-      }}
       return obterDataFiltroTexto(registro);
     }}
 
     function obterDataIntervaloBase(registro) {{
-      if (filtroAgendamento.value === "Agendadas") {{
-        const dataAgendamento = obterDataAgendamentoTexto(registro);
-        if (dataAgendamento) return dataAgendamento;
-      }}
       return obterDataBaseTexto(registro);
     }}
 
@@ -1960,6 +1952,7 @@ def gerar_html_dashboard(
         if (!usuarioCorrespondeAoFiltro(registro, filtroUsuario.value)) return false;
         if (filtroGrupo.value && obterGrupoFiltro(registro) !== filtroGrupo.value) return false;
         if (filtroPop.value && obterPop(registro) !== filtroPop.value) return false;
+        if (!agendamentoCorrespondeAoFiltro(registro)) return false;
         if (!statusCorrespondeAoFiltro(registro)) return false;
         if (busca && !obterTextoBusca(registro).includes(busca)) return false;
         return true;
