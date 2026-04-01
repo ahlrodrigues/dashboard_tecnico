@@ -3028,30 +3028,6 @@ def gerar_html_dashboard(
 	      }}
 	    }});
 
-	    const pluginRotulosGraficoHistoricoTecnicos = {{
-	      id: "rotulosGraficoHistoricoTecnicos",
-	      afterDatasetsDraw(chart) {{
-	        if (resumoHistoricoTecnicosAtual?.escalaVisual === "real") return;
-	        const dataset = chart.data.datasets?.[0];
-	        const meta = chart.getDatasetMeta(0);
-	        if (!dataset || !meta?.data?.length) return;
-
-	        const ctx = chart.ctx;
-	        ctx.save();
-	        ctx.fillStyle = "#173229";
-	        ctx.font = "600 12px Segoe UI";
-	        ctx.textAlign = "center";
-	        ctx.textBaseline = "bottom";
-
-	        meta.data.forEach((ponto, indice) => {{
-	          const valorReal = resumoHistoricoTecnicosAtual?.totalCarteira?.[indice];
-	          if (valorReal === undefined || valorReal === null) return;
-	          ctx.fillText(String(valorReal), ponto.x, ponto.y - 10);
-	        }});
-	        ctx.restore();
-	      }},
-	    }};
-
 	    function obterLinhasTooltipHistoricoTecnicos(indice) {{
 	      if (!resumoHistoricoTecnicosAtual) return {{ titulo: "", linhas: [] }};
 	      const evento = Array.isArray(resumoHistoricoTecnicosAtual.eventosCarteira)
@@ -3130,11 +3106,10 @@ def gerar_html_dashboard(
 	        labels: [],
 	        datasets: []
 	      }},
-	      plugins: [pluginRotulosGraficoHistoricoTecnicos],
 	      options: {{
 	        responsive: true,
 	        maintainAspectRatio: false,
-	        interaction: {{ mode: "nearest", intersect: false }},
+	        interaction: {{ mode: "index", intersect: false, axis: "x" }},
 	        plugins: {{
 	          legend: {{ display: false }},
 	          tooltip: {{
