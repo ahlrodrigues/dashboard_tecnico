@@ -2795,7 +2795,26 @@
 	        plugins: {
 	          legend: { display: false },
 	          tooltip: {
+	            displayColors: false,
+	            padding: 10,
+	            caretPadding: 8,
+	            titleFont: { size: 12, weight: "700" },
+	            bodyFont: { size: 12, weight: "600" },
 	            callbacks: {
+	              title(items) {
+	                if (!items.length || !resumoHistoricoTecnicosAtual) return "";
+	                const indice = items[0].dataIndex;
+	                const evento = Array.isArray(resumoHistoricoTecnicosAtual.eventosCarteira)
+	                  ? resumoHistoricoTecnicosAtual.eventosCarteira[indice]
+	                  : null;
+	                return evento?.capturadoEm || items[0].label || "";
+	              },
+	              label(item) {
+	                if (!resumoHistoricoTecnicosAtual) return "";
+	                const indice = item.dataIndex;
+	                const valorReal = resumoHistoricoTecnicosAtual?.totalCarteira?.[indice];
+	                return `Itinerário: ${valorReal ?? item.formattedValue} O.S.`;
+	              },
 	              afterBody(items) {
 	                if (!items.length || !resumoHistoricoTecnicosAtual) return [];
 	                const indice = items[0].dataIndex;
@@ -2818,17 +2837,6 @@
 	                if (Number(evento.encerradasDaCarteira || 0) > 0) linhas.push(`Saídas por encerramento: ${evento.encerradasDaCarteira}`);
 	                if (Number(evento.reabertas || 0) > 0) linhas.push(`Reaberturas recebidas: ${evento.reabertas}`);
 
-	                const detalhes = Array.isArray(evento.detalhes) ? evento.detalhes : [];
-	                detalhes.slice(0, 6).forEach((item) => {
-	                  const texto = formatarEventoCarteira(item);
-	                  if (texto) linhas.push(texto);
-	                });
-	                if (detalhes.length > 6) {
-	                  linhas.push(`+${detalhes.length - 6} evento(s) adicionais`);
-	                }
-	                if (!detalhes.length && Number(evento.deltaCarteira || 0) !== 0) {
-	                  linhas.push("Detalhe por O.S. indisponível neste ponto do histórico legado.");
-	                }
 	                if (!linhas.length) {
 	                  linhas.push("Sem alteração no itinerário nesta coleta.");
 	                }
@@ -2843,12 +2851,6 @@
 	            grid: { color: "rgba(88, 113, 102, 0.14)" },
 	            border: { color: "rgba(88, 113, 102, 0.24)" },
 	            display: true,
-	            title: {
-	              display: true,
-	              text: "Número total",
-	              color: "#173229",
-	              font: { size: 12, weight: "700" },
-	            },
 	            ticks: {
 	              precision: 0,
 	              color: "#3f5b4f",
@@ -2863,12 +2865,6 @@
 	            grid: { display: false },
 	            border: { color: "rgba(88, 113, 102, 0.24)" },
 	            offset: false,
-	            title: {
-	              display: true,
-	              text: "Técnicos",
-	              color: "#173229",
-	              font: { size: 12, weight: "700" },
-	            },
 	            ticks: {
 	              color: "#3f5b4f",
 	              font: { size: 12, weight: "600" },
@@ -3436,14 +3432,15 @@
 	          borderColor: "#1d4ed8",
 	          backgroundColor: hexParaRgba("#1d4ed8", 0.78),
 	          borderWidth: 1,
-	          borderRadius: 4,
-	          maxBarThickness: 36,
+	          borderRadius: 0,
+	          categoryPercentage: 1,
+	          barPercentage: 1,
+	          maxBarThickness: 48,
 	          yAxisID: "y",
 	        },
 	      ];
 	      graficoHistoricoTecnicos.options.scales.y.beginAtZero = serieHistorico.eixoY.beginAtZero;
 	      graficoHistoricoTecnicos.options.scales.y.display = serieHistorico.escalaVisual === "real";
-	      graficoHistoricoTecnicos.options.scales.x.title.text = resumo.tecnicoSelecionado || "Técnicos";
 	      if (serieHistorico.eixoY.min === undefined) delete graficoHistoricoTecnicos.options.scales.y.min;
 	      else graficoHistoricoTecnicos.options.scales.y.min = serieHistorico.eixoY.min;
 	      if (serieHistorico.eixoY.max === undefined) delete graficoHistoricoTecnicos.options.scales.y.max;
