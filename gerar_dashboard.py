@@ -1348,9 +1348,11 @@ def gerar_html_dashboard(
     let pollingAtualizacaoId = null;
     let restanteRefresh = refreshSeconds;
     let intervaloRefreshId = null;
+    let timeoutAplicarFiltrosBusca = null;
     let ordenacaoDetalhes = {{ col: "data_finalizacao_dashboard", dir: "desc" }};
     let ordenacaoRankingVotos = {{ col: votosCols[0] || "data", dir: "asc" }};
     let ordenacaoReincidencias = {{ col: "cliente", dir: "asc" }};
+    let tecnicosPermitidosHistorico = new Set();
 
     function normalizarTexto(valor) {{
       return String(valor || "").trim();
@@ -1361,6 +1363,17 @@ def gerar_html_dashboard(
       dataMinDisponivel = datasDisponiveisOrdenadas[0] || dataInicialPadrao || "";
       dataMaxDisponivel = datasDisponiveisOrdenadas[datasDisponiveisOrdenadas.length - 1] || dataFinalPadrao || dataMinDisponivel || "";
       restanteRefresh = refreshSeconds;
+    }}
+
+    function atualizarTecnicosPermitidosHistorico() {{
+      tecnicosPermitidosHistorico = new Set(
+        detalhes
+          .filter((registro) => normalizarTexto(registro.grupo_dashboard).toLowerCase() === "técnicos")
+          .map((registro) => normalizarChaveUsuario(
+            registro.responsavel || registro.finalizado_por_dashboard || registro.tecnico || registro.tecnico_nome
+          ))
+          .filter(Boolean)
+      );
     }}
 
     function aplicarVersaoDashboard() {{
@@ -1392,6 +1405,7 @@ def gerar_html_dashboard(
       sgpBaseUrl = normalizarTexto(payload.sgp_base_url) || sgpBaseUrl;
       aplicarVersaoDashboard();
       recalcularMetadadosBase();
+      atualizarTecnicosPermitidosHistorico();
     }}
 
     async function carregarDadosDashboardRemotos() {{
@@ -2048,14 +2062,14 @@ def gerar_html_dashboard(
       return formatarNomeUsuarioExibicao(mapaRotulos?.get(chave) || texto);
     }}
 
-    function construirMapaDuplasPorDia() {{
+    function construirMapaDuplasPorDia(registros = null) {{
       const mapaAuxiliar = new Map();
       const mapaResponsavel = new Map();
       const mapaAuxiliaresPorResponsavel = new Map();
-      const registros = filtrarDetalhes();
-      const mapaRotulos = construirMapaRotulosUsuarios(registros);
+      const baseRegistros = Array.isArray(registros) ? registros : filtrarDetalhes();
+      const mapaRotulos = construirMapaRotulosUsuarios(baseRegistros);
 
-      registros.forEach((registro) => {{
+      baseRegistros.forEach((registro) => {{
         const data = obterDataBaseTexto(registro);
         const responsavel = normalizarRotuloUsuario(registro.responsavel, mapaRotulos);
         if (!data || !responsavel) return;
@@ -2119,13 +2133,15 @@ def gerar_html_dashboard(
       return voto;
     }}
 
-    function filtrarVotosPorData(filtros = obterEstadoFiltros()) {{
+    function filtrarVotosPorData(filtros = obterEstadoFiltros(), registrosDetalhesFiltrados = null) {{
       const usuarioFiltro = normalizarTexto(filtros.usuario);
-      const usuariosPermitidos = obterUsuariosPermitidosParaVotos(filtros);
+      const usuariosPermitidos = Array.isArray(registrosDetalhesFiltrados)
+        ? obterUsuariosPermitidosParaVotosAPartirDeRegistros(registrosDetalhesFiltrados)
+        : obterUsuariosPermitidosParaVotos(filtros);
       const restringirPorDetalhes = Boolean(
         filtros.usuario || filtros.grupo || filtros.pop || filtros.agendamento || filtros.status || filtros.busca
       );
-      const mapaDuplas = construirMapaDuplasPorDia();
+      const mapaDuplas = construirMapaDuplasPorDia(registrosDetalhesFiltrados);
 
       return votosData.flatMap((registro) => {{
         const data = obterDataVotoTexto(registro);
@@ -2144,6 +2160,22 @@ def gerar_html_dashboard(
 
         return [voto];
       }});
+    }}
+
+    function obterUsuariosPermitidosParaVotosAPartirDeRegistros(registros) {{
+      const usuarios = new Set();
+
+      registros.forEach((registro) => {{
+        const usuario = obterUsuario(registro);
+        const responsavel = normalizarTexto(registro.responsavel);
+        if (usuario) usuarios.add(normalizarChaveUsuario(usuario));
+        if (responsavel) usuarios.add(normalizarChaveUsuario(responsavel));
+        obterTecnicosAuxiliares(registro).forEach((auxiliar) => {{
+          usuarios.add(normalizarChaveUsuario(auxiliar));
+        }});
+      }});
+
+      return usuarios;
     }}
 
     function filtrarBaseReincidencias(filtros = obterEstadoFiltros()) {{
@@ -3118,14 +3150,6 @@ def gerar_html_dashboard(
 
 	    function agruparResumoDiario() {{
 	      const usuarioFiltro = normalizarChaveUsuario(filtroUsuario.value);
-	      const tecnicosPermitidos = new Set(
-	        detalhesData
-	          .filter((registro) => normalizarTexto(registro.grupo_dashboard) === "Técnicos")
-	          .map((registro) => normalizarChaveUsuario(
-	            registro.responsavel || registro.finalizado_por_dashboard || registro.tecnico || registro.tecnico_nome
-	          ))
-	          .filter(Boolean)
-	      );
 	      const capturas = [];
 	      const mapaIndices = new Map();
 	      const mapaTecnicos = new Map();
@@ -3142,7 +3166,7 @@ def gerar_html_dashboard(
 
 	        const tecnicoKey = normalizarChaveUsuario(registro.tecnico || registro.tecnico_nome);
 	        if (!tecnicoKey) return;
-	        if (tecnicosPermitidos.size && !tecnicosPermitidos.has(tecnicoKey)) return;
+	        if (tecnicosPermitidosHistorico.size && !tecnicosPermitidosHistorico.has(tecnicoKey)) return;
 	        if (usuarioFiltro && tecnicoKey !== usuarioFiltro) return;
 
 	        if (!mapaTecnicos.has(tecnicoKey)) {{
@@ -3708,11 +3732,11 @@ def gerar_html_dashboard(
       const registrosStatusOperacional = filtrarBaseStatusOperacional(filtros);
       const registrosOperacionais = registrosStatusOperacional;
       const registrosAnaliticos = filtrarBaseAnalitica(filtros);
-      const registrosPops = filtrarBasePops(filtros);
+      const registrosPops = registrosStatusOperacional;
       const registrosDetalhamentoPops = filtrarDetalhamentoPops(registrosPops);
       const registrosFinalizados = registrosAnaliticos;
       const registrosRanking = filtrarBaseRanking(filtros);
-      const registrosVotos = filtrarVotosPorData(filtros);
+      const registrosVotos = filtrarVotosPorData(filtros, registros);
       const registrosVotosUnicos = deduplicarVotosPorIpEData(registrosVotos);
 	      const registrosBaseEncerramentos = filtrarBaseEncerramentos(filtros);
       const registrosBaseRanking = filtrarBaseRankingComparativo(filtros);
@@ -3733,6 +3757,13 @@ def gerar_html_dashboard(
 	      renderGraficoHistoricoTecnicos();
 	      atualizarMetas(registrosOperacionais, registrosFinalizados, registrosAnaliticos.length, registrosVotosUnicos.length, registrosVotos.length, registrosDetalhamentoPops.length);
 	    }}
+
+    function aplicarFiltrosComDebounce() {{
+      window.clearTimeout(timeoutAplicarFiltrosBusca);
+      timeoutAplicarFiltrosBusca = window.setTimeout(() => {{
+        aplicarFiltros();
+      }}, 180);
+    }}
 
     function formatarDataInput(data) {{
       const ano = data.getFullYear();
@@ -3770,7 +3801,7 @@ def gerar_html_dashboard(
       select.addEventListener("change", aplicarFiltros);
     }});
 
-    filtroBusca.addEventListener("input", aplicarFiltros);
+    filtroBusca.addEventListener("input", aplicarFiltrosComDebounce);
     quickRangeButtons.forEach((button) => {{
       button.addEventListener("click", () => aplicarAtalhoPeriodo(button.dataset.range));
     }});
