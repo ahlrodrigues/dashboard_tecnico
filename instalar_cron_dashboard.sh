@@ -38,28 +38,10 @@ if [[ -f "$REQ_FILE" ]]; then
   "$PIP_BIN" install -r "$REQ_FILE"
 fi
 
-INTERVALO_SEGUNDOS="$("$PYTHON_BIN" - <<'PY'
-import json
-from pathlib import Path
-
-cfg = json.loads(Path("config.json").read_text(encoding="utf-8"))
-refresh = int(cfg.get("dashboard", {}).get("atualizacao_segundos", 300))
-print(max(refresh, 60))
-PY
-)"
-
-INTERVALO_MINUTOS=$(( INTERVALO_SEGUNDOS / 60 ))
-if (( INTERVALO_MINUTOS < 1 )); then
-  INTERVALO_MINUTOS=1
-fi
-
-if (( 60 % INTERVALO_MINUTOS != 0 )); then
-  echo "O cron usa resolucao em minutos. Ajuste 'atualizacao_segundos' para um multiplo de 60 que divida 60." >&2
-  exit 1
-fi
+INTERVALO_MINUTOS=5
 
 CRON_TAG="# dashboard_tecnico_auto_update"
-CRON_CMD="*/${INTERVALO_MINUTOS} * * * * \"$SCRIPT_FILE\" $CRON_TAG"
+CRON_CMD="*/${INTERVALO_MINUTOS} * * * * /bin/bash \"$SCRIPT_FILE\" $CRON_TAG"
 
 TMP_CRON="$(mktemp)"
 trap 'rm -f "$TMP_CRON"' EXIT

@@ -211,7 +211,7 @@ chmod +x atualizar_dashboard.sh instalar_cron_dashboard.sh
 ./instalar_cron_dashboard.sh
 ```
 
-Isso cria uma entrada no `cron` para executar `main.py` no intervalo configurado em `dashboard.atualizacao_segundos`.
+Isso cria uma entrada no `cron` para executar a atualização automaticamente a cada 5 minutos.
 
 ## Deploy único em `8775`
 
