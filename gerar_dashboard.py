@@ -2134,7 +2134,8 @@ def gerar_html_dashboard(
 	    function filtrarBaseStatusOperacional(filtros = obterEstadoFiltros()) {{
 	      return detalhes.filter((registro) =>
 	        registroCorrespondeAEstadoFiltros(registro, filtros, FILTER_CAPABILITIES.statusOperacional, {{
-	          obterData: obterDataIntervaloBase,
+	          obterData: obterDataIntervaloFinalizacao,
+	          somenteEncerradas: true,
 	        }})
 	      );
 	    }}
@@ -2142,7 +2143,8 @@ def gerar_html_dashboard(
 	    function filtrarBaseOperacional(filtros = obterEstadoFiltros()) {{
 	      return detalhes.filter((registro) =>
 	        registroCorrespondeAEstadoFiltros(registro, filtros, FILTER_CAPABILITIES.operacional, {{
-	          obterData: obterDataIntervaloBase,
+	          obterData: obterDataIntervaloFinalizacao,
+	          somenteEncerradas: true,
 	        }})
 	      );
 	    }}
@@ -2150,7 +2152,8 @@ def gerar_html_dashboard(
 	    function filtrarBasePops(filtros = obterEstadoFiltros()) {{
 	      return detalhes.filter((registro) =>
 	        registroCorrespondeAEstadoFiltros(registro, filtros, FILTER_CAPABILITIES.pops, {{
-	          obterData: obterDataIntervaloBase,
+	          obterData: obterDataIntervaloFinalizacao,
+	          somenteEncerradas: true,
 	        }})
 	      );
 	    }}

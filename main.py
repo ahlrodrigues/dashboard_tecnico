@@ -748,15 +748,12 @@ def _resolver_tecnicos_classificacao(base: Path, config: dict[str, object]) -> d
 
 
 def _buscar_os_periodo(client: SGPClient, data_inicio: str, data_fim: str) -> list[dict[str, object]]:
-    raw_abertas = client.listar_ordens_servico_statuses(
-        statuses=STATUS_ABERTAS,
-    )
     raw_encerradas = client.listar_ordens_servico_statuses(
         statuses=STATUS_ENCERRADAS,
         data_finalizacao_inicio=data_inicio,
         data_finalizacao_fim=data_fim,
     )
-    return _mesclar_registros_os(raw_abertas + raw_encerradas)
+    return _mesclar_registros_os(raw_encerradas)
 
 
 def _atualizar_os_cache_incremental(
