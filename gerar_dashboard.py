@@ -3767,8 +3767,10 @@ def gerar_html_dashboard(
           mapa.set(tecnicoKey, {{
             tecnico: normalizarTexto(registro.tecnico_nome) || tecnicoKey,
             totalOs: 0,
+            osIniciais: 0,
             osRecebidas: 0,
             osEncerradas: 0,
+            primeiraCaptura: "",
             ultimaCaptura: "",
           }});
         }}
@@ -3781,6 +3783,10 @@ def gerar_html_dashboard(
           || 0
         );
 
+        if (!item.primeiraCaptura || capturadoEm < item.primeiraCaptura) {{
+          item.primeiraCaptura = capturadoEm;
+          item.osIniciais = Number(registro.total_carteira || 0);
+        }}
         if (!item.ultimaCaptura || capturadoEm > item.ultimaCaptura) {{
           item.ultimaCaptura = capturadoEm;
           item.totalOs = Number(registro.total_carteira || 0);
@@ -3809,10 +3815,11 @@ def gerar_html_dashboard(
           <span class="metric-value">${{item.totalOs}}</span>
           <span class="metric-sub">OS recebidas: ${{item.osRecebidas}}</span>
           <span class="metric-sub">OS encerradas: ${{item.osEncerradas}}</span>
+          <span class="metric-sub">OS iniciais: ${{item.osIniciais}}</span>
         `;
         resumoTecnicosGrid.appendChild(card);
       }});
-      resumoTecnicosMeta.textContent = `Mostrando ${{itens.length}} técnico(s) do grupo Técnicos com total atual, O.S. recebidas e O.S. encerradas no intervalo selecionado.`;
+      resumoTecnicosMeta.textContent = `Mostrando ${{itens.length}} técnico(s) do grupo Técnicos com O.S. iniciais, total atual, O.S. recebidas e O.S. encerradas no intervalo selecionado.`;
     }}
 
     function atualizarMetas(registrosOperacionais, registrosFinalizados, totalDetalhes, totalVotosValidos, totalVotosDetalhamento, totalDetalhamentoPops) {{

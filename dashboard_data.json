@@ -3,8 +3,8 @@
   "mes_selecionado": "Todos",
   "refresh_seconds": 1200,
   "sgp_base_url": "https://sgp.net4you.com.br",
-  "dashboard_version": "V2.5.3 (cc038e2)",
-  "dashboard_title": "Dashboard de OS SGP - V2.5.3 (cc038e2)",
+  "dashboard_version": "V2.5.3 (aa9f7ce)",
+  "dashboard_title": "Dashboard de OS SGP - V2.5.3 (aa9f7ce)",
   "dashboard_title_base": "Dashboard de OS SGP",
   "titulo_periodo": "Encerramentos e backlog operacional conforme o recorte atual e todos os filtros ativos",
   "detalhe_cols": [
@@ -28,7 +28,7 @@
     "status_dashboard": "Status"
   },
   "cards": {
-    "aberta": 73,
+    "aberta": 74,
     "encerrada": 4812,
     "encerrada_tecnicos": 2557,
     "pendente": 6,
@@ -125071,6 +125071,32 @@
       "mes_criacao_nome": "Dezembro",
       "responsavel": "TALIS",
       "status_dashboard": "Encerrada"
+    },
+    {
+      "id": 143929,
+      "cliente": "JOSEMAR OLIVEIRA LIMA",
+      "contrato": 18621,
+      "pop": "BAIA FORMOSA",
+      "motivo": "Corretiva",
+      "status": "Aberta",
+      "data_finalizacao_dashboard": "",
+      "finalizado_por_dashboard": "",
+      "grupo_dashboard": "Outros",
+      "mes_nome": "Abril",
+      "mes_num": 4,
+      "grupo_encerramento_dashboard": "Outros",
+      "total_os_encerramento_dashboard": "Fora da equipe responsável",
+      "contrato_status_dashboard": "Ativo",
+      "tecnicos_auxiliares": [],
+      "data_base_dashboard": "2026-04-01",
+      "data_criacao_dashboard": "2026-04-01",
+      "data_agendamento": "",
+      "hora_agendamento": "",
+      "classificacoes": [],
+      "mes_criacao_num": 4,
+      "mes_criacao_nome": "Abril",
+      "responsavel": "",
+      "status_dashboard": "Aberta"
     },
     {
       "id": 143928,
