@@ -414,6 +414,9 @@ def gerar_html_dashboard(
     .update-overlay.active {{
       opacity: 1;
       visibility: visible;
+      pointer-events: none;
+    }}
+    .update-overlay.blocking {{
       pointer-events: auto;
     }}
     .update-dialog {{
@@ -2027,7 +2030,7 @@ def gerar_html_dashboard(
 
     const FILTER_CAPABILITIES = {{
       detalhes: ["data", "usuario", "grupo", "pop", "agendamento", "status", "busca"],
-      statusOperacional: ["data", "usuario", "grupo", "pop", "agendamento", "status", "busca"],
+      statusOperacional: ["data", "usuario", "grupo", "pop", "agendamento", "busca"],
       operacional: ["data", "usuario", "grupo", "pop", "agendamento", "status", "busca"],
       pops: ["data", "usuario", "grupo", "pop", "agendamento", "status", "busca"],
       analitica: ["data", "usuario", "grupo", "pop", "agendamento", "status", "busca"],
@@ -2132,10 +2135,10 @@ def gerar_html_dashboard(
     }}
 
 	    function filtrarBaseStatusOperacional(filtros = obterEstadoFiltros()) {{
+	      const filtrosStatusOperacional = {{ ...filtros, status: "" }};
 	      return detalhes.filter((registro) =>
-	        registroCorrespondeAEstadoFiltros(registro, filtros, FILTER_CAPABILITIES.statusOperacional, {{
-	          obterData: obterDataIntervaloFinalizacao,
-	          somenteEncerradas: true,
+	        registroCorrespondeAEstadoFiltros(registro, filtrosStatusOperacional, FILTER_CAPABILITIES.statusOperacional, {{
+	          obterData: obterDataFiltroTexto,
 	        }})
 	      );
 	    }}
@@ -2143,8 +2146,7 @@ def gerar_html_dashboard(
 	    function filtrarBaseOperacional(filtros = obterEstadoFiltros()) {{
 	      return detalhes.filter((registro) =>
 	        registroCorrespondeAEstadoFiltros(registro, filtros, FILTER_CAPABILITIES.operacional, {{
-	          obterData: obterDataIntervaloFinalizacao,
-	          somenteEncerradas: true,
+	          obterData: obterDataFiltroTexto,
 	        }})
 	      );
 	    }}
@@ -2152,8 +2154,7 @@ def gerar_html_dashboard(
 	    function filtrarBasePops(filtros = obterEstadoFiltros()) {{
 	      return detalhes.filter((registro) =>
 	        registroCorrespondeAEstadoFiltros(registro, filtros, FILTER_CAPABILITIES.pops, {{
-	          obterData: obterDataIntervaloFinalizacao,
-	          somenteEncerradas: true,
+	          obterData: obterDataFiltroTexto,
 	        }})
 	      );
 	    }}
@@ -4243,8 +4244,9 @@ def gerar_html_dashboard(
       return `${{String(minutos).padStart(2, "0")}}:${{String(segundos).padStart(2, "0")}}`;
     }}
 
-    function atualizarVisibilidadeOverlay(ativo, mensagem = "", status = "", erro = false) {{
+    function atualizarVisibilidadeOverlay(ativo, mensagem = "", status = "", erro = false, bloquearInteracao = false) {{
       updateOverlay.classList.toggle("active", ativo);
+      updateOverlay.classList.toggle("blocking", ativo && Boolean(bloquearInteracao));
       updateOverlay.classList.toggle("error", Boolean(erro));
       updateOverlay.setAttribute("aria-hidden", ativo ? "false" : "true");
       if (mensagem) updateOverlayMessage.textContent = mensagem;
@@ -4296,6 +4298,7 @@ def gerar_html_dashboard(
           true,
           `Não foi possível acompanhar a atualização. ${{dicaServidor}}`,
           mensagemErro,
+          true,
           true,
         );
         encerrarEstadoAtualizacao();
@@ -4370,6 +4373,7 @@ def gerar_html_dashboard(
           true,
           `Não foi possível gerar os arquivos agora. ${{dicaServidor}}`,
           mensagemErro,
+          true,
           true,
         );
         encerrarEstadoAtualizacao();
