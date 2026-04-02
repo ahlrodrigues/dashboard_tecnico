@@ -1122,7 +1122,7 @@ def gerar_html_dashboard(
 	        </div>
 	        <div class="metric-grid cols-2" id="statusOperacionalGrid">
 	          <div class="metric-item"><span class="metric-label">Total de O.S. do recorte</span><span class="metric-value">{len(detalhes_data)}</span></div>
-	          <div class="metric-item"><span class="metric-label">Aberta</span><span class="metric-value">{cards['aberta']}</span></div>
+	          <div class="metric-item metric-separator"><span class="metric-label">Aberta</span><span class="metric-value">{cards['aberta']}</span></div>
 	          <div class="metric-item"><span class="metric-label">Pendente</span><span class="metric-value">{cards['pendente']}</span></div>
 	          <div class="metric-item"><span class="metric-label">Em execução</span><span class="metric-value">{cards['em_execucao']}</span></div>
 	          <div class="metric-item"><span class="metric-label">Encerrada</span><span class="metric-value">{cards['encerrada']}</span></div>
@@ -2454,11 +2454,13 @@ def gerar_html_dashboard(
 
       adicionarCardStatus("Total de O.S. do recorte", registros.length);
 
+      let primeiroStatusRenderizado = true;
       itensStatus.forEach(([status, total]) => {{
         if (!exibirStatusOperacionais && (status === "Aberta" || status === "Pendente" || status === "Em execução")) {{
           return;
         }}
-        adicionarCardStatus(status, total);
+        adicionarCardStatus(status, total, primeiroStatusRenderizado ? "metric-separator" : "");
+        primeiroStatusRenderizado = false;
       }});
 
       if (contagemStatus.has("Encerrada")) {{
