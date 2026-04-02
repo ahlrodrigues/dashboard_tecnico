@@ -3525,6 +3525,10 @@
 	    }
 
     function obterResumoTecnicosPainel() {
+      const primeiraCapturaJanela = tecnicoHistoryData
+        .map((registro) => normalizarTexto(registro.capturado_em))
+        .filter((capturadoEm) => capturadoEm && dataCapturaDentroDoIntervalo(capturadoEm))
+        .sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }))[0] || "";
       const mapa = new Map();
 
       tecnicoHistoryData.forEach((registro) => {
@@ -3539,23 +3543,17 @@
             tecnico: normalizarTexto(registro.tecnico_nome) || tecnicoKey,
             totalOs: 0,
             osIniciais: 0,
-            osRecebidas: 0,
-            osEncerradas: 0,
-            primeiraCaptura: "",
+            entradas: 0,
+            saidas: 0,
             ultimaCaptura: "",
           });
         }
 
         const item = mapa.get(tecnicoKey);
-        item.osRecebidas += Number(registro.recebidas_no_periodo || 0);
-        item.osEncerradas += Number(
-          registro.encerradas_da_carteira_no_periodo
-          || registro.encerradas_no_periodo
-          || 0
-        );
+        item.entradas += Number(registro.entradas_na_carteira || 0);
+        item.saidas += Number(registro.saidas_da_carteira || 0);
 
-        if (!item.primeiraCaptura || capturadoEm < item.primeiraCaptura) {
-          item.primeiraCaptura = capturadoEm;
+        if (capturadoEm === primeiraCapturaJanela) {
           item.osIniciais = Number(registro.total_carteira || 0);
         }
         if (!item.ultimaCaptura || capturadoEm > item.ultimaCaptura) {
@@ -3584,13 +3582,13 @@
         card.innerHTML = `
           <span class="metric-label">${item.tecnico}</span>
           <span class="metric-value">${item.totalOs}</span>
-          <span class="metric-sub">OS recebidas: ${item.osRecebidas}</span>
-          <span class="metric-sub">OS encerradas: ${item.osEncerradas}</span>
+          <span class="metric-sub">Entradas: ${item.entradas}</span>
+          <span class="metric-sub">Saídas: ${item.saidas}</span>
           <span class="metric-sub">OS iniciais: ${item.osIniciais}</span>
         `;
         resumoTecnicosGrid.appendChild(card);
       });
-      resumoTecnicosMeta.textContent = `Mostrando ${itens.length} técnico(s) do grupo Técnicos com O.S. iniciais, total atual, O.S. recebidas e O.S. encerradas no intervalo selecionado.`;
+      resumoTecnicosMeta.textContent = `Mostrando ${itens.length} técnico(s) do grupo Técnicos com O.S. iniciais, total atual, entradas e saídas no intervalo selecionado.`;
     }
 
     function atualizarMetas(registrosOperacionais, registrosFinalizados, totalDetalhes, totalVotosValidos, totalVotosDetalhamento, totalDetalhamentoPops) {
