@@ -528,9 +528,21 @@ def gerar_html_dashboard(
       background: #f8fbf9;
       color: var(--text);
     }}
-    .panel-inline-filter {{
+    .table-head-inline {{
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 16px;
       margin: 14px 0 12px;
-      max-width: 380px;
+      flex-wrap: wrap;
+    }}
+    .table-head-inline .panel-meta {{
+      margin: 0;
+      flex: 1 1 320px;
+    }}
+    .panel-inline-filter {{
+      flex: 0 1 380px;
+      min-width: min(100%, 280px);
     }}
     .panel-inline-filter label {{
       display: block;
@@ -1134,6 +1146,13 @@ def gerar_html_dashboard(
 	      <h2 class="section-title" id="tituloBacklogOperacional">Backlog operacional</h2>
 	      <div class="panel-meta" id="backlogOperacionalMeta">Mostrando as O.S. abertas, pendentes e em execucao do snapshot filtrado.</div>
       <div class="table-wrap">
+        <div class="table-head-inline">
+          <div class="panel-meta">Busca local na tabela do backlog operacional.</div>
+          <div class="panel-inline-filter">
+            <label for="filtroBacklogOperacionalBusca">Buscar na tabela</label>
+            <input type="search" id="filtroBacklogOperacionalBusca" placeholder="Filtrar por OS, cliente, POP, status, motivo ou responsável" autocomplete="off" />
+          </div>
+        </div>
         <table id="tabelaBacklogOperacional">
           <thead>
             <tr><th>Data</th><th>POP</th><th>OS</th><th>Cliente</th><th>Contrato</th><th>Status</th><th>Motivo</th><th>Responsável</th><th>Auxiliares</th></tr>
@@ -1147,6 +1166,13 @@ def gerar_html_dashboard(
 	      <h2 class="section-title" id="tituloDetalhamentoPops">Detalhamento por POP</h2>
 	      <div class="panel-meta" id="detalhamentoPopsMeta">Mostrando todas as O.S. do recorte filtradas por POP.</div>
       <div class="table-wrap">
+        <div class="table-head-inline">
+          <div class="panel-meta">Busca local na tabela de detalhamento por POP.</div>
+          <div class="panel-inline-filter">
+            <label for="filtroDetalhamentoPopsBusca">Buscar na tabela</label>
+            <input type="search" id="filtroDetalhamentoPopsBusca" placeholder="Filtrar por OS, cliente, POP, status, motivo ou responsável" autocomplete="off" />
+          </div>
+        </div>
         <table id="tabelaDetalhamentoPops">
           <thead>
             <tr><th>Data</th><th>POP</th><th>OS</th><th>Cliente</th><th>Contrato</th><th>Status</th><th>Motivo</th><th>Responsável</th><th>Auxiliares</th></tr>
@@ -1159,9 +1185,16 @@ def gerar_html_dashboard(
 	    <div class="grid-panels">
 	      <div class="panel">
 	        <h2 class="section-title" id="tituloTempoBacklog">Tempo médio e backlog</h2>
-	        <div class="panel-meta" id="painelTempoMeta">Tempo médio e backlog no recorte atual.</div>
-	        <div class="table-wrap">
-	          <table>
+		      <div class="panel-meta" id="painelTempoMeta">Tempo médio e backlog no recorte atual.</div>
+		        <div class="table-wrap">
+              <div class="table-head-inline">
+                <div class="panel-meta">Busca local na tabela de indicadores.</div>
+                <div class="panel-inline-filter">
+                  <label for="filtroTempoBacklogBusca">Buscar na tabela</label>
+                  <input type="search" id="filtroTempoBacklogBusca" placeholder="Filtrar por indicador ou valor" autocomplete="off" />
+                </div>
+              </div>
+		          <table>
 	            <thead>
 	              <tr>
 	                <th>Indicador</th>
@@ -1175,10 +1208,17 @@ def gerar_html_dashboard(
 
       <div class="panel-stack">
         <div class="panel">
-          <h2 class="section-title" id="tituloRanking">Ranking por finalizador</h2>
-          <div class="panel-meta" id="rankingMeta">Ranking atualizado pelos filtros da página.</div>
-          <div class="table-wrap">
-            <table>
+	          <h2 class="section-title" id="tituloRanking">Ranking por finalizador</h2>
+	          <div class="panel-meta" id="rankingMeta">Ranking atualizado pelos filtros da página.</div>
+	          <div class="table-wrap">
+              <div class="table-head-inline">
+                <div class="panel-meta">Busca local na tabela de ranking.</div>
+                <div class="panel-inline-filter">
+                  <label for="filtroRankingBusca">Buscar na tabela</label>
+                  <input type="search" id="filtroRankingBusca" placeholder="Filtrar por finalizador, grupo, total ou variação" autocomplete="off" />
+                </div>
+              </div>
+	            <table>
               <thead>
                 <tr>
                   <th>Finalizado Por</th>
@@ -1193,10 +1233,17 @@ def gerar_html_dashboard(
         </div>
 
         <div class="panel">
-          <h2 class="section-title" id="tituloRankingVotosResumo">Ranking de votação</h2>
-          <div class="panel-meta" id="rankingVotosResumoMeta">Total de votos únicos por IP e data no recorte atual.</div>
-          <div class="table-wrap">
-            <table>
+	          <h2 class="section-title" id="tituloRankingVotosResumo">Ranking de votação</h2>
+	          <div class="panel-meta" id="rankingVotosResumoMeta">Total de votos únicos por IP e data no recorte atual.</div>
+	          <div class="table-wrap">
+              <div class="table-head-inline">
+                <div class="panel-meta">Busca local na tabela de ranking de votação.</div>
+                <div class="panel-inline-filter">
+                  <label for="filtroRankingVotosResumoBusca">Buscar na tabela</label>
+                  <input type="search" id="filtroRankingVotosResumoBusca" placeholder="Filtrar por técnico ou total" autocomplete="off" />
+                </div>
+              </div>
+	            <table>
               <thead>
                 <tr>
                   <th>Técnico</th>
@@ -1221,22 +1268,24 @@ def gerar_html_dashboard(
 	      <canvas id="graficoDiario"></canvas>
 	    </div>
 
-	    <div class="panel full chart-tooltip-host">
-	      <h2 class="section-title" id="tituloHistoricoTecnicos">Histórico dos técnicos</h2>
-	      <div class="panel-meta" id="historicoTecnicosMeta">Mostrando a evolução do itinerário no período filtrado.</div>
-	      <canvas id="graficoHistoricoTecnicos"></canvas>
-	      <div class="chartjs-html-tooltip" id="historicoTecnicosTooltip" aria-hidden="true"></div>
-	      <div class="panel-meta" id="historicoTecnicosEventosMeta">Lista fixa da evolução do itinerário e dos eventos registrados no período mostrado no gráfico.</div>
-      <div class="panel-inline-filter">
-        <label for="filtroHistoricoTecnicosBusca">Buscar na tabela do histórico</label>
-        <input
-          type="search"
-          id="filtroHistoricoTecnicosBusca"
-          placeholder="Filtrar por O.S., cliente, POP, evento ou detalhes"
-          autocomplete="off"
-        />
-      </div>
+		    <div class="panel full chart-tooltip-host">
+		      <h2 class="section-title" id="tituloHistoricoTecnicos">Histórico dos técnicos</h2>
+		      <div class="panel-meta" id="historicoTecnicosMeta">Mostrando a evolução do itinerário no período filtrado.</div>
+		      <canvas id="graficoHistoricoTecnicos"></canvas>
+		      <div class="chartjs-html-tooltip" id="historicoTecnicosTooltip" aria-hidden="true"></div>
       <div class="table-wrap">
+        <div class="table-head-inline">
+          <div class="panel-meta" id="historicoTecnicosEventosMeta">Lista fixa da evolução do itinerário e dos eventos registrados no período mostrado no gráfico.</div>
+          <div class="panel-inline-filter">
+            <label for="filtroHistoricoTecnicosBusca">Buscar na tabela do histórico</label>
+            <input
+              type="search"
+              id="filtroHistoricoTecnicosBusca"
+              placeholder="Filtrar por O.S., cliente, POP, evento ou detalhes"
+              autocomplete="off"
+            />
+          </div>
+        </div>
         <table>
           <thead>
             <tr>
@@ -1272,6 +1321,13 @@ def gerar_html_dashboard(
 	      <h2 class="section-title" id="tituloDetalhamento">Detalhamento</h2>
 	      <div class="panel-meta" id="detalheMeta">Mostrando os registros filtrados.</div>
       <div class="table-wrap">
+        <div class="table-head-inline">
+          <div class="panel-meta">Busca local na tabela de detalhamento.</div>
+          <div class="panel-inline-filter">
+            <label for="filtroDetalhesTabelaBusca">Buscar na tabela</label>
+            <input type="search" id="filtroDetalhesTabelaBusca" placeholder="Refinar apenas os resultados listados nesta tabela" autocomplete="off" />
+          </div>
+        </div>
         <table id="tabelaDetalhes">
           <thead id="detalhesHead">
             <tr>{header_cols}</tr>
@@ -1285,6 +1341,13 @@ def gerar_html_dashboard(
 	      <h2 class="section-title" id="tituloRankingVotos">Detalhamento dos votos</h2>
 	      <div class="panel-meta" id="rankingVotosMeta">Tabela de votos atualizada pelo recorte de data da página.</div>
       <div class="table-wrap">
+        <div class="table-head-inline">
+          <div class="panel-meta">Busca local na tabela de votos.</div>
+          <div class="panel-inline-filter">
+            <label for="filtroRankingVotosBusca">Buscar na tabela</label>
+            <input type="search" id="filtroRankingVotosBusca" placeholder="Filtrar por data, técnico, IP, responsável ou demais colunas" autocomplete="off" />
+          </div>
+        </div>
         <table id="tabelaRankingVotos">
           <thead id="rankingVotosHead">
             <tr>{votos_header_cols}</tr>
@@ -1298,6 +1361,13 @@ def gerar_html_dashboard(
 	      <h2 class="section-title" id="tituloReincidencia">Reincidência por cliente/contrato</h2>
 	      <div class="panel-meta" id="reincidenciaMeta">Mostrando as O.S. dos clientes/contratos com reincidência em janela móvel de 30 dias.</div>
       <div class="table-wrap">
+        <div class="table-head-inline">
+          <div class="panel-meta">Busca local na tabela de reincidências.</div>
+          <div class="panel-inline-filter">
+            <label for="filtroReincidenciasBusca">Buscar na tabela</label>
+            <input type="search" id="filtroReincidenciasBusca" placeholder="Filtrar por cliente, contrato, OS ou outros campos" autocomplete="off" />
+          </div>
+        </div>
         <table id="tabelaReincidencias">
           <thead id="reincidenciasHead">
             <tr>{header_cols}</tr>
@@ -1336,11 +1406,19 @@ def gerar_html_dashboard(
     const filtroDataFinal = document.getElementById("filtroDataFinal");
     const filtroUsuario = document.getElementById("filtroUsuario");
     const filtroGrupo = document.getElementById("filtroGrupo");
-    const filtroPop = document.getElementById("filtroPop");
+	    const filtroPop = document.getElementById("filtroPop");
 	    const filtroAgendamento = document.getElementById("filtroAgendamento");
 	    const filtroStatusOs = document.getElementById("filtroStatusOs");
 	    const filtroBusca = document.getElementById("filtroBusca");
+    const filtroBacklogOperacionalBusca = document.getElementById("filtroBacklogOperacionalBusca");
+    const filtroDetalhamentoPopsBusca = document.getElementById("filtroDetalhamentoPopsBusca");
+    const filtroTempoBacklogBusca = document.getElementById("filtroTempoBacklogBusca");
+    const filtroRankingBusca = document.getElementById("filtroRankingBusca");
+    const filtroRankingVotosResumoBusca = document.getElementById("filtroRankingVotosResumoBusca");
     const filtroHistoricoTecnicosBusca = document.getElementById("filtroHistoricoTecnicosBusca");
+    const filtroDetalhesTabelaBusca = document.getElementById("filtroDetalhesTabelaBusca");
+    const filtroRankingVotosBusca = document.getElementById("filtroRankingVotosBusca");
+    const filtroReincidenciasBusca = document.getElementById("filtroReincidenciasBusca");
 	    const quickRangeButtons = Array.from(document.querySelectorAll("[data-range]"));
     const refreshCountdown = document.getElementById("refreshCountdown");
     const refreshNowButton = document.getElementById("refreshNowButton");
@@ -2442,8 +2520,8 @@ def gerar_html_dashboard(
 	      }});
 	    }}
 
-    function renderBacklogOperacional(registros) {{
-      backlogOperacionalBody.innerHTML = "";
+	    function renderBacklogOperacional(registros) {{
+	      backlogOperacionalBody.innerHTML = "";
 
       if (!registros.length) {{
         backlogOperacionalBody.innerHTML = '<tr><td colspan="9" class="empty">Nenhuma O.S. no backlog para os filtros atuais.</td></tr>';
@@ -2458,7 +2536,23 @@ def gerar_html_dashboard(
         return obterPop(a).localeCompare(obterPop(b), "pt-BR", {{ sensitivity: "base" }});
       }});
 
-      linhas.forEach((registro) => {{
+        const linhasFiltradas = linhas.filter((registro) => linhaTabelaCorrespondeBuscaLocal([
+          obterDataAgendamentoTexto(registro) || obterDataBaseTexto(registro),
+          obterPop(registro),
+          normalizarTexto(registro.id || registro.ordem_servico),
+          normalizarTexto(registro.cliente),
+          normalizarTexto(registro.contrato),
+          obterStatus(registro),
+          obterMotivo(registro),
+          normalizarTexto(registro.responsavel),
+          obterTecnicosAuxiliares(registro).join(", "),
+        ], filtroBacklogOperacionalBusca));
+        if (!linhasFiltradas.length) {{
+          backlogOperacionalBody.innerHTML = '<tr><td colspan="9" class="empty">Nenhuma linha do backlog corresponde à busca local.</td></tr>';
+          return;
+        }}
+
+	      linhasFiltradas.forEach((registro) => {{
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td>${{obterDataAgendamentoTexto(registro) || obterDataBaseTexto(registro)}}</td>
@@ -2475,8 +2569,8 @@ def gerar_html_dashboard(
       }});
     }}
 
-    function renderDetalhamentoPops(registros) {{
-      detalhamentoPopsBody.innerHTML = "";
+	    function renderDetalhamentoPops(registros) {{
+	      detalhamentoPopsBody.innerHTML = "";
 
       if (!registros.length) {{
         detalhamentoPopsBody.innerHTML = '<tr><td colspan="9" class="empty">Nenhuma O.S. encontrada para os filtros atuais.</td></tr>';
@@ -2491,7 +2585,23 @@ def gerar_html_dashboard(
         return obterPop(a).localeCompare(obterPop(b), "pt-BR", {{ sensitivity: "base" }});
       }});
 
-      linhas.forEach((registro) => {{
+        const linhasFiltradas = linhas.filter((registro) => linhaTabelaCorrespondeBuscaLocal([
+          normalizarTexto(obterDataAgendamentoTexto(registro) || obterDataBaseTexto(registro)),
+          obterPop(registro),
+          normalizarTexto(registro.id || registro.ordem_servico),
+          normalizarTexto(registro.cliente),
+          normalizarTexto(registro.contrato),
+          obterStatus(registro),
+          obterMotivo(registro),
+          normalizarTexto(registro.responsavel),
+          obterTecnicosAuxiliares(registro).join(", "),
+        ], filtroDetalhamentoPopsBusca));
+        if (!linhasFiltradas.length) {{
+          detalhamentoPopsBody.innerHTML = '<tr><td colspan="9" class="empty">Nenhuma linha do detalhamento por POP corresponde à busca local.</td></tr>';
+          return;
+        }}
+
+	      linhasFiltradas.forEach((registro) => {{
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td>${{normalizarTexto(obterDataAgendamentoTexto(registro) || obterDataBaseTexto(registro))}}</td>
@@ -2548,7 +2658,7 @@ def gerar_html_dashboard(
 	      return `${{mediaDias.toFixed(1)}} dia(s)`;
 	    }}
 
-	    function renderTempoBacklog(registros, registrosFinalizados) {{
+		    function renderTempoBacklog(registros, registrosFinalizados) {{
 	      tempoBacklogBody.innerHTML = "";
 
 	      const backlogAberta = registros.filter((registro) => obterStatus(registro) === "Aberta").length;
@@ -2596,7 +2706,13 @@ def gerar_html_dashboard(
 	        ["Tempo médio de outros", formatarDuracaoDias(mediaPorGrupo("Outros"))],
 	      ];
 
-	      linhas.forEach(([indicador, valor]) => {{
+        const linhasFiltradas = linhas.filter((linha) => linhaTabelaCorrespondeBuscaLocal(linha, filtroTempoBacklogBusca));
+        if (!linhasFiltradas.length) {{
+          tempoBacklogBody.innerHTML = '<tr><td colspan="2" class="empty">Nenhum indicador corresponde à busca local.</td></tr>';
+          return;
+        }}
+
+		      linhasFiltradas.forEach(([indicador, valor]) => {{
 	        const tr = document.createElement("tr");
 	        tr.innerHTML = `
 	          <td><b>${{indicador}}</b></td>
@@ -2691,17 +2807,26 @@ def gerar_html_dashboard(
       return {{ texto: "→ 0.0%", classe: "flat" }};
     }}
 
-    function renderRanking(registros, registrosBaseRanking) {{
-      const linhas = agruparRanking(registros);
-      rankingBody.innerHTML = "";
+	    function renderRanking(registros, registrosBaseRanking) {{
+	      const linhas = agruparRanking(registros);
+	      rankingBody.innerHTML = "";
 
       if (!linhas.length) {{
         rankingBody.innerHTML = '<tr><td colspan="4" class="empty">Nenhum usuário encontrado.</td></tr>';
         return;
       }}
 
-      linhas.forEach((linha) => {{
-        const variacao = calcularVariacaoRanking(registros, registrosBaseRanking, linha.usuario, linha.grupo);
+        const linhasFiltradas = linhas.filter((linha) => {{
+          const variacao = calcularVariacaoRanking(registros, registrosBaseRanking, linha.usuario, linha.grupo);
+          return linhaTabelaCorrespondeBuscaLocal([linha.usuario, linha.grupo, linha.total, variacao.texto], filtroRankingBusca);
+        }});
+        if (!linhasFiltradas.length) {{
+          rankingBody.innerHTML = '<tr><td colspan="4" class="empty">Nenhuma linha do ranking corresponde à busca local.</td></tr>';
+          return;
+        }}
+
+	      linhasFiltradas.forEach((linha) => {{
+	        const variacao = calcularVariacaoRanking(registros, registrosBaseRanking, linha.usuario, linha.grupo);
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td>${{linha.usuario || linha["Finalizado Por"] || ""}}</td>
@@ -2729,16 +2854,22 @@ def gerar_html_dashboard(
         .sort((a, b) => b.total - a.total || a.tecnico.localeCompare(b.tecnico, "pt-BR", {{ sensitivity: "base" }}));
     }}
 
-    function renderRankingVotosResumo(registros) {{
-      rankingVotosResumoBody.innerHTML = "";
-      const linhas = agruparRankingVotacao(deduplicarVotosPorIpEData(registros));
+	    function renderRankingVotosResumo(registros) {{
+	      rankingVotosResumoBody.innerHTML = "";
+	      const linhas = agruparRankingVotacao(deduplicarVotosPorIpEData(registros));
 
       if (!linhas.length) {{
         rankingVotosResumoBody.innerHTML = '<tr><td colspan="2" class="empty">Nenhum voto encontrado para o recorte atual.</td></tr>';
         return;
       }}
 
-      linhas.forEach((linha) => {{
+        const linhasFiltradas = linhas.filter((linha) => linhaTabelaCorrespondeBuscaLocal([linha.tecnico, linha.total], filtroRankingVotosResumoBusca));
+        if (!linhasFiltradas.length) {{
+          rankingVotosResumoBody.innerHTML = '<tr><td colspan="2" class="empty">Nenhuma linha do ranking de votos corresponde à busca local.</td></tr>';
+          return;
+        }}
+
+	      linhasFiltradas.forEach((linha) => {{
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td>${{linha.tecnico}}</td>
@@ -2842,7 +2973,7 @@ def gerar_html_dashboard(
       }});
     }}
 
-    function renderRankingVotos(registros) {{
+	    function renderRankingVotos(registros) {{
       atualizarIndicadoresOrdenacao();
       rankingVotosBody.innerHTML = "";
 
@@ -2856,16 +2987,26 @@ def gerar_html_dashboard(
         return;
       }}
 
-      const analiseDuplicidade = analisarDuplicidadeVotos(registros);
-      const linhas = [...registros].sort((a, b) => {{
-        const comparacaoBase = compararRegistrosPorColunaGenerica(
-          obterValorOrdenacaoVoto(a, ordenacaoRankingVotos.col),
-          obterValorOrdenacaoVoto(b, ordenacaoRankingVotos.col),
-        );
-        return ordenacaoRankingVotos.dir === "asc" ? comparacaoBase : -comparacaoBase;
-      }});
+	      const analiseDuplicidade = analisarDuplicidadeVotos(registros);
+	      const linhas = [...registros].sort((a, b) => {{
+	        const comparacaoBase = compararRegistrosPorColunaGenerica(
+	          obterValorOrdenacaoVoto(a, ordenacaoRankingVotos.col),
+	          obterValorOrdenacaoVoto(b, ordenacaoRankingVotos.col),
+	        );
+	        return ordenacaoRankingVotos.dir === "asc" ? comparacaoBase : -comparacaoBase;
+	      }});
+        const linhasFiltradas = linhas.filter((registro) => {{
+          const valores = votosDisplayCols.map((coluna) =>
+            coluna === "responsavel_dupla_dashboard" ? obterUsuarioVotoConsolidado(registro) : normalizarTexto(registro[coluna])
+          );
+          return linhaTabelaCorrespondeBuscaLocal(valores, filtroRankingVotosBusca);
+        }});
+        if (!linhasFiltradas.length) {{
+          rankingVotosBody.innerHTML = `<tr><td colspan="${len(votos_display_cols) if votos_display_cols else 1}" class="empty">Nenhuma linha de votos corresponde à busca local.</td></tr>`;
+          return;
+        }}
 
-      linhas.forEach((registro) => {{
+	      linhasFiltradas.forEach((registro) => {{
         const tr = document.createElement("tr");
         const possuiDuplicidadeIpData = analiseDuplicidade.chavesDuplicadas.has(obterChaveDuplicidadeVoto(registro));
         const possuiIpDesconhecido = !ipEstaNosRangesConhecidos(registro);
@@ -2887,7 +3028,7 @@ def gerar_html_dashboard(
       }});
     }}
 
-    function renderDetalhes(registros) {{
+	    function renderDetalhes(registros) {{
       atualizarIndicadoresOrdenacao();
       detalhesBody.innerHTML = "";
 
@@ -2896,13 +3037,21 @@ def gerar_html_dashboard(
         return;
       }}
 
-      const linhas = [...registros].sort((a, b) => {{
-        const comparacaoBase = compararRegistrosPorColuna(a, b, ordenacaoDetalhes.col)
-          || normalizarTexto(a.id || a.ordem_servico).localeCompare(normalizarTexto(b.id || b.ordem_servico), "pt-BR", {{ sensitivity: "base" }});
-        return ordenacaoDetalhes.dir === "asc" ? comparacaoBase : -comparacaoBase;
-      }});
+	      const linhas = [...registros].sort((a, b) => {{
+	        const comparacaoBase = compararRegistrosPorColuna(a, b, ordenacaoDetalhes.col)
+	          || normalizarTexto(a.id || a.ordem_servico).localeCompare(normalizarTexto(b.id || b.ordem_servico), "pt-BR", {{ sensitivity: "base" }});
+	        return ordenacaoDetalhes.dir === "asc" ? comparacaoBase : -comparacaoBase;
+	      }});
+        const linhasFiltradas = linhas.filter((registro) => linhaTabelaCorrespondeBuscaLocal(
+          detalheCols.map((coluna) => coluna === "grupo_dashboard" ? obterGrupo(registro) : normalizarTexto(registro[coluna])),
+          filtroDetalhesTabelaBusca,
+        ));
+        if (!linhasFiltradas.length) {{
+          detalhesBody.innerHTML = `<tr><td colspan="${len(detalhe_cols) if detalhe_cols else 1}" class="empty">Nenhuma linha do detalhamento corresponde à busca local.</td></tr>`;
+          return;
+        }}
 
-      linhas.forEach((registro) => {{
+	      linhasFiltradas.forEach((registro) => {{
         const tr = document.createElement("tr");
         const linkSgp = obterLinkSgp(registro);
         if (linkSgp) {{
@@ -2975,7 +3124,7 @@ def gerar_html_dashboard(
       );
     }}
 
-    function renderReincidencias(registros) {{
+	    function renderReincidencias(registros) {{
       atualizarIndicadoresOrdenacao();
       const chavesReincidentes = obterChavesReincidentes(registros);
       const intervaloReincidencia = obterIntervaloReincidencia30Dias();
@@ -3011,7 +3160,16 @@ def gerar_html_dashboard(
           return ordenacaoReincidencias.dir === "asc" ? comparacaoBase : -comparacaoBase;
         }});
 
-      linhas.forEach((registro) => {{
+        const linhasFiltradas = linhas.filter((registro) => linhaTabelaCorrespondeBuscaLocal(
+          detalheCols.map((coluna) => coluna === "grupo_dashboard" ? obterGrupo(registro) : normalizarTexto(registro[coluna])),
+          filtroReincidenciasBusca,
+        ));
+        if (!linhasFiltradas.length) {{
+          reincidenciasBody.innerHTML = `<tr><td colspan="${len(detalhe_cols) if detalhe_cols else 1}" class="empty">Nenhuma linha de reincidência corresponde à busca local.</td></tr>`;
+          return;
+        }}
+
+	      linhasFiltradas.forEach((registro) => {{
         const tr = document.createElement("tr");
         const linkSgp = obterLinkSgp(registro);
         if (linkSgp) {{
@@ -3543,13 +3701,21 @@ def gerar_html_dashboard(
 	      }};
 	    }}
 
-      function filtroHistoricoTecnicosCorresponde(linha) {{
-        const termo = normalizarTexto(filtroHistoricoTecnicosBusca?.value).toLowerCase();
+      function obterTermoBuscaLocal(input) {{
+        return normalizarTexto(input?.value).toLowerCase();
+      }}
+
+      function linhaTabelaCorrespondeBuscaLocal(valores, input) {{
+        const termo = obterTermoBuscaLocal(input);
         if (!termo) return true;
-        const textoLinha = Array.isArray(linha?.valores)
-          ? linha.valores.map((valor) => normalizarTexto(valor).toLowerCase()).join(" ")
+        const textoLinha = Array.isArray(valores)
+          ? valores.map((valor) => normalizarTexto(valor).toLowerCase()).join(" ")
           : "";
         return textoLinha.includes(termo);
+      }}
+
+      function filtroHistoricoTecnicosCorresponde(linha) {{
+        return linhaTabelaCorrespondeBuscaLocal(linha?.valores, filtroHistoricoTecnicosBusca);
       }}
 
 	    function renderHistoricoTecnicosEventos() {{
@@ -3987,10 +4153,48 @@ def gerar_html_dashboard(
 	    }});
 
 	    filtroBusca.addEventListener("input", aplicarFiltrosComDebounce);
+    if (filtroBacklogOperacionalBusca) {{
+      filtroBacklogOperacionalBusca.addEventListener("input", () => renderBacklogOperacional(filtrarBaseStatusOperacional(obterEstadoFiltros())));
+    }}
+    if (filtroDetalhamentoPopsBusca) {{
+      filtroDetalhamentoPopsBusca.addEventListener("input", () => renderDetalhamentoPops(filtrarDetalhamentoPops(filtrarBaseStatusOperacional(obterEstadoFiltros()))));
+    }}
+    if (filtroTempoBacklogBusca) {{
+      filtroTempoBacklogBusca.addEventListener("input", () => {{
+        const filtros = obterEstadoFiltros();
+        renderTempoBacklog(filtrarBaseStatusOperacional(filtros), filtrarBaseAnalitica(filtros));
+      }});
+    }}
+    if (filtroRankingBusca) {{
+      filtroRankingBusca.addEventListener("input", () => {{
+        const filtros = obterEstadoFiltros();
+        renderRanking(filtrarBaseRanking(filtros), filtrarBaseRankingComparativo(filtros));
+      }});
+    }}
+    if (filtroRankingVotosResumoBusca) {{
+      filtroRankingVotosResumoBusca.addEventListener("input", () => {{
+        const filtros = obterEstadoFiltros();
+        const registros = filtrarDetalhes(filtros);
+        renderRankingVotosResumo(filtrarVotosPorData(filtros, registros));
+      }});
+    }}
     if (filtroHistoricoTecnicosBusca) {{
       filtroHistoricoTecnicosBusca.addEventListener("input", () => {{
         renderHistoricoTecnicosEventos();
       }});
+    }}
+    if (filtroDetalhesTabelaBusca) {{
+      filtroDetalhesTabelaBusca.addEventListener("input", () => renderDetalhes(filtrarBaseAnalitica(obterEstadoFiltros())));
+    }}
+    if (filtroRankingVotosBusca) {{
+      filtroRankingVotosBusca.addEventListener("input", () => {{
+        const filtros = obterEstadoFiltros();
+        const registros = filtrarDetalhes(filtros);
+        renderRankingVotos(filtrarVotosPorData(filtros, registros));
+      }});
+    }}
+    if (filtroReincidenciasBusca) {{
+      filtroReincidenciasBusca.addEventListener("input", () => renderReincidencias(filtrarBaseReincidencias(obterEstadoFiltros())));
     }}
 	    quickRangeButtons.forEach((button) => {{
 	      button.addEventListener("click", () => aplicarAtalhoPeriodo(button.dataset.range));
