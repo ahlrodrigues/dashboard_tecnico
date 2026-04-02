@@ -529,20 +529,20 @@ def gerar_html_dashboard(
       color: var(--text);
     }}
     .table-head-inline {{
-      display: flex;
-      align-items: end;
-      justify-content: space-between;
-      gap: 16px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
+      align-items: start;
+      gap: 14px 16px;
       margin: 14px 0 12px;
-      flex-wrap: wrap;
     }}
     .table-head-inline .panel-meta {{
       margin: 0;
-      flex: 1 1 320px;
+      min-width: 0;
     }}
     .panel-inline-filter {{
-      flex: 0 1 380px;
-      min-width: min(100%, 280px);
+      width: min(100%, 380px);
+      justify-self: end;
+      align-self: start;
     }}
     .panel-inline-filter label {{
       display: block;
@@ -1002,6 +1002,13 @@ def gerar_html_dashboard(
 	      .toolbar {{
 	        grid-template-columns: 1fr;
 	      }}
+        .table-head-inline {{
+          grid-template-columns: 1fr;
+        }}
+        .panel-inline-filter {{
+          width: 100%;
+          justify-self: stretch;
+        }}
 	      .metric-grid {{
 	        justify-content: flex-start;
 	      }}
