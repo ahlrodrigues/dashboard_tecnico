@@ -3783,7 +3783,10 @@ def gerar_html_dashboard(
         item.saidas += Number(registro.saidas_da_carteira || 0);
 
         if (capturadoEm === primeiraCapturaJanela) {{
-          item.osIniciais = Number(registro.total_carteira || 0);
+          const totalPrimeiraColeta = Number(registro.total_carteira || 0);
+          const entradasPrimeiraColeta = Number(registro.entradas_na_carteira || 0);
+          const saidasPrimeiraColeta = Number(registro.saidas_da_carteira || 0);
+          item.osIniciais = totalPrimeiraColeta - entradasPrimeiraColeta + saidasPrimeiraColeta;
         }}
         if (!item.ultimaCaptura || capturadoEm > item.ultimaCaptura) {{
           item.ultimaCaptura = capturadoEm;
@@ -3817,7 +3820,7 @@ def gerar_html_dashboard(
         `;
         resumoTecnicosGrid.appendChild(card);
       }});
-      resumoTecnicosMeta.textContent = `Mostrando ${{itens.length}} técnico(s) do grupo Técnicos com O.S. iniciais, entradas, saídas e total atual no intervalo selecionado.`;
+      resumoTecnicosMeta.textContent = `Mostrando ${{itens.length}} técnico(s) do grupo Técnicos com O.S. iniciais antes dos movimentos da primeira coleta, entradas, saídas e total atual no intervalo selecionado.`;
     }}
 
     function atualizarMetas(registrosOperacionais, registrosFinalizados, totalDetalhes, totalVotosValidos, totalVotosDetalhamento, totalDetalhamentoPops) {{
