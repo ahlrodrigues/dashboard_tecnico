@@ -3545,6 +3545,11 @@
             osIniciais: 0,
             entradas: 0,
             saidas: 0,
+            novasOs: 0,
+            transferenciasRecebidas: 0,
+            reabertas: 0,
+            encerradasDaCarteira: 0,
+            transferenciasCedidas: 0,
             ultimaCaptura: "",
           });
         }
@@ -3552,6 +3557,11 @@
         const item = mapa.get(tecnicoKey);
         item.entradas += Number(registro.entradas_na_carteira || 0);
         item.saidas += Number(registro.saidas_da_carteira || 0);
+        item.novasOs += Number(registro.novas_os_no_periodo || 0);
+        item.transferenciasRecebidas += Number(registro.transferencias_entrada_no_periodo || 0);
+        item.reabertas += Number(registro.reabertas_no_periodo || 0);
+        item.encerradasDaCarteira += Number(registro.encerradas_da_carteira_no_periodo || 0);
+        item.transferenciasCedidas += Number(registro.transferencias_saida_no_periodo || 0);
 
         if (capturadoEm === primeiraCapturaJanela) {
           item.osIniciais = Number(registro.total_carteira || 0);
@@ -3579,16 +3589,27 @@
       itens.forEach((item) => {
         const card = document.createElement("div");
         card.className = "metric-item compact";
+        const detalhes = [
+          ["OS iniciais", item.osIniciais],
+          ["Entradas", item.entradas],
+          ["Novas O.S.", item.novasOs],
+          ["Transferências recebidas", item.transferenciasRecebidas],
+          ["Reabertas", item.reabertas],
+          ["Saídas", item.saidas],
+          ["Encerradas da carteira", item.encerradasDaCarteira],
+          ["Transferências cedidas", item.transferenciasCedidas],
+        ]
+          .filter(([, valor]) => Number(valor) !== 0)
+          .map(([rotulo, valor]) => `<span class="metric-sub">${rotulo}: ${valor}</span>`)
+          .join("");
         card.innerHTML = `
           <span class="metric-label">${item.tecnico}</span>
           <span class="metric-value">${item.totalOs}</span>
-          <span class="metric-sub">Entradas: ${item.entradas}</span>
-          <span class="metric-sub">Saídas: ${item.saidas}</span>
-          <span class="metric-sub">OS iniciais: ${item.osIniciais}</span>
+          ${detalhes}
         `;
         resumoTecnicosGrid.appendChild(card);
       });
-      resumoTecnicosMeta.textContent = `Mostrando ${itens.length} técnico(s) do grupo Técnicos com O.S. iniciais, total atual, entradas e saídas no intervalo selecionado.`;
+      resumoTecnicosMeta.textContent = `Mostrando ${itens.length} técnico(s) do grupo Técnicos com O.S. iniciais, total atual, entradas e saídas discriminadas no intervalo selecionado.`;
     }
 
     function atualizarMetas(registrosOperacionais, registrosFinalizados, totalDetalhes, totalVotosValidos, totalVotosDetalhamento, totalDetalhamentoPops) {

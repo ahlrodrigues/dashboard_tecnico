@@ -3,8 +3,8 @@
   "mes_selecionado": "Todos",
   "refresh_seconds": 1200,
   "sgp_base_url": "https://sgp.net4you.com.br",
-  "dashboard_version": "V2.5.3 (f9911ad)",
-  "dashboard_title": "Dashboard de OS SGP - V2.5.3 (f9911ad)",
+  "dashboard_version": "V2.5.3 (1473a80)",
+  "dashboard_title": "Dashboard de OS SGP - V2.5.3 (1473a80)",
   "dashboard_title_base": "Dashboard de OS SGP",
   "titulo_periodo": "Encerramentos e backlog operacional conforme o recorte atual e todos os filtros ativos",
   "detalhe_cols": [
