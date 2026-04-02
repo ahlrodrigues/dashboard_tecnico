@@ -31,7 +31,7 @@
 "dashboard": {
   "ano_padrao": 2026,
   "mes_padrao": "Todos",
-  "atualizacao_segundos": 1200,
+  "atualizacao_segundos": 300,
     "janela_recente_dias": 45,
   "votos_cache_segundos": 1800,
   "tecnicos_history_retencao_dias": 366,

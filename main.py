@@ -165,7 +165,12 @@ def _mesclar_registros_os(registros: list[dict[str, object]]) -> list[dict[str, 
 
         atual = mesclados[chave]
         for campo, valor in registro.items():
+            if valor in ("", None, [], {}):
+                continue
             if campo not in atual or atual[campo] in ("", None, [], {}):
+                atual[campo] = valor
+                continue
+            if atual[campo] != valor:
                 atual[campo] = valor
 
     return [mesclados[chave] for chave in ordem_chaves]
@@ -751,12 +756,19 @@ def _buscar_os_periodo(client: SGPClient, data_inicio: str, data_fim: str) -> li
     raw_abertas = client.listar_ordens_servico_statuses(
         statuses=STATUS_ABERTAS,
     )
+    raw_agendadas = client.listar_ordens_servico_statuses(
+        statuses=STATUS_ABERTAS + STATUS_ENCERRADAS,
+        extra_params={
+            "data_agendamento_inicio": data_inicio,
+            "data_agendamento_fim": data_fim,
+        },
+    )
     raw_encerradas = client.listar_ordens_servico_statuses(
         statuses=STATUS_ENCERRADAS,
         data_finalizacao_inicio=data_inicio,
         data_finalizacao_fim=data_fim,
     )
-    return _mesclar_registros_os(raw_abertas + raw_encerradas)
+    return _mesclar_registros_os(raw_abertas + raw_agendadas + raw_encerradas)
 
 
 def _atualizar_os_cache_incremental(

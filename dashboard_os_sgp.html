@@ -892,13 +892,13 @@
 	          <p class="caption" id="statusOperacionalCaption">Backlog atual e encerramentos do recorte, sempre respeitando todos os filtros selecionados.</p>
 	        </div>
 	        <div class="metric-grid cols-2" id="statusOperacionalGrid">
-	          <div class="metric-item"><span class="metric-label">Total de O.S. do recorte</span><span class="metric-value">4789</span></div>
-	          <div class="metric-item"><span class="metric-label">Aberta</span><span class="metric-value">58</span></div>
+	          <div class="metric-item"><span class="metric-label">Total de O.S. do recorte</span><span class="metric-value">4860</span></div>
+	          <div class="metric-item"><span class="metric-label">Aberta</span><span class="metric-value">59</span></div>
 	          <div class="metric-item"><span class="metric-label">Pendente</span><span class="metric-value">14</span></div>
 	          <div class="metric-item"><span class="metric-label">Em execução</span><span class="metric-value">0</span></div>
-	          <div class="metric-item"><span class="metric-label">Encerrada</span><span class="metric-value">4717</span></div>
-	          <div class="metric-item metric-separator"><span class="metric-label">Encerradas pelo técnico</span><span class="metric-value">2574</span></div>
-	          <div class="metric-item"><span class="metric-label">Encerradas por outros</span><span class="metric-value">2143</span></div>
+	          <div class="metric-item"><span class="metric-label">Encerrada</span><span class="metric-value">4787</span></div>
+	          <div class="metric-item metric-separator"><span class="metric-label">Encerradas pelo técnico</span><span class="metric-value">2575</span></div>
+	          <div class="metric-item"><span class="metric-label">Encerradas por outros</span><span class="metric-value">2212</span></div>
 	        </div>
 	      </div>
 	      <div class="summary-card tertiary">
@@ -908,8 +908,8 @@
 	        </div>
 	        <div class="metric-grid flow scrollable" id="movimentacoesGrid">
 	          <div class="metric-item compact"><span class="metric-label">Inviabilidades</span><span class="metric-value" id="cardInviabilidade">34</span></div>
-	          <div class="metric-item compact"><span class="metric-label">Instalação de KIT</span><span class="metric-value" id="cardInstalacoes">625</span></div>
-	          <div class="metric-item compact"><span class="metric-label">Remoção de KIT</span><span class="metric-value" id="cardRemocoes">1006</span></div>
+	          <div class="metric-item compact"><span class="metric-label">Instalação de KIT</span><span class="metric-value" id="cardInstalacoes">626</span></div>
+	          <div class="metric-item compact"><span class="metric-label">Remoção de KIT</span><span class="metric-value" id="cardRemocoes">1010</span></div>
 	        </div>
 	      </div>
 	      <div class="summary-card quaternary">
@@ -1131,7 +1131,7 @@
         </div>
         <table id="tabelaRankingVotos">
           <thead id="rankingVotosHead">
-            <tr><th aria-sort="none"><button type="button" class="sort-header" data-col="auxiliares_dupla_dashboard"><span class="sort-header-label">auxiliares_no_dia</span><span class="sort-indicator" aria-hidden="true">△</span></button></th><th aria-sort="none"><button type="button" class="sort-header" data-col="papel_dupla_dashboard"><span class="sort-header-label">papel_no_dia</span><span class="sort-indicator" aria-hidden="true">△</span></button></th><th aria-sort="none"><button type="button" class="sort-header" data-col="responsavel_dupla_dashboard"><span class="sort-header-label">consolidado_para</span><span class="sort-indicator" aria-hidden="true">△</span></button></th></tr>
+            <tr><th aria-sort="none"><button type="button" class="sort-header" data-col="0"><span class="sort-header-label">0</span><span class="sort-indicator" aria-hidden="true">△</span></button></th><th aria-sort="none"><button type="button" class="sort-header" data-col="tecnico"><span class="sort-header-label">tecnico</span><span class="sort-indicator" aria-hidden="true">△</span></button></th><th aria-sort="none"><button type="button" class="sort-header" data-col="atendimento"><span class="sort-header-label">atendimento</span><span class="sort-indicator" aria-hidden="true">△</span></button></th><th aria-sort="none"><button type="button" class="sort-header" data-col="star"><span class="sort-header-label">star</span><span class="sort-indicator" aria-hidden="true">△</span></button></th><th aria-sort="none"><button type="button" class="sort-header" data-col="indicacao"><span class="sort-header-label">indicacao</span><span class="sort-indicator" aria-hidden="true">△</span></button></th><th aria-sort="none"><button type="button" class="sort-header" data-col="data"><span class="sort-header-label">data</span><span class="sort-indicator" aria-hidden="true">△</span></button></th><th aria-sort="none"><button type="button" class="sort-header" data-col="hora"><span class="sort-header-label">hora</span><span class="sort-indicator" aria-hidden="true">△</span></button></th><th aria-sort="none"><button type="button" class="sort-header" data-col="ip"><span class="sort-header-label">ip</span><span class="sort-indicator" aria-hidden="true">△</span></button></th><th aria-sort="none"><button type="button" class="sort-header" data-col="auxiliares_dupla_dashboard"><span class="sort-header-label">auxiliares_no_dia</span><span class="sort-indicator" aria-hidden="true">△</span></button></th><th aria-sort="none"><button type="button" class="sort-header" data-col="papel_dupla_dashboard"><span class="sort-header-label">papel_no_dia</span><span class="sort-indicator" aria-hidden="true">△</span></button></th><th aria-sort="none"><button type="button" class="sort-header" data-col="responsavel_dupla_dashboard"><span class="sort-header-label">consolidado_para</span><span class="sort-indicator" aria-hidden="true">△</span></button></th></tr>
           </thead>
           <tbody id="rankingVotosBody"></tbody>
         </table>
@@ -1163,22 +1163,22 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script>
     const detalheCols = ["id", "cliente", "contrato", "pop", "motivo", "status", "data_finalizacao_dashboard", "finalizado_por_dashboard", "grupo_dashboard"];
-    const votosCols = [];
-    const votosDisplayCols = ["auxiliares_dupla_dashboard", "papel_dupla_dashboard", "responsavel_dupla_dashboard"];
-    const votosDisplayLabels = {"auxiliares_dupla_dashboard": "auxiliares_no_dia", "papel_dupla_dashboard": "papel_no_dia", "responsavel_dupla_dashboard": "consolidado_para"};
+    const votosCols = ["0", "tecnico", "atendimento", "star", "indicacao", "data", "hora", "ip"];
+    const votosDisplayCols = ["0", "tecnico", "atendimento", "star", "indicacao", "data", "hora", "ip", "auxiliares_dupla_dashboard", "papel_dupla_dashboard", "responsavel_dupla_dashboard"];
+    const votosDisplayLabels = {"0": "0", "tecnico": "tecnico", "atendimento": "atendimento", "star": "star", "indicacao": "indicacao", "data": "data", "hora": "hora", "ip": "ip", "auxiliares_dupla_dashboard": "auxiliares_no_dia", "papel_dupla_dashboard": "papel_no_dia", "responsavel_dupla_dashboard": "consolidado_para"};
     const mesesOrdem = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
     let detalhes = [];
     let votosData = [];
     let tecnicoHistoryData = [];
     let resumoHistoricoTecnicosAtual = null;
     let historicoTecnicosIndiceSelecionado = -1;
-    let dataInicialPadrao = "2026-01-01";
+    let dataInicialPadrao = "2025-12-30";
     let dataFinalPadrao = "2026-04-02";
     let dataSnapshotAtual = "2026-04-02";
     let datasDisponiveisOrdenadas = [];
     let dataMinDisponivel = "";
     let dataMaxDisponivel = "";
-    let refreshSeconds = 1200;
+    let refreshSeconds = 300;
     let sgpBaseUrl = "https://sgp.net4you.com.br";
     let dashboardVersion = "V2.5.3";
     let dashboardTitle = "Dashboard de OS SGP - V2.5.3";
@@ -1572,6 +1572,13 @@
       return dataSnapshotAtual;
     }
 
+    function obterDataOperacionalTexto(registro, filtros = obterEstadoFiltros()) {
+      if (filtros.agendamento === "Agendadas") {
+        return obterDataAgendamentoTexto(registro);
+      }
+      return obterDataFiltroTexto(registro);
+    }
+
     function obterDataVotoTexto(registro) {
       return normalizarTexto(registro.data_voto_dashboard || "");
     }
@@ -1863,10 +1870,15 @@
       return Boolean(normalizarTexto(registro.data_agendamento) || normalizarTexto(registro.hora_agendamento));
     }
 
-    function agendamentoCorrespondeAoFiltro(registro, valorFiltro = filtroAgendamento.value) {
+    function agendamentoCorrespondeAoFiltro(registro, filtros = obterEstadoFiltros(), valorFiltro = filtroAgendamento.value) {
       if (!valorFiltro) return true;
       const agendado = registroEhAgendado(registro);
-      if (valorFiltro === "Agendadas") return agendado;
+      if (valorFiltro === "Agendadas") {
+        if (!agendado) return false;
+        const dataAgendamento = obterDataAgendamentoTexto(registro);
+        if (!filtros.dataInicial && !filtros.dataFinal) return true;
+        return dataEstaNoIntervalo(dataAgendamento, filtros);
+      }
       if (valorFiltro === "Não agendadas") return !agendado;
       return true;
     }
@@ -1894,7 +1906,7 @@
       if (capacidadesIncluem(capacidades, "usuario") && !usuarioCorrespondeAoFiltro(registro, filtros.usuario)) return false;
       if (capacidadesIncluem(capacidades, "grupo") && filtros.grupo && obterGrupoFiltro(registro) !== filtros.grupo) return false;
       if (capacidadesIncluem(capacidades, "pop") && filtros.pop && obterPop(registro) !== filtros.pop) return false;
-      if (capacidadesIncluem(capacidades, "agendamento") && !agendamentoCorrespondeAoFiltro(registro, filtros.agendamento)) return false;
+      if (capacidadesIncluem(capacidades, "agendamento") && !agendamentoCorrespondeAoFiltro(registro, filtros, filtros.agendamento)) return false;
       if (capacidadesIncluem(capacidades, "status") && !statusCorrespondeAoFiltro(registro, filtros.status)) return false;
       if (capacidadesIncluem(capacidades, "busca") && filtros.busca && !textoBusca.includes(filtros.busca)) return false;
       return true;
@@ -1912,7 +1924,7 @@
 	      const filtrosStatusOperacional = { ...filtros, status: "" };
 	      return detalhes.filter((registro) =>
 	        registroCorrespondeAEstadoFiltros(registro, filtrosStatusOperacional, FILTER_CAPABILITIES.statusOperacional, {
-	          obterData: obterDataFiltroTexto,
+	          obterData: (registroAtual) => obterDataOperacionalTexto(registroAtual, filtrosStatusOperacional),
 	        })
 	      );
 	    }
@@ -1920,7 +1932,7 @@
 	    function filtrarBaseOperacional(filtros = obterEstadoFiltros()) {
 	      return detalhes.filter((registro) =>
 	        registroCorrespondeAEstadoFiltros(registro, filtros, FILTER_CAPABILITIES.operacional, {
-	          obterData: obterDataFiltroTexto,
+	          obterData: (registroAtual) => obterDataOperacionalTexto(registroAtual, filtros),
 	        })
 	      );
 	    }
@@ -1928,7 +1940,7 @@
 	    function filtrarBasePops(filtros = obterEstadoFiltros()) {
 	      return detalhes.filter((registro) =>
 	        registroCorrespondeAEstadoFiltros(registro, filtros, FILTER_CAPABILITIES.pops, {
-	          obterData: obterDataFiltroTexto,
+	          obterData: (registroAtual) => obterDataOperacionalTexto(registroAtual, filtros),
 	        })
 	      );
 	    }
@@ -2797,7 +2809,7 @@
       }
 
       if (!registros.length) {
-        rankingVotosBody.innerHTML = `<tr><td colspan="$3" class="empty">Nenhum voto encontrado para o recorte atual.</td></tr>`;
+        rankingVotosBody.innerHTML = `<tr><td colspan="$11" class="empty">Nenhum voto encontrado para o recorte atual.</td></tr>`;
         return;
       }
 
@@ -2816,7 +2828,7 @@
           return linhaTabelaCorrespondeBuscaLocal(valores, filtroRankingVotosBusca);
         });
         if (!linhasFiltradas.length) {
-          rankingVotosBody.innerHTML = `<tr><td colspan="$3" class="empty">Nenhuma linha de votos corresponde à busca local.</td></tr>`;
+          rankingVotosBody.innerHTML = `<tr><td colspan="$11" class="empty">Nenhuma linha de votos corresponde à busca local.</td></tr>`;
           return;
         }
 

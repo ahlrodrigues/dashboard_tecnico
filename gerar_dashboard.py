@@ -1801,6 +1801,13 @@ def gerar_html_dashboard(
       return dataSnapshotAtual;
     }}
 
+    function obterDataOperacionalTexto(registro, filtros = obterEstadoFiltros()) {{
+      if (filtros.agendamento === "Agendadas") {{
+        return obterDataAgendamentoTexto(registro);
+      }}
+      return obterDataFiltroTexto(registro);
+    }}
+
     function obterDataVotoTexto(registro) {{
       return normalizarTexto(registro.data_voto_dashboard || "");
     }}
@@ -2092,10 +2099,15 @@ def gerar_html_dashboard(
       return Boolean(normalizarTexto(registro.data_agendamento) || normalizarTexto(registro.hora_agendamento));
     }}
 
-    function agendamentoCorrespondeAoFiltro(registro, valorFiltro = filtroAgendamento.value) {{
+    function agendamentoCorrespondeAoFiltro(registro, filtros = obterEstadoFiltros(), valorFiltro = filtroAgendamento.value) {{
       if (!valorFiltro) return true;
       const agendado = registroEhAgendado(registro);
-      if (valorFiltro === "Agendadas") return agendado;
+      if (valorFiltro === "Agendadas") {{
+        if (!agendado) return false;
+        const dataAgendamento = obterDataAgendamentoTexto(registro);
+        if (!filtros.dataInicial && !filtros.dataFinal) return true;
+        return dataEstaNoIntervalo(dataAgendamento, filtros);
+      }}
       if (valorFiltro === "Não agendadas") return !agendado;
       return true;
     }}
@@ -2123,7 +2135,7 @@ def gerar_html_dashboard(
       if (capacidadesIncluem(capacidades, "usuario") && !usuarioCorrespondeAoFiltro(registro, filtros.usuario)) return false;
       if (capacidadesIncluem(capacidades, "grupo") && filtros.grupo && obterGrupoFiltro(registro) !== filtros.grupo) return false;
       if (capacidadesIncluem(capacidades, "pop") && filtros.pop && obterPop(registro) !== filtros.pop) return false;
-      if (capacidadesIncluem(capacidades, "agendamento") && !agendamentoCorrespondeAoFiltro(registro, filtros.agendamento)) return false;
+      if (capacidadesIncluem(capacidades, "agendamento") && !agendamentoCorrespondeAoFiltro(registro, filtros, filtros.agendamento)) return false;
       if (capacidadesIncluem(capacidades, "status") && !statusCorrespondeAoFiltro(registro, filtros.status)) return false;
       if (capacidadesIncluem(capacidades, "busca") && filtros.busca && !textoBusca.includes(filtros.busca)) return false;
       return true;
@@ -2141,7 +2153,7 @@ def gerar_html_dashboard(
 	      const filtrosStatusOperacional = {{ ...filtros, status: "" }};
 	      return detalhes.filter((registro) =>
 	        registroCorrespondeAEstadoFiltros(registro, filtrosStatusOperacional, FILTER_CAPABILITIES.statusOperacional, {{
-	          obterData: obterDataFiltroTexto,
+	          obterData: (registroAtual) => obterDataOperacionalTexto(registroAtual, filtrosStatusOperacional),
 	        }})
 	      );
 	    }}
@@ -2149,7 +2161,7 @@ def gerar_html_dashboard(
 	    function filtrarBaseOperacional(filtros = obterEstadoFiltros()) {{
 	      return detalhes.filter((registro) =>
 	        registroCorrespondeAEstadoFiltros(registro, filtros, FILTER_CAPABILITIES.operacional, {{
-	          obterData: obterDataFiltroTexto,
+	          obterData: (registroAtual) => obterDataOperacionalTexto(registroAtual, filtros),
 	        }})
 	      );
 	    }}
@@ -2157,7 +2169,7 @@ def gerar_html_dashboard(
 	    function filtrarBasePops(filtros = obterEstadoFiltros()) {{
 	      return detalhes.filter((registro) =>
 	        registroCorrespondeAEstadoFiltros(registro, filtros, FILTER_CAPABILITIES.pops, {{
-	          obterData: obterDataFiltroTexto,
+	          obterData: (registroAtual) => obterDataOperacionalTexto(registroAtual, filtros),
 	        }})
 	      );
 	    }}
