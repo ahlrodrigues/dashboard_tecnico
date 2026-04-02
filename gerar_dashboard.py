@@ -1118,16 +1118,16 @@ def gerar_html_dashboard(
 	      <div class="summary-card secondary">
 	        <div class="summary-card-head">
 	          <h3 id="tituloStatusOperacional">Status Operacional</h3>
-	          <p class="caption">Backlog atual e encerramentos do recorte, sempre respeitando todos os filtros selecionados.</p>
+	          <p class="caption" id="statusOperacionalCaption">Backlog atual e encerramentos do recorte, sempre respeitando todos os filtros selecionados.</p>
 	        </div>
-	        <div class="metric-grid cols-2">
-	          <div class="metric-item"><span class="metric-label">Total de O.S. do recorte</span><span class="metric-value" id="cardTotalStatus">{len(detalhes_data)}</span></div>
-	          <div class="metric-item"><span class="metric-label">Em aberto</span><span class="metric-value" id="cardAberta">{cards['aberta']}</span></div>
-	          <div class="metric-item"><span class="metric-label">Pendentes</span><span class="metric-value" id="cardPendente">{cards['pendente']}</span></div>
-	          <div class="metric-item"><span class="metric-label">Em execução</span><span class="metric-value" id="cardEmExecucao">{cards['em_execucao']}</span></div>
-	          <div class="metric-item"><span class="metric-label">Total de O.S. encerradas</span><span class="metric-value" id="cardEncerrada">{cards['encerrada']}</span></div>
-	          <div class="metric-item metric-separator"><span class="metric-label">Encerradas pelo técnico</span><span class="metric-value" id="cardEncerradaTecnicos">{cards['encerrada_tecnicos']}</span></div>
-	          <div class="metric-item"><span class="metric-label">Encerradas por outros</span><span class="metric-value" id="cardPorOutros">{cards['por_outros']}</span></div>
+	        <div class="metric-grid cols-2" id="statusOperacionalGrid">
+	          <div class="metric-item"><span class="metric-label">Total de O.S. do recorte</span><span class="metric-value">{len(detalhes_data)}</span></div>
+	          <div class="metric-item"><span class="metric-label">Aberta</span><span class="metric-value">{cards['aberta']}</span></div>
+	          <div class="metric-item"><span class="metric-label">Pendente</span><span class="metric-value">{cards['pendente']}</span></div>
+	          <div class="metric-item"><span class="metric-label">Em execução</span><span class="metric-value">{cards['em_execucao']}</span></div>
+	          <div class="metric-item"><span class="metric-label">Encerrada</span><span class="metric-value">{cards['encerrada']}</span></div>
+	          <div class="metric-item metric-separator"><span class="metric-label">Encerradas pelo técnico</span><span class="metric-value">{cards['encerrada_tecnicos']}</span></div>
+	          <div class="metric-item"><span class="metric-label">Encerradas por outros</span><span class="metric-value">{cards['por_outros']}</span></div>
 	        </div>
 	      </div>
 	      <div class="summary-card tertiary">
@@ -1445,6 +1445,7 @@ def gerar_html_dashboard(
     const refreshApiUrl = `${{backendBaseUrl}}/api/refresh`;
     const refreshStatusUrl = `${{backendBaseUrl}}/api/refresh-status`;
     const dashboardDataUrl = `${{backendBaseUrl}}/api/dashboard-data`;
+    const STATUS_OPERACIONAL_ORDEM = ["Aberta", "Pendente", "Em execução", "Encerrada"];
 		    const tempoBacklogBody = document.getElementById("tempoBacklogBody");
     const rankingBody = document.getElementById("rankingBody");
     const rankingVotosResumoBody = document.getElementById("rankingVotosResumoBody");
@@ -1466,6 +1467,8 @@ def gerar_html_dashboard(
     const detalheMeta = document.getElementById("detalheMeta");
     const reincidenciaMeta = document.getElementById("reincidenciaMeta");
     const tituloStatusOperacional = document.getElementById("tituloStatusOperacional");
+    const statusOperacionalCaption = document.getElementById("statusOperacionalCaption");
+    const statusOperacionalGrid = document.getElementById("statusOperacionalGrid");
     const tituloMovimentacoes = document.getElementById("tituloMovimentacoes");
     const tituloPops = document.getElementById("tituloPops");
     const tituloBacklogOperacional = document.getElementById("tituloBacklogOperacional");
@@ -2403,32 +2406,53 @@ def gerar_html_dashboard(
     }}
 
     function renderStatusCards(registros) {{
-      let aberta = 0;
-      let pendente = 0;
-      let emExecucao = 0;
-      let encerrada = 0;
+      const contagemStatus = new Map();
       let encerradaTecnicos = 0;
       let encerradaOutros = 0;
+      const exibirStatusOperacionais = recorteIncluiSnapshotAtual();
 
       registros.forEach((registro) => {{
-        const status = obterStatus(registro);
-        if (status === "Aberta") aberta += 1;
-        else if (status === "Pendente") pendente += 1;
-        else if (status === "Em execução") emExecucao += 1;
-        else if (status === "Encerrada") {{
-          encerrada += 1;
+        const status = obterStatus(registro) || "Sem status";
+        contagemStatus.set(status, (contagemStatus.get(status) || 0) + 1);
+        if (status === "Encerrada") {{
           if (obterGrupoEncerramento(registro) === "Técnicos") encerradaTecnicos += 1;
           else encerradaOutros += 1;
         }}
       }});
 
-      document.getElementById("cardTotalStatus").textContent = registros.length;
-      document.getElementById("cardAberta").textContent = aberta;
-      document.getElementById("cardPendente").textContent = pendente;
-      document.getElementById("cardEmExecucao").textContent = emExecucao;
-      document.getElementById("cardEncerrada").textContent = encerrada;
-      document.getElementById("cardEncerradaTecnicos").textContent = encerradaTecnicos;
-      document.getElementById("cardPorOutros").textContent = encerradaOutros;
+      const itensStatus = [...contagemStatus.entries()].sort((a, b) => {{
+        const ordemA = STATUS_OPERACIONAL_ORDEM.indexOf(a[0]);
+        const ordemB = STATUS_OPERACIONAL_ORDEM.indexOf(b[0]);
+        if (ordemA !== -1 || ordemB !== -1) {{
+          if (ordemA === -1) return 1;
+          if (ordemB === -1) return -1;
+          if (ordemA !== ordemB) return ordemA - ordemB;
+        }}
+        return a[0].localeCompare(b[0], "pt-BR", {{ sensitivity: "base" }});
+      }});
+
+      statusOperacionalGrid.innerHTML = "";
+
+      const adicionarCardStatus = (label, valor, extraClass = "") => {{
+        const item = document.createElement("div");
+        item.className = `metric-item${{extraClass ? ` ${{extraClass}}` : ""}}`;
+        item.innerHTML = `<span class="metric-label">${{label}}</span><span class="metric-value">${{valor}}</span>`;
+        statusOperacionalGrid.appendChild(item);
+      }};
+
+      adicionarCardStatus("Total de O.S. do recorte", registros.length);
+
+      itensStatus.forEach(([status, total]) => {{
+        if (!exibirStatusOperacionais && (status === "Aberta" || status === "Pendente" || status === "Em execução")) {{
+          return;
+        }}
+        adicionarCardStatus(status, total);
+      }});
+
+      if (contagemStatus.has("Encerrada")) {{
+        adicionarCardStatus("Encerradas pelo técnico", encerradaTecnicos, "metric-separator");
+        adicionarCardStatus("Encerradas por outros", encerradaOutros);
+      }}
     }}
 
 	    function renderMotivoCards(registros) {{
@@ -2627,10 +2651,7 @@ def gerar_html_dashboard(
     }}
 
     function renderCardsEncerramentos(registros) {{
-      const cards = calcularCardsEncerramentos(registros);
-      document.getElementById("cardEncerrada").textContent = cards.totalOs;
-      document.getElementById("cardEncerradaTecnicos").textContent = cards.peloTecnico;
-      document.getElementById("cardPorOutros").textContent = cards.porOutros;
+      renderStatusCards(registros);
     }}
 
     function obterMembroGrafico(registro) {{
@@ -2903,9 +2924,23 @@ def gerar_html_dashboard(
       return partes.length ? partes.join(" | ") : "Todos os filtros";
     }}
 
+    function recorteIncluiSnapshotAtual() {{
+      if (!dataSnapshotAtual) return true;
+      const inicio = filtroDataInicial.value || dataInicialPadrao || "";
+      const fim = filtroDataFinal.value || dataFinalPadrao || "";
+      if (inicio && dataSnapshotAtual < inicio) return false;
+      if (fim && dataSnapshotAtual > fim) return false;
+      return true;
+    }}
+
     function atualizarTitulosPaineis() {{
       const resumo = obterResumoFiltrosTitulo();
       tituloStatusOperacional.textContent = `Status Operacional | ${{resumo}}`;
+      if (statusOperacionalCaption) {{
+        statusOperacionalCaption.textContent = recorteIncluiSnapshotAtual()
+          ? "Total e encerradas respeitam o recorte; aberta, pendente e em execução refletem a carteira atual quando o intervalo inclui hoje."
+          : "Para recortes totalmente no passado, o painel destaca apenas o total do recorte e as O.S. encerradas no intervalo.";
+      }}
       tituloMovimentacoes.textContent = `Movimentações | ${{resumo}}`;
       tituloPops.textContent = `POPs | ${{resumo}}`;
       tituloBacklogOperacional.textContent = `Backlog operacional | ${{resumo}}`;
