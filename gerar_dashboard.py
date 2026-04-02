@@ -3795,6 +3795,15 @@ def gerar_html_dashboard(
       }});
 
       return [...mapa.values()]
+        .map((item) => {{
+          const saldoEsperado = item.osIniciais + item.entradas - item.saidas;
+          if (saldoEsperado > item.totalOs) {{
+            item.saidas += saldoEsperado - item.totalOs;
+          }} else if (saldoEsperado < item.totalOs) {{
+            item.entradas += item.totalOs - saldoEsperado;
+          }}
+          return item;
+        }})
         .sort((a, b) => a.tecnico.localeCompare(b.tecnico, "pt-BR", {{ sensitivity: "base" }}));
     }}
 

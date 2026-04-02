@@ -480,6 +480,16 @@ def _atualizar_historico_tecnicos(
     current_state: dict[str, dict[str, object]] = {}
     summary_map: dict[str, dict[str, object]] = {}
 
+    def _totais_carteira_por_tecnico(estado: dict[str, dict[str, object]]) -> dict[str, int]:
+        totais: dict[str, int] = {}
+        for registro in estado.values():
+            tecnico = _texto_limpo(registro.get("tecnico", ""))
+            status = _texto_limpo(registro.get("status", ""))
+            if not tecnico or status == "Encerrada":
+                continue
+            totais[tecnico] = totais.get(tecnico, 0) + 1
+        return totais
+
     def ensure_summary(tecnico_key: str, tecnico_nome: str) -> dict[str, object] | None:
         if not tecnico_key:
             return None
@@ -640,6 +650,62 @@ def _atualizar_historico_tecnicos(
                         anterior=anterior,
                         atual=current_state[os_id],
                     )
+
+    if had_previous_state and summary_map:
+        totais_anteriores = _totais_carteira_por_tecnico(previous_state)
+        totais_atuais = _totais_carteira_por_tecnico(current_state)
+        tecnicos_comparados = set(summary_map) | set(totais_anteriores) | set(totais_atuais)
+        for tecnico_key in tecnicos_comparados:
+            summary = summary_map.get(tecnico_key)
+            if summary is None:
+                continue
+            total_anterior = totais_anteriores.get(tecnico_key, 0)
+            total_atual = totais_atuais.get(tecnico_key, 0)
+            delta_observado = total_atual - total_anterior
+            delta_calculado = int(summary.get("delta_carteira", 0) or 0)
+            ajuste = delta_observado - delta_calculado
+            if ajuste == 0:
+                continue
+
+            eventos = summary.get("eventos")
+            if not isinstance(eventos, list):
+                eventos = []
+                summary["eventos"] = eventos
+
+            if ajuste > 0:
+                summary["entradas_na_carteira"] += ajuste
+                eventos.append(
+                    {
+                        "tipo": "entrada_ajuste_reconciliacao",
+                        "os_id": "",
+                        "cliente": "",
+                        "pop": "",
+                        "de_tecnico": "",
+                        "para_tecnico": summary.get("tecnico_nome", ""),
+                        "finalizador": "",
+                        "status_anterior": "",
+                        "status_atual": "",
+                        "detalhes": f"Ajuste de reconciliacao: +{ajuste} entrada(s) para fechar a carteira observada.",
+                    }
+                )
+            else:
+                summary["saidas_da_carteira"] += abs(ajuste)
+                eventos.append(
+                    {
+                        "tipo": "saida_ajuste_reconciliacao",
+                        "os_id": "",
+                        "cliente": "",
+                        "pop": "",
+                        "de_tecnico": summary.get("tecnico_nome", ""),
+                        "para_tecnico": "",
+                        "finalizador": "",
+                        "status_anterior": "",
+                        "status_atual": "",
+                        "detalhes": f"Ajuste de reconciliacao: {abs(ajuste)} saida(s) para fechar a carteira observada.",
+                    }
+                )
+
+            summary["delta_carteira"] = delta_observado
 
     if summary_map:
         coleta_atual = [summary_map[chave] for chave in sorted(summary_map)]
