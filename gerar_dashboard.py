@@ -737,6 +737,13 @@ def gerar_html_dashboard(
       font-weight: 800;
       letter-spacing: -0.03em;
     }}
+    .metric-sub {{
+      display: block;
+      font-size: 12px;
+      line-height: 1.35;
+      color: var(--muted);
+      white-space: nowrap;
+    }}
     .summary-card.primary .metric-value,
     .summary-card.secondary .metric-value {{
       font-size: 28px;
@@ -1220,6 +1227,17 @@ def gerar_html_dashboard(
 	    </div>
 
 	    <div class="panel full">
+	      <h2 class="section-title" id="tituloResumoTecnicos">Resumo dos técnicos</h2>
+	      <div class="panel-meta" id="resumoTecnicosMeta">Mostrando os totais mais recentes e os movimentos acumulados dos técnicos no intervalo selecionado.</div>
+	      <div class="metric-grid flow scrollable" id="resumoTecnicosGrid">
+	        <div class="metric-item compact">
+	          <span class="metric-label">Sem dados no recorte</span>
+	          <span class="metric-value">0</span>
+	        </div>
+	      </div>
+	    </div>
+
+	    <div class="panel full">
 	      <h2 class="section-title" id="tituloDetalhamento">Detalhamento</h2>
 	      <div class="panel-meta" id="detalheMeta">Mostrando os registros filtrados.</div>
       <div class="table-wrap">
@@ -1339,11 +1357,14 @@ def gerar_html_dashboard(
     const tituloGraficoMensal = document.getElementById("tituloGraficoMensal");
     const tituloGraficoDiario = document.getElementById("tituloGraficoDiario");
     const tituloHistoricoTecnicos = document.getElementById("tituloHistoricoTecnicos");
+    const tituloResumoTecnicos = document.getElementById("tituloResumoTecnicos");
     const tituloDetalhamento = document.getElementById("tituloDetalhamento");
     const tituloReincidencia = document.getElementById("tituloReincidencia");
     const dashboardTitleMain = document.getElementById("dashboardTitleMain");
     const dashboardVersionLabel = document.getElementById("dashboardVersionLabel");
     const historicoTecnicosTooltip = document.getElementById("historicoTecnicosTooltip");
+    const resumoTecnicosMeta = document.getElementById("resumoTecnicosMeta");
+    const resumoTecnicosGrid = document.getElementById("resumoTecnicosGrid");
     const detalhesHead = document.getElementById("detalhesHead");
     const rankingVotosHead = document.getElementById("rankingVotosHead");
     const reincidenciasHead = document.getElementById("reincidenciasHead");
@@ -2725,6 +2746,7 @@ def gerar_html_dashboard(
       tituloGraficoMensal.textContent = `Gráfico mensal | ${{resumo}}`;
       tituloGraficoDiario.textContent = `Evolução do itinerário | ${{resumo}}`;
       tituloHistoricoTecnicos.textContent = "Histórico dos técnicos";
+      tituloResumoTecnicos.textContent = `Resumo dos técnicos | ${{resumo}}`;
       tituloDetalhamento.textContent = `Detalhamento | ${{resumo}}`;
       tituloReincidencia.textContent = `Reincidência por cliente/contrato | ${{resumo}}`;
     }}
@@ -3731,6 +3753,68 @@ def gerar_html_dashboard(
 	      renderHistoricoTecnicosEventos();
 	    }}
 
+    function obterResumoTecnicosPainel() {{
+      const mapa = new Map();
+
+      tecnicoHistoryData.forEach((registro) => {{
+        const capturadoEm = normalizarTexto(registro.capturado_em);
+        const tecnicoKey = normalizarChaveUsuario(registro.tecnico || registro.tecnico_nome);
+        if (!capturadoEm || !tecnicoKey) return;
+        if (!dataCapturaDentroDoIntervalo(capturadoEm)) return;
+        if (tecnicosPermitidosHistorico.size && !tecnicosPermitidosHistorico.has(tecnicoKey)) return;
+
+        if (!mapa.has(tecnicoKey)) {{
+          mapa.set(tecnicoKey, {{
+            tecnico: normalizarTexto(registro.tecnico_nome) || tecnicoKey,
+            totalOs: 0,
+            osRecebidas: 0,
+            osEncerradas: 0,
+            ultimaCaptura: "",
+          }});
+        }}
+
+        const item = mapa.get(tecnicoKey);
+        item.osRecebidas += Number(registro.recebidas_no_periodo || 0);
+        item.osEncerradas += Number(
+          registro.encerradas_da_carteira_no_periodo
+          || registro.encerradas_no_periodo
+          || 0
+        );
+
+        if (!item.ultimaCaptura || capturadoEm > item.ultimaCaptura) {{
+          item.ultimaCaptura = capturadoEm;
+          item.totalOs = Number(registro.total_carteira || 0);
+        }}
+      }});
+
+      return [...mapa.values()]
+        .sort((a, b) => a.tecnico.localeCompare(b.tecnico, "pt-BR", {{ sensitivity: "base" }}));
+    }}
+
+    function renderResumoTecnicosPainel() {{
+      if (!resumoTecnicosGrid || !resumoTecnicosMeta) return;
+      const itens = obterResumoTecnicosPainel();
+      if (!itens.length) {{
+        resumoTecnicosGrid.innerHTML = '<div class="metric-item compact"><span class="metric-label">Sem dados no recorte</span><span class="metric-value">0</span></div>';
+        resumoTecnicosMeta.textContent = "Sem dados de técnicos no intervalo selecionado.";
+        return;
+      }}
+
+      resumoTecnicosGrid.innerHTML = "";
+      itens.forEach((item) => {{
+        const card = document.createElement("div");
+        card.className = "metric-item compact";
+        card.innerHTML = `
+          <span class="metric-label">${{item.tecnico}}</span>
+          <span class="metric-value">${{item.totalOs}}</span>
+          <span class="metric-sub">OS recebidas: ${{item.osRecebidas}}</span>
+          <span class="metric-sub">OS encerradas: ${{item.osEncerradas}}</span>
+        `;
+        resumoTecnicosGrid.appendChild(card);
+      }});
+      resumoTecnicosMeta.textContent = `Mostrando ${{itens.length}} técnico(s) do grupo Técnicos com total atual, O.S. recebidas e O.S. encerradas no intervalo selecionado.`;
+    }}
+
     function atualizarMetas(registrosOperacionais, registrosFinalizados, totalDetalhes, totalVotosValidos, totalVotosDetalhamento, totalDetalhamentoPops) {{
       const partes = [];
       if (filtroDataInicial.value) partes.push(`Data inicial: ${{filtroDataInicial.value}}`);
@@ -3789,6 +3873,7 @@ def gerar_html_dashboard(
 	      renderGrafico(registrosFinalizados);
 	      renderGraficoDiario();
 	      renderGraficoHistoricoTecnicos();
+	      renderResumoTecnicosPainel();
 	      atualizarMetas(registrosOperacionais, registrosFinalizados, registrosAnaliticos.length, registrosVotosUnicos.length, registrosVotos.length, registrosDetalhamentoPops.length);
 	    }}
 
