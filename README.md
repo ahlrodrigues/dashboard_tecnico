@@ -213,64 +213,43 @@ chmod +x atualizar_dashboard.sh instalar_cron_dashboard.sh
 
 Isso cria uma entrada no `cron` para executar `main.py` no intervalo configurado em `dashboard.atualizacao_segundos`.
 
-## Publicação paralela sem sobrescrever a versão antiga
+## Deploy único em `8775`
 
-Para publicar esta versão em paralelo com a antiga, use:
+Este projeto agora assume uma única instalação ativa:
 
-- outro diretório
-- outra porta
-- outro nome de serviço `systemd`
-- outro arquivo de log
+- diretório padrão: `/var/www/html/dashboard_tecnico-live`
+- porta padrão: `8775`
+- porta antiga `8765`: deve ficar desativada e sem responder
 
-Exemplo seguro:
-
-- versão antiga: `/var/www/html/dashboard_tecnico-main` na porta `8765`
-- nova versão live: `/var/www/html/dashboard_tecnico-live` na porta `8775`
-
-### 1. Envie os arquivos para um novo diretório no servidor
-
-No servidor, crie um diretório separado:
+### 1. Prepare o diretório do servidor
 
 ```bash
 mkdir -p /var/www/html/dashboard_tecnico-live
-```
-
-Depois envie os arquivos desta branch para esse novo diretório.
-Se você estiver usando `git` no servidor:
-
-```bash
 cd /var/www/html
 git clone git@github.com:ahlrodrigues/dashboard_tecnico.git dashboard_tecnico-live
 cd dashboard_tecnico-live
 git checkout feature/dashboard-live-api
 ```
 
-Se preferir copiar a partir da máquina local, envie pelo método que você já usa hoje, sempre para o novo diretório:
+Se preferir copiar a partir da máquina local:
 
 ```bash
 rsync -av --exclude '.git' --exclude '.venv' /CAMINHO/LOCAL/dashboard_técnico/ usuario@SERVIDOR:/var/www/html/dashboard_tecnico-live/
 ```
 
-### 2. Crie o ambiente virtual da nova versão
+### 2. Crie o ambiente virtual
 
 ```bash
 cd /var/www/html/dashboard_tecnico-live
 python3 -m venv .venv
 ./.venv/bin/pip install -U pip
-./.venv/bin/pip install requests pandas
-```
-
-Se o seu projeto já tiver outros pacotes no servidor:
-
-```bash
 ./.venv/bin/pip install -r requirements.txt
 ```
 
-### 3. Crie o `config.json` da nova versão
-
-Copie o arquivo de configuração e ajuste se necessário:
+### 3. Crie o `config.json`
 
 ```bash
+cd /var/www/html/dashboard_tecnico-live
 cp config.example.json config.json
 ```
 
@@ -281,7 +260,7 @@ Depois edite:
 - classificação
 - `dashboard.atualizacao_segundos`
 
-### 4. Gere os arquivos da nova versão antes de subir o servidor
+### 4. Gere os arquivos antes de subir o serviço
 
 ```bash
 cd /var/www/html/dashboard_tecnico-live
@@ -293,7 +272,7 @@ Isso deve gerar:
 - `dashboard_os_sgp.html`
 - `dashboard_data.json`
 
-Para simplificar as próximas atualizações do servidor, você também pode usar:
+Para as próximas atualizações:
 
 ```bash
 cd /var/www/html/dashboard_tecnico-live
@@ -301,15 +280,7 @@ chmod +x atualizar_live.sh
 ./atualizar_live.sh
 ```
 
-O script `atualizar_live.sh`:
-- faz `git fetch`
-- garante checkout da branch `feature/dashboard-live-api` por padrão
-- limpa o `dashboard_os_sgp.html` gerado localmente antes do pull, para evitar bloqueio de merge
-- executa `git pull --ff-only`
-- roda `main.py --rebuild-html` para regenerar o shell HTML e o JSON com a versão/commit atuais
-- grava log em `atualizar_live.log`
-
-### 5. Teste manualmente a nova versão em outra porta
+### 5. Teste manualmente em `8775`
 
 ```bash
 cd /var/www/html/dashboard_tecnico-live
@@ -322,9 +293,7 @@ Depois teste:
 - `http://SEU_IP:8775/api/dashboard-data`
 - `http://SEU_IP:8775/api/refresh-status`
 
-### 6. Instale um segundo serviço `systemd`, sem tocar no antigo
-
-O script agora aceita nome de serviço parametrizado. Para instalar a nova versão em paralelo:
+### 6. Instale o serviço `systemd`
 
 ```bash
 cd /var/www/html/dashboard_tecnico-live
@@ -338,11 +307,7 @@ sudo env \
   ./instalar_systemd_dashboard.sh
 ```
 
-Isso cria um segundo serviço, sem substituir `dashboard-tecnico.service`.
-
-### 7. Garanta que o processo auxiliar use o diretório novo
-
-Se você usar `garantir_dashboard_server.sh`, rode com as mesmas variáveis:
+### 7. Garanta o processo auxiliar no mesmo diretório e porta
 
 ```bash
 cd /var/www/html/dashboard_tecnico-live
@@ -353,41 +318,30 @@ env \
   ./garantir_dashboard_server.sh
 ```
 
-### 8. Valide os dois serviços em paralelo
+### 8. Desative completamente a antiga `8765`
 
-Versão antiga:
+Pare e desabilite qualquer serviço antigo que ainda responda em `8765`.
+
+Exemplo:
 
 ```bash
-systemctl status dashboard-tecnico.service
+sudo systemctl stop dashboard-tecnico.service
+sudo systemctl disable dashboard-tecnico.service
 ```
 
-Nova versão live:
+Se houver proxy reverso, monitoramento ou firewall apontando para `8765`, remova essas referências.
+
+Checagens esperadas após a migração:
 
 ```bash
-systemctl status dashboard-tecnico-live.service
-```
-
-Checagens HTTP:
-
-```bash
-curl -s http://127.0.0.1:8765/api/refresh-status
 curl -s http://127.0.0.1:8775/api/refresh-status
 curl -s http://127.0.0.1:8775/api/dashboard-data | head
 ```
 
-### 9. Só depois troque acesso externo, se quiser
+Resultado esperado:
 
-Enquanto estiver validando:
-
-- mantenha a antiga em `8765`
-- mantenha a nova em `8775`
-
-Depois, se quiser promover a nova versão, você pode:
-
-- trocar o proxy reverso para apontar para `8775`
-- ou desligar a antiga e reaproveitar a porta `8765`
-
-Fazendo assim, a publicação é paralela e reversível.
+- `8775` responde normalmente
+- `8765` não responde mais
 
 ## Saídas geradas
 

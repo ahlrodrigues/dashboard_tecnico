@@ -191,7 +191,7 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
 def main() -> None:
     parser = argparse.ArgumentParser(description="Servidor local do dashboard técnico")
     parser.add_argument("--host", default="127.0.0.1")
-    parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument("--port", type=int, default=8775)
     args = parser.parse_args()
 
     base_dir = Path(__file__).resolve().parent

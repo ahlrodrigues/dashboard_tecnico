@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BASE_DIR="${DASHBOARD_BASE_DIR:-/var/www/html/dashboard_tecnico-main}"
+BASE_DIR="${DASHBOARD_BASE_DIR:-/var/www/html/dashboard_tecnico-live}"
 cd "$BASE_DIR"
 
 HOST="${DASHBOARD_SERVER_HOST:-0.0.0.0}"
-PORT="${DASHBOARD_SERVER_PORT:-8765}"
+PORT="${DASHBOARD_SERVER_PORT:-8775}"
 CHECK_HOST="${DASHBOARD_SERVER_CHECK_HOST:-127.0.0.1}"
 PYTHON_BIN="${DASHBOARD_PYTHON_BIN:-$BASE_DIR/.venv/bin/python}"
 SERVER_SCRIPT="${DASHBOARD_SERVER_SCRIPT:-$BASE_DIR/dashboard_server.py}"

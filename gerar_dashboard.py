@@ -1434,7 +1434,7 @@ def gerar_html_dashboard(
     const updateOverlayStatus = document.getElementById("updateOverlayStatus");
     const backendBaseUrl = (() => {{
       if (window.location.protocol === "file:") {{
-        return "http://127.0.0.1:8765";
+        return "http://127.0.0.1:8775";
       }}
 
       return window.location.origin || "";
@@ -4275,7 +4275,7 @@ def gerar_html_dashboard(
       }} catch (erro) {{
         const mensagemErro = erro instanceof Error ? erro.message : "Falha ao consultar atualização.";
         const dicaServidor = window.location.protocol === "file:"
-          ? "Inicie o servidor local com `./.venv/bin/python dashboard_server.py --host 127.0.0.1 --port 8765`."
+          ? "Inicie o servidor local com `./.venv/bin/python dashboard_server.py --host 127.0.0.1 --port 8775`."
           : "Confirme se o servidor local do dashboard está em execução.";
         atualizarVisibilidadeOverlay(
           true,
@@ -4349,7 +4349,7 @@ def gerar_html_dashboard(
       }} catch (erro) {{
         const mensagemErro = erro instanceof Error ? erro.message : "Falha ao atualizar arquivos.";
         const dicaServidor = window.location.protocol === "file:"
-          ? "Inicie o servidor local com `./.venv/bin/python dashboard_server.py --host 127.0.0.1 --port 8765`."
+          ? "Inicie o servidor local com `./.venv/bin/python dashboard_server.py --host 127.0.0.1 --port 8775`."
           : "Confirme se o servidor local do dashboard está em execução.";
         atualizarVisibilidadeOverlay(
           true,
