@@ -528,6 +528,28 @@ def gerar_html_dashboard(
       background: #f8fbf9;
       color: var(--text);
     }}
+    .panel-inline-filter {{
+      margin: 14px 0 12px;
+      max-width: 380px;
+    }}
+    .panel-inline-filter label {{
+      display: block;
+      margin-bottom: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }}
+    .panel-inline-filter input {{
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      padding: 12px 14px;
+      font-size: 14px;
+      background: #f8fbf9;
+      color: var(--text);
+    }}
     .quick-range {{
       display: flex;
       flex-wrap: wrap;
@@ -1205,6 +1227,15 @@ def gerar_html_dashboard(
 	      <canvas id="graficoHistoricoTecnicos"></canvas>
 	      <div class="chartjs-html-tooltip" id="historicoTecnicosTooltip" aria-hidden="true"></div>
 	      <div class="panel-meta" id="historicoTecnicosEventosMeta">Lista fixa da evolução do itinerário e dos eventos registrados no período mostrado no gráfico.</div>
+      <div class="panel-inline-filter">
+        <label for="filtroHistoricoTecnicosBusca">Buscar na tabela do histórico</label>
+        <input
+          type="search"
+          id="filtroHistoricoTecnicosBusca"
+          placeholder="Filtrar por O.S., cliente, POP, evento ou detalhes"
+          autocomplete="off"
+        />
+      </div>
       <div class="table-wrap">
         <table>
           <thead>
@@ -1306,10 +1337,11 @@ def gerar_html_dashboard(
     const filtroUsuario = document.getElementById("filtroUsuario");
     const filtroGrupo = document.getElementById("filtroGrupo");
     const filtroPop = document.getElementById("filtroPop");
-    const filtroAgendamento = document.getElementById("filtroAgendamento");
-    const filtroStatusOs = document.getElementById("filtroStatusOs");
-    const filtroBusca = document.getElementById("filtroBusca");
-    const quickRangeButtons = Array.from(document.querySelectorAll("[data-range]"));
+	    const filtroAgendamento = document.getElementById("filtroAgendamento");
+	    const filtroStatusOs = document.getElementById("filtroStatusOs");
+	    const filtroBusca = document.getElementById("filtroBusca");
+    const filtroHistoricoTecnicosBusca = document.getElementById("filtroHistoricoTecnicosBusca");
+	    const quickRangeButtons = Array.from(document.querySelectorAll("[data-range]"));
     const refreshCountdown = document.getElementById("refreshCountdown");
     const refreshNowButton = document.getElementById("refreshNowButton");
     const updateOverlay = document.getElementById("updateOverlay");
@@ -3511,6 +3543,15 @@ def gerar_html_dashboard(
 	      }};
 	    }}
 
+      function filtroHistoricoTecnicosCorresponde(linha) {{
+        const termo = normalizarTexto(filtroHistoricoTecnicosBusca?.value).toLowerCase();
+        if (!termo) return true;
+        const textoLinha = Array.isArray(linha?.valores)
+          ? linha.valores.map((valor) => normalizarTexto(valor).toLowerCase()).join(" ")
+          : "";
+        return textoLinha.includes(termo);
+      }}
+
 	    function renderHistoricoTecnicosEventos() {{
 	      if (!historicoTecnicosEventosMeta || !historicoTecnicosEventosBody) return;
 	      const resumo = resumoHistoricoTecnicosAtual;
@@ -3573,13 +3614,21 @@ def gerar_html_dashboard(
 	        }});
 	      }});
 
-	      historicoTecnicosEventosMeta.textContent = `Lista fixa com ${{totalEventos}} evento(s) em ${{totalColetasComEvento}} coleta(s) do período mostrado no gráfico.`;
+	      const linhasFiltradas = linhas.filter((linha) => filtroHistoricoTecnicosCorresponde(linha));
+	      const termoBusca = normalizarTexto(filtroHistoricoTecnicosBusca?.value);
+	      historicoTecnicosEventosMeta.textContent = termoBusca
+	        ? `Lista fixa com ${{linhasFiltradas.length}} de ${{totalEventos}} evento(s), em ${{totalColetasComEvento}} coleta(s) do período mostrado no gráfico, após a busca local.`
+	        : `Lista fixa com ${{totalEventos}} evento(s) em ${{totalColetasComEvento}} coleta(s) do período mostrado no gráfico.`;
 	      if (!linhas.length) {{
 	        historicoTecnicosEventosBody.innerHTML = `<tr><td colspan="8" class="empty">Nenhuma variação relevante do itinerário no período filtrado.</td></tr>`;
 	        return;
 	      }}
+	      if (!linhasFiltradas.length) {{
+	        historicoTecnicosEventosBody.innerHTML = `<tr><td colspan="8" class="empty">Nenhum evento corresponde à busca informada.</td></tr>`;
+	        return;
+	      }}
 	      historicoTecnicosEventosBody.innerHTML = "";
-	      linhas.forEach((linha) => {{
+	      linhasFiltradas.forEach((linha) => {{
 	        const tr = document.createElement("tr");
 	        tr.className = `history-event-row ${{linha.classe || "event-aggregate"}}`;
 	        linha.valores.forEach((valor) => {{
@@ -3933,14 +3982,19 @@ def gerar_html_dashboard(
       aplicarFiltros();
     }}
 
-    [filtroDataInicial, filtroDataFinal, filtroUsuario, filtroGrupo, filtroPop, filtroAgendamento, filtroStatusOs].forEach((select) => {{
-      select.addEventListener("change", aplicarFiltros);
-    }});
+	    [filtroDataInicial, filtroDataFinal, filtroUsuario, filtroGrupo, filtroPop, filtroAgendamento, filtroStatusOs].forEach((select) => {{
+	      select.addEventListener("change", aplicarFiltros);
+	    }});
 
-    filtroBusca.addEventListener("input", aplicarFiltrosComDebounce);
-    quickRangeButtons.forEach((button) => {{
-      button.addEventListener("click", () => aplicarAtalhoPeriodo(button.dataset.range));
-    }});
+	    filtroBusca.addEventListener("input", aplicarFiltrosComDebounce);
+    if (filtroHistoricoTecnicosBusca) {{
+      filtroHistoricoTecnicosBusca.addEventListener("input", () => {{
+        renderHistoricoTecnicosEventos();
+      }});
+    }}
+	    quickRangeButtons.forEach((button) => {{
+	      button.addEventListener("click", () => aplicarAtalhoPeriodo(button.dataset.range));
+	    }});
 
     function atualizarBotaoVoltarAoTopo() {{
       if (!scrollTopButton) return;
