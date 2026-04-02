@@ -2131,32 +2131,29 @@ def gerar_html_dashboard(
       );
     }}
 
-    function filtrarBaseStatusOperacional(filtros = obterEstadoFiltros()) {{
-      return detalhes.filter((registro) =>
-        registroCorrespondeAEstadoFiltros(registro, filtros, FILTER_CAPABILITIES.statusOperacional, {{
-          obterData: obterDataIntervaloAgendamento,
-          exigirAgendamento: true,
-        }})
-      );
-    }}
+	    function filtrarBaseStatusOperacional(filtros = obterEstadoFiltros()) {{
+	      return detalhes.filter((registro) =>
+	        registroCorrespondeAEstadoFiltros(registro, filtros, FILTER_CAPABILITIES.statusOperacional, {{
+	          obterData: obterDataIntervaloBase,
+	        }})
+	      );
+	    }}
 
-    function filtrarBaseOperacional(filtros = obterEstadoFiltros()) {{
-      return detalhes.filter((registro) =>
-        registroCorrespondeAEstadoFiltros(registro, filtros, FILTER_CAPABILITIES.operacional, {{
-          obterData: obterDataIntervaloAgendamento,
-          exigirAgendamento: true,
-        }})
-      );
-    }}
+	    function filtrarBaseOperacional(filtros = obterEstadoFiltros()) {{
+	      return detalhes.filter((registro) =>
+	        registroCorrespondeAEstadoFiltros(registro, filtros, FILTER_CAPABILITIES.operacional, {{
+	          obterData: obterDataIntervaloBase,
+	        }})
+	      );
+	    }}
 
-    function filtrarBasePops(filtros = obterEstadoFiltros()) {{
-      return detalhes.filter((registro) =>
-        registroCorrespondeAEstadoFiltros(registro, filtros, FILTER_CAPABILITIES.pops, {{
-          obterData: obterDataIntervaloAgendamento,
-          exigirAgendamento: true,
-        }})
-      );
-    }}
+	    function filtrarBasePops(filtros = obterEstadoFiltros()) {{
+	      return detalhes.filter((registro) =>
+	        registroCorrespondeAEstadoFiltros(registro, filtros, FILTER_CAPABILITIES.pops, {{
+	          obterData: obterDataIntervaloBase,
+	        }})
+	      );
+	    }}
 
     function filtrarBaseAnalitica(filtros = obterEstadoFiltros()) {{
       return detalhes.filter((registro) =>
@@ -4054,7 +4051,7 @@ def gerar_html_dashboard(
       resumoTecnicosMeta.textContent = `Mostrando ${{itens.length}} técnico(s) do grupo Técnicos com O.S. iniciais antes dos movimentos da primeira coleta, entradas, saídas e total atual no intervalo selecionado.`;
     }}
 
-    function atualizarMetas(registrosOperacionais, registrosFinalizados, totalDetalhes, totalVotosValidos, totalVotosDetalhamento, totalDetalhamentoPops) {{
+    function atualizarMetas(registrosOperacionais, registrosFinalizados, registrosRanking, registrosVotos, totalDetalhes, totalVotosValidos, totalVotosDetalhamento, totalDetalhamentoPops, registrosBaseReincidencias) {{
       const partes = [];
       if (filtroDataInicial.value) partes.push(`Data inicial: ${{filtroDataInicial.value}}`);
       if (filtroDataFinal.value) partes.push(`Data final: ${{filtroDataFinal.value}}`);
@@ -4066,19 +4063,34 @@ def gerar_html_dashboard(
       if (filtroBusca.value.trim()) partes.push(`Busca: ${{filtroBusca.value.trim()}}`);
 
       const textoFiltro = partes.length ? partes.join(" | ") : "Todos";
+      const totalIndicadoresTempo = 8;
+      const totalLinhasRanking = agruparRanking(registrosRanking).length;
+      const totalLinhasRankingVotosResumo = agruparRankingVotacao(deduplicarVotosPorIpEData(registrosVotos)).length;
+      const totalReincidencias = (() => {{
+        const chaves = obterChavesReincidentes(registrosBaseReincidencias);
+        const intervalo = obterIntervaloReincidencia30Dias();
+        if (!chaves.size || !intervalo) return 0;
+        return registrosBaseReincidencias.filter((registro) => {{
+          const dataBase = obterDataBaseTexto(registro);
+          if (!dataBase || dataBase < intervalo.inicio || dataBase > intervalo.fim) return false;
+          const cliente = normalizarTexto(registro.cliente);
+          const contrato = normalizarTexto(registro.contrato);
+          return chaves.has(`${{cliente}}|||${{contrato}}`);
+        }}).length;
+      }})();
       atualizarTitulosPaineis();
-      painelTempoMeta.textContent = `Tempo médio de encerramento e visão operacional para o recorte: ${{textoFiltro}}.`;
-      backlogOperacionalMeta.textContent = `Tabela com ${{registrosOperacionais.length}} O.S. agendadas no recorte de data, refinadas pelos demais filtros da página.`;
-      detalhamentoPopsMeta.textContent = `Tabela de POPs com ${{totalDetalhamentoPops}} O.S. agendadas no recorte atual, considerando os filtros aplicados na página.`;
-      rankingMeta.textContent = `Ranking atualizado com ${{registrosFinalizados.length}} OS encerradas no recorte atual.`;
-      rankingVotosResumoMeta.textContent = `Ranking atualizado com ${{totalVotosValidos}} voto(s) válido(s), considerando apenas 1 voto por IP e data no recorte atual.`;
+      painelTempoMeta.textContent = `Painel com ${{totalIndicadoresTempo}} indicador(es), calculado sobre ${{registrosOperacionais.length}} O.S. operacionais e ${{registrosFinalizados.length}} O.S. encerradas no recorte: ${{textoFiltro}}.`;
+	      backlogOperacionalMeta.textContent = `Tabela com ${{registrosOperacionais.length}} O.S. no recorte de data, refinadas pelos demais filtros da página.`;
+	      detalhamentoPopsMeta.textContent = `Tabela de POPs com ${{totalDetalhamentoPops}} O.S. no recorte atual, considerando os filtros aplicados na página.`;
+      rankingMeta.textContent = `Ranking com ${{totalLinhasRanking}} linha(s), consolidado a partir de ${{registrosFinalizados.length}} O.S. encerradas no recorte atual.`;
+      rankingVotosResumoMeta.textContent = `Ranking com ${{totalLinhasRankingVotosResumo}} linha(s), consolidado a partir de ${{totalVotosValidos}} voto(s) válido(s), considerando apenas 1 voto por IP e data no recorte atual.`;
       rankingVotosMeta.textContent = `Tabela de votos atualizada com ${{totalVotosDetalhamento}} registro(s) do recorte atual; duplicidades por IP e data e IPs fora dos ranges permitidos deixam a linha inteira em vermelho.`;
       detalheMeta.textContent = `Mostrando ${{totalDetalhes}} O.S. encerrada(s) após aplicar os filtros.`;
       const intervaloReincidencia = obterIntervaloReincidencia30Dias();
       const descricaoReincidencia = intervaloReincidencia
         ? `janela de 30 dias entre ${{intervaloReincidencia.inicio}} e ${{intervaloReincidencia.fim}}`
         : "janela de 30 dias indisponível";
-      reincidenciaMeta.textContent = `Mostrando as O.S. reincidentes de cliente/contrato na ${{descricaoReincidencia}}: ${{textoFiltro}}.`;
+      reincidenciaMeta.textContent = `Tabela com ${{totalReincidencias}} O.S. reincidente(s) de cliente/contrato na ${{descricaoReincidencia}}: ${{textoFiltro}}.`;
     }}
 
 	    function aplicarFiltros() {{
@@ -4113,7 +4125,7 @@ def gerar_html_dashboard(
 	      renderGraficoDiario();
 	      renderGraficoHistoricoTecnicos();
 	      renderResumoTecnicosPainel();
-	      atualizarMetas(registrosOperacionais, registrosFinalizados, registrosAnaliticos.length, registrosVotosUnicos.length, registrosVotos.length, registrosDetalhamentoPops.length);
+	      atualizarMetas(registrosOperacionais, registrosFinalizados, registrosRanking, registrosVotos, registrosAnaliticos.length, registrosVotosUnicos.length, registrosVotos.length, registrosDetalhamentoPops.length, registrosBaseReincidencias);
 	    }}
 
     function aplicarFiltrosComDebounce() {{
