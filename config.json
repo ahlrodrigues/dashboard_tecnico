@@ -1,0 +1,42 @@
+{
+  "url_base": "https://sgp.net4you.com.br/",
+  "auth_mode": "basic",
+  "basic_auth": {
+    "username": "robo",
+    "password": "Ox(?YMae?0V3V#}HIGcF"
+  },
+  "app_token_auth": {
+    "app": "teste",
+    "token": "0e59da19-7961-4289-a3f4-4f62cd22740aSEU_TOKEN"
+  },
+  "classificacao": {
+    "usar_api_tecnicos": true,
+    "tecnicos_cache_segundos": 21600,
+    "tecnicos": [
+      "cabral",
+      "eriki",
+      "francivaldo",
+      "ivison",
+      "joaopaulo",
+      "LuizCarlos",
+      "micael",
+      "talis",
+      "wilton"
+    ],
+    "infra_keywords": [
+      "infra",
+      "infraestrutura"
+    ]
+  },
+"dashboard": {
+  "ano_padrao": 2026,
+  "mes_padrao": "Todos",
+  "atualizacao_segundos": 1200,
+    "janela_recente_dias": 45,
+  "votos_cache_segundos": 1800,
+  "tecnicos_history_retencao_dias": 366,
+  "tecnicos_history_hora_inicio": 5,
+  "tecnicos_history_hora_fim": 20
+}
+
+}
