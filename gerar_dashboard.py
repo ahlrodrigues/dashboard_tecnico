@@ -840,6 +840,19 @@ def gerar_html_dashboard(
       border: 1px solid var(--line);
       border-radius: 16px;
     }}
+    .panel-historico-tecnicos {{
+      overflow: visible;
+      min-height: 760px;
+      padding-bottom: 26px;
+    }}
+    .panel-historico-tecnicos .table-wrap {{
+      margin-top: 28px;
+    }}
+    #graficoHistoricoTecnicos {{
+      display: block;
+      height: 430px !important;
+      margin-top: 10px;
+    }}
     table {{
       width: 100%;
       border-collapse: collapse;
@@ -1278,7 +1291,7 @@ def gerar_html_dashboard(
 	      <canvas id="graficoDiario"></canvas>
 	    </div>
 
-		    <div class="panel full chart-tooltip-host">
+		    <div class="panel full chart-tooltip-host panel-historico-tecnicos">
 		      <h2 class="section-title" id="tituloHistoricoTecnicos">Histórico</h2>
 		      <div class="panel-meta" id="historicoTecnicosMeta">Mostrando O.S. encerradas por técnico, dia a dia, no período filtrado.</div>
 		      <canvas id="graficoHistoricoTecnicos"></canvas>
@@ -3407,19 +3420,19 @@ def gerar_html_dashboard(
 	        plugins: {{
 	          legend: {{
 	            display: false,
-	            position: "bottom",
+	            position: "top",
 	            align: "start",
 	            labels: {{
 	              usePointStyle: true,
 	              pointStyle: "circle",
 	              boxWidth: 8,
 	              boxHeight: 8,
-	              padding: 20,
+	              padding: 18,
 	              color: "#2d4f43",
 	              font: {{
 	                size: 12,
 	                weight: "600",
-	                lineHeight: 18,
+	                lineHeight: 20,
 	              }},
 	            }},
 	          }},
