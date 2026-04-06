@@ -842,17 +842,50 @@ def gerar_html_dashboard(
     }}
     .panel-historico-tecnicos {{
       overflow: visible;
-      min-height: 980px;
-      padding-bottom: 48px;
+      min-height: 0;
+      padding-bottom: 0;
     }}
     .panel-historico-tecnicos .table-wrap {{
-      margin-top: 72px;
+      margin-top: 28px;
+    }}
+    .historico-tecnicos-legend {{
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0;
+      margin: 10px 0 6px;
+      padding: 0;
+    }}
+    .historico-tecnicos-legend-item {{
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 0;
+      background: transparent;
+      padding: 0 10px 6px 0;
+      color: inherit;
+      font: inherit;
+      cursor: pointer;
+    }}
+    .historico-tecnicos-legend-item.is-hidden {{
+      opacity: 0.45;
+    }}
+    .historico-tecnicos-legend-swatch {{
+      width: 40px;
+      height: 12px;
+      border: 2px solid currentColor;
+      border-radius: 0;
+      background: currentColor;
+      flex: none;
+    }}
+    .historico-tecnicos-legend-label {{
+      white-space: nowrap;
     }}
     #graficoHistoricoTecnicos {{
       display: block;
-      height: 500px !important;
-      margin-top: 14px;
-      margin-bottom: 24px;
+      height: 360px !important;
+      margin-top: 0;
+      margin-bottom: 0;
     }}
     table {{
       width: 100%;
@@ -1295,6 +1328,7 @@ def gerar_html_dashboard(
 		    <div class="panel full chart-tooltip-host panel-historico-tecnicos">
 		      <h2 class="section-title" id="tituloHistoricoTecnicos">Histórico</h2>
 		      <div class="panel-meta" id="historicoTecnicosMeta">Mostrando O.S. encerradas por técnico, dia a dia, no período filtrado.</div>
+		      <div class="historico-tecnicos-legend" id="historicoTecnicosLegend" aria-label="Legenda do gráfico histórico"></div>
 		      <canvas id="graficoHistoricoTecnicos"></canvas>
 		      <div class="chartjs-html-tooltip" id="historicoTecnicosTooltip" aria-hidden="true"></div>
       <div class="table-wrap">
@@ -1410,6 +1444,7 @@ def gerar_html_dashboard(
     let tecnicoHistoryData = {json.dumps(tecnico_history_embutido, ensure_ascii=False)};
     let resumoHistoricoTecnicosAtual = null;
     let historicoTecnicosIndiceSelecionado = -1;
+    const historicoTecnicosSeriesOcultas = new Set();
     let dataInicialPadrao = "{data_inicial_padrao}";
     let dataFinalPadrao = "{data_final_padrao}";
     let dataSnapshotAtual = "{data_snapshot_atual}";
@@ -1471,6 +1506,7 @@ def gerar_html_dashboard(
     const rankingVotosMeta = document.getElementById("rankingVotosMeta");
 	    const graficoDiarioMeta = document.getElementById("graficoDiarioMeta");
     const historicoTecnicosMeta = document.getElementById("historicoTecnicosMeta");
+    const historicoTecnicosLegend = document.getElementById("historicoTecnicosLegend");
     const historicoTecnicosEventosMeta = document.getElementById("historicoTecnicosEventosMeta");
     const historicoTecnicosEventosBody = document.getElementById("historicoTecnicosEventosBody");
     const detalheMeta = document.getElementById("detalheMeta");
@@ -3296,29 +3332,67 @@ def gerar_html_dashboard(
 	      }}
 	    }});
 
+	    function criarOpcoesGraficoLinha({{
+	      onClick = null,
+	      legend = true,
+	      legendOnClick = null,
+	      externalTooltip = null,
+	    }} = {{}}) {{
+	      return {{
+	        responsive: true,
+	        maintainAspectRatio: false,
+	        layout: {{
+	          padding: {{
+	            top: 8,
+	            bottom: 4,
+	          }},
+	        }},
+	        interaction: {{ mode: "index", intersect: false, axis: "x" }},
+	        onClick,
+	        plugins: {{
+	          legend: {{
+	            display: legend,
+	            position: "top",
+	            align: "center",
+	            onClick: legendOnClick || Chart.defaults.plugins.legend.onClick,
+	          }},
+	          tooltip: externalTooltip
+	            ? {{
+	                enabled: false,
+	                external: externalTooltip,
+	              }}
+	            : {{
+	                mode: "nearest",
+	                intersect: false,
+	              }},
+	        }},
+	        scales: {{
+	          y: {{
+	            beginAtZero: true,
+	            ticks: {{
+	              precision: 0,
+	              maxTicksLimit: 6,
+	            }},
+	          }},
+	          x: {{
+	            grid: {{ display: false }},
+	          }},
+	        }},
+	      }};
+	    }}
+
 	    const graficoDiario = new Chart(document.getElementById("graficoDiario"), {{
 	      type: "line",
 	      data: {{
 	        labels: [],
 	        datasets: []
 	      }},
-	      options: {{
-	        responsive: true,
-	        maintainAspectRatio: false,
-	        interaction: {{ mode: "index", intersect: false, axis: "x" }},
+	      options: criarOpcoesGraficoLinha({{
 	        onClick(evento, elementos, chart) {{
 	          if (!Array.isArray(elementos) || !elementos.length) return;
 	          selecionarHistoricoTecnicosIndice(elementos[0].index, chart);
 	        }},
-	        plugins: {{
-	          legend: {{ position: "top" }},
-	          tooltip: {{ mode: "nearest", intersect: false }}
-	        }},
-	        scales: {{
-	          y: {{ beginAtZero: true, ticks: {{ precision: 0, maxTicksLimit: 6 }} }},
-	          x: {{ grid: {{ display: false }} }}
-	        }}
-	      }}
+	      }})
 	    }});
 
 	    function obterLinhasTooltipHistoricoTecnicos(indice) {{
@@ -3408,64 +3482,80 @@ def gerar_html_dashboard(
 	      historicoTecnicosTooltip.setAttribute("aria-hidden", "false");
 	    }}
 
+	    function renderLegendaHistoricoTecnicos(datasets = []) {{
+	      if (!historicoTecnicosLegend) return;
+	      historicoTecnicosLegend.innerHTML = "";
+	      historicoTecnicosLegend.style.color = Chart.defaults.color || "#666";
+	      historicoTecnicosLegend.style.fontFamily = Chart.defaults.font?.family || "'Helvetica Neue', 'Helvetica', 'Arial', sans-serif";
+	      historicoTecnicosLegend.style.fontSize = `${{Chart.defaults.font?.size || 12}}px`;
+	      historicoTecnicosLegend.style.fontStyle = Chart.defaults.font?.style || "normal";
+	      historicoTecnicosLegend.style.fontWeight = Chart.defaults.font?.weight || "normal";
+	      historicoTecnicosLegend.style.lineHeight = String(Chart.defaults.font?.lineHeight || 1.2);
+	      historicoTecnicosLegend.hidden = datasets.length <= 1;
+	      if (datasets.length <= 1) return;
+
+	      datasets.forEach((dataset, indice) => {{
+	        const botao = document.createElement("button");
+	        botao.type = "button";
+	        botao.className = "historico-tecnicos-legend-item";
+	        if (dataset.hidden) {{
+	          botao.classList.add("is-hidden");
+	        }}
+	        botao.setAttribute("aria-pressed", dataset.hidden ? "false" : "true");
+	        botao.title = dataset.hidden ? "Mostrar série" : "Ocultar série";
+
+	        const marcador = document.createElement("span");
+	        marcador.className = "historico-tecnicos-legend-swatch";
+	        marcador.style.color = normalizarTexto(dataset.borderColor) || "#17624c";
+
+	        const rotulo = document.createElement("span");
+	        rotulo.className = "historico-tecnicos-legend-label";
+	        rotulo.textContent = normalizarTexto(dataset.label);
+
+	        botao.appendChild(marcador);
+	        botao.appendChild(rotulo);
+	        botao.addEventListener("click", () => {{
+	          const chart = graficoHistoricoTecnicos;
+	          const visivel = chart.isDatasetVisible(indice);
+	          const label = normalizarTexto(dataset.label).replace(/^itinerário\\s*-\\s*/i, "");
+	          if (visivel) {{
+	            historicoTecnicosSeriesOcultas.add(label);
+	            chart.hide(indice);
+	          }} else {{
+	            historicoTecnicosSeriesOcultas.delete(label);
+	            chart.show(indice);
+	          }}
+	          renderLegendaHistoricoTecnicos(chart.data.datasets);
+	        }});
+
+	        historicoTecnicosLegend.appendChild(botao);
+	      }});
+	    }}
+
 	    const graficoHistoricoTecnicos = new Chart(document.getElementById("graficoHistoricoTecnicos"), {{
 	      type: "line",
 	      data: {{
 	        labels: [],
 	        datasets: []
 	      }},
-	      options: {{
-	        responsive: true,
-	        maintainAspectRatio: false,
-	        layout: {{
-	          padding: {{
-	            top: 8,
-	            bottom: 28,
-	          }},
-	        }},
-	        interaction: {{ mode: "index", intersect: false, axis: "x" }},
-	        plugins: {{
-	          legend: {{ display: false, position: "top" }},
-	          tooltip: {{
-	            enabled: false,
-	            external: renderTooltipHistoricoTecnicos,
+	      options: criarOpcoesGraficoLinha({{
+	        legend: false,
+	        legendOnClick(evento, item, legend) {{
+	          const chart = legend.chart;
+	          const indice = item.datasetIndex;
+	          const dataset = chart?.data?.datasets?.[indice];
+	          if (!chart || !dataset) return;
+	          const label = normalizarTexto(dataset.label);
+	          const visivel = chart.isDatasetVisible(indice);
+	          if (visivel) {{
+	            historicoTecnicosSeriesOcultas.add(label);
+	          }} else {{
+	            historicoTecnicosSeriesOcultas.delete(label);
 	          }}
+	          Chart.defaults.plugins.legend.onClick.call(this, evento, item, legend);
 	        }},
-	        scales: {{
-	          y: {{
-	            beginAtZero: false,
-	            grid: {{ color: "rgba(88, 113, 102, 0.14)" }},
-	            border: {{ color: "rgba(88, 113, 102, 0.24)" }},
-	            display: true,
-	            ticks: {{
-	              display: true,
-	              color: "#4f6f63",
-	              font: {{
-	                size: 11,
-	                weight: "600",
-	              }},
-	              padding: 6,
-	            }}
-	          }},
-	          x: {{
-	            grid: {{ color: "rgba(88, 113, 102, 0.08)" }},
-	            border: {{ color: "rgba(88, 113, 102, 0.24)" }},
-	            offset: false,
-	            ticks: {{
-	              display: true,
-	              color: "#4f6f63",
-	              font: {{
-	                size: 11,
-	                weight: "600",
-	              }},
-	              maxRotation: 0,
-	              autoSkip: true,
-	              maxTicksLimit: 10,
-	              padding: 8,
-	            }}
-	          }}
-	        }}
-	      }}
+	        externalTooltip: renderTooltipHistoricoTecnicos,
+	      }})
 	    }});
 
 	    const paletaGraficoDiario = [
@@ -3491,6 +3581,42 @@ def gerar_html_dashboard(
 	      return `rgba(${{r}}, ${{g}}, ${{b}}, ${{alpha}})`;
 	    }}
 
+	    function compararRotulosGrafico(a, b) {{
+	      return normalizarTexto(a).localeCompare(normalizarTexto(b), "pt-BR", {{ sensitivity: "base" }});
+	    }}
+
+	    function obterMapaCoresTecnicosGraficos() {{
+	      const filtros = obterEstadoFiltros();
+	      const usuarioFiltro = normalizarChaveUsuario(filtroUsuario.value);
+	      const itens = new Map();
+
+	      tecnicoHistoryData.forEach((registro) => {{
+	        const capturadoEm = normalizarTexto(registro.capturado_em);
+	        const tecnicoKey = normalizarChaveUsuario(registro.tecnico || registro.tecnico_nome);
+	        if (!capturadoEm || !tecnicoKey || !dataCapturaDentroDoIntervalo(capturadoEm)) return;
+	        if (tecnicosPermitidosHistorico.size && !tecnicosPermitidosHistorico.has(tecnicoKey)) return;
+	        if (usuarioFiltro && tecnicoKey !== usuarioFiltro) return;
+	        if (!itens.has(tecnicoKey)) {{
+	          itens.set(tecnicoKey, normalizarTexto(registro.tecnico_nome) || tecnicoKey);
+	        }}
+	      }});
+
+	      filtrarBaseAnalitica(filtros).forEach((registro) => {{
+	        const tecnicoKey = normalizarChaveUsuario(obterUsuario(registro));
+	        if (!tecnicoKey) return;
+	        if (usuarioFiltro && tecnicoKey !== usuarioFiltro) return;
+	        if (!itens.has(tecnicoKey)) {{
+	          itens.set(tecnicoKey, formatarNomeUsuarioExibicao(obterUsuario(registro) || tecnicoKey));
+	        }}
+	      }});
+
+	      return new Map(
+	        [...itens.entries()]
+	          .sort((a, b) => compararRotulosGrafico(a[1], b[1]))
+	          .map(([tecnicoKey], indice) => [tecnicoKey, paletaGraficoDiario[indice % paletaGraficoDiario.length]])
+	      );
+	    }}
+
 	    function renderGrafico(registros) {{
 	      const resumo = agruparResumo(registros);
 	      graficoMensal.data.datasets[0].data = resumo.map((item) => item.total);
@@ -3510,6 +3636,7 @@ def gerar_html_dashboard(
 
 	    function agruparResumoDiario() {{
 	      const usuarioFiltro = normalizarChaveUsuario(filtroUsuario.value);
+	      const coresTecnicos = obterMapaCoresTecnicosGraficos();
 	      const capturas = [];
 	      const mapaTecnicos = new Map();
 	      const rotulos = new Map();
@@ -3540,7 +3667,7 @@ def gerar_html_dashboard(
 	      }}
 
 	      const tecnicosOrdenados = [...mapaTecnicos.entries()]
-	        .sort((a, b) => (rotulos.get(a[0]) || a[0]).localeCompare(rotulos.get(b[0]) || b[0], "pt-BR", {{ sensitivity: "base" }}));
+	        .sort((a, b) => compararRotulosGrafico(rotulos.get(a[0]) || a[0], rotulos.get(b[0]) || b[0]));
 
 	      const valoresPorTecnico = tecnicosOrdenados.map(([_, item]) =>
 	        capturasOrdenadas.map((capturadoEm) => {{
@@ -3563,7 +3690,7 @@ def gerar_html_dashboard(
 	      const labels = capturasCompactadas.map((capturadoEm) => formatarRotuloHistorico(capturadoEm, capturasCompactadas.length));
 	      let totalMudancas = 0;
 	      const datasets = tecnicosOrdenados.map(([tecnicoKey, item], indiceTecnico) => {{
-	          const cor = paletaGraficoDiario[indiceTecnico % paletaGraficoDiario.length];
+	          const cor = coresTecnicos.get(tecnicoKey) || paletaGraficoDiario[indiceTecnico % paletaGraficoDiario.length];
 	          const valores = indicesMantidos.map((indiceCaptura) => valoresPorTecnico[indiceTecnico][indiceCaptura]);
 
 	          let valorAnterior = null;
@@ -3988,6 +4115,7 @@ def gerar_html_dashboard(
 
 	    function renderGraficoHistoricoTecnicos() {{
 	      const filtros = obterEstadoFiltros();
+	      const coresTecnicos = obterMapaCoresTecnicosGraficos();
 	      const registrosFinalizados = filtrarBaseAnalitica(filtros);
 	      const intervalo = obterIntervaloSelecionado();
 	      const usuarioFiltro = normalizarChaveUsuario(filtroUsuario.value);
@@ -4026,15 +4154,17 @@ def gerar_html_dashboard(
 	          valores: item.valores,
 	          total: item.valores.reduce((acc, valor) => acc + valor, 0),
 	        }}))
-	        .sort((a, b) => b.total - a.total || a.label.localeCompare(b.label, "pt-BR", {{ sensitivity: "base" }}));
+	        .sort((a, b) => compararRotulosGrafico(a.label, b.label));
 
 	      const labels = labelsBase.map((data) => formatarDataTitulo(data));
 	      const datasets = tecnicosOrdenados.map((item, indice) => {{
-	        const cor = paletaGraficoDiario[indice % paletaGraficoDiario.length];
+	        const cor = coresTecnicos.get(item.tecnicoKey) || paletaGraficoDiario[indice % paletaGraficoDiario.length];
+	        const hidden = historicoTecnicosSeriesOcultas.has(normalizarTexto(item.label));
 	        return {{
 	          type: "line",
-	          label: item.label,
+	          label: `Itinerário - ${{item.label}}`,
 	          data: item.valores,
+	          hidden,
 	          borderColor: cor,
 	          backgroundColor: hexParaRgba(cor, 0.14),
 	          borderWidth: 2,
@@ -4070,16 +4200,17 @@ def gerar_html_dashboard(
 	      }}
 	      graficoHistoricoTecnicos.data.labels = labels;
 	      graficoHistoricoTecnicos.data.datasets = datasets;
-	      graficoHistoricoTecnicos.options.plugins.legend.display = datasets.length > 1;
 	      graficoHistoricoTecnicos.options.scales.y.beginAtZero = true;
 	      graficoHistoricoTecnicos.options.scales.y.display = true;
 	      delete graficoHistoricoTecnicos.options.scales.y.min;
 	      delete graficoHistoricoTecnicos.options.scales.y.max;
 	      graficoHistoricoTecnicos.options.scales.y.ticks.stepSize = 1;
 	      graficoHistoricoTecnicos.update();
+	      renderLegendaHistoricoTecnicos(datasets);
 
 	      if (!labels.length || !datasets.length) {{
 	        historicoTecnicosMeta.textContent = "Sem O.S. encerradas suficientes para montar o histórico diário no intervalo selecionado.";
+	        renderLegendaHistoricoTecnicos([]);
 	        renderHistoricoTecnicosEventos();
 	        return;
 	      }}
