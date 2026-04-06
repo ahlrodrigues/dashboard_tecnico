@@ -1553,7 +1553,7 @@ def gerar_html_dashboard(
           .map((registro) => normalizarChaveUsuario(
             registro.responsavel || registro.finalizado_por_dashboard || registro.tecnico || registro.tecnico_nome
           ))
-          .filter(Boolean)
+          .filter((tecnicoKey) => usuarioContaNoGrupoTecnicos(tecnicoKey))
       );
     }}
 
@@ -1621,6 +1621,13 @@ def gerar_html_dashboard(
       return aliasesUsuarios[base] || base;
     }}
 
+    const usuariosExcluidosDoGrupoTecnicos = new Set(["studart", "luizhenrique"]);
+
+    function usuarioContaNoGrupoTecnicos(valor) {{
+      const chave = normalizarChaveUsuario(valor);
+      return Boolean(chave) && !usuariosExcluidosDoGrupoTecnicos.has(chave) && !chave.includes("infra");
+    }}
+
     function usuariosSaoEquivalentes(a, b) {{
       const chaveA = normalizarChaveUsuario(a);
       const chaveB = normalizarChaveUsuario(b);
@@ -1671,7 +1678,9 @@ def gerar_html_dashboard(
 	    }}
 
 	    function obterGrupoEncerramento(registro) {{
-	      return normalizarTexto(registro.grupo_encerramento_dashboard);
+	      const grupoEncerramento = normalizarTexto(registro.grupo_encerramento_dashboard);
+	      if (grupoEncerramento !== "Técnicos") return grupoEncerramento;
+	      return usuarioContaNoGrupoTecnicos(registro.finalizado_por_dashboard) ? "Técnicos" : "Outros";
 	    }}
 
 	    function obterGrupoFiltro(registro) {{
@@ -1685,12 +1694,14 @@ def gerar_html_dashboard(
 	        if (grupoEncerramento) return grupoEncerramento;
 	      }}
 
-	      const responsavel = normalizarTexto(registro.responsavel).toLowerCase();
-	      const auxiliares = obterTecnicosAuxiliares(registro).map((valor) => valor.toLowerCase());
-	      if (responsavel.includes("infra") || auxiliares.some((valor) => valor.includes("infra"))) {{
+	      const responsavel = normalizarTexto(registro.responsavel);
+	      const auxiliares = obterTecnicosAuxiliares(registro);
+	      const responsavelChave = normalizarChaveUsuario(responsavel);
+	      const auxiliaresChave = auxiliares.map((valor) => normalizarChaveUsuario(valor));
+	      if (responsavelChave.includes("infra") || auxiliaresChave.some((valor) => valor.includes("infra"))) {{
 	        return "Infra";
 	      }}
-	      if (responsavel || auxiliares.length) {{
+	      if (usuarioContaNoGrupoTecnicos(responsavel) || auxiliares.some((valor) => usuarioContaNoGrupoTecnicos(valor))) {{
 	        return "Técnicos";
 	      }}
 
@@ -3361,14 +3372,18 @@ def gerar_html_dashboard(
 	      `;
 
 	      const margem = 8;
+	      const deslocamentoHorizontal = 10;
+	      const deslocamentoVertical = 6;
 	      const largura = historicoTecnicosTooltip.offsetWidth;
 	      const altura = historicoTecnicosTooltip.offsetHeight;
 	      const larguraHost = host.clientWidth;
 	      const alturaHost = host.clientHeight;
-	      const leftDesejado = tooltip.caretX - largura / 2;
-	      const topAcima = tooltip.caretY - altura - 12;
-	      const topAbaixo = tooltip.caretY + 12;
-	      const left = Math.min(Math.max(leftDesejado, margem), Math.max(margem, larguraHost - largura - margem));
+	      const leftDireita = tooltip.caretX + deslocamentoHorizontal;
+	      const leftEsquerda = tooltip.caretX - largura - deslocamentoHorizontal;
+	      const leftPreferido = leftDireita + largura <= larguraHost - margem ? leftDireita : leftEsquerda;
+	      const topAcima = tooltip.caretY - altura - deslocamentoVertical;
+	      const topAbaixo = tooltip.caretY + deslocamentoVertical;
+	      const left = Math.min(Math.max(leftPreferido, margem), Math.max(margem, larguraHost - largura - margem));
 	      const top = topAcima >= margem
 	        ? topAcima
 	        : Math.min(topAbaixo, Math.max(margem, alturaHost - altura - margem));
@@ -3390,7 +3405,23 @@ def gerar_html_dashboard(
 	        maintainAspectRatio: false,
 	        interaction: {{ mode: "index", intersect: false, axis: "x" }},
 	        plugins: {{
-	          legend: {{ display: false }},
+	          legend: {{
+	            display: false,
+	            position: "bottom",
+	            align: "start",
+	            labels: {{
+	              usePointStyle: true,
+	              pointStyle: "circle",
+	              boxWidth: 8,
+	              boxHeight: 8,
+	              padding: 16,
+	              color: "#2d4f43",
+	              font: {{
+	                size: 12,
+	                weight: "600",
+	              }},
+	            }},
+	          }},
 	          tooltip: {{
 	            enabled: false,
 	            external: renderTooltipHistoricoTecnicos,
