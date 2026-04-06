@@ -4029,6 +4029,7 @@ def gerar_html_dashboard(
 	    }}
 
     function obterResumoTecnicosPainel() {{
+      const incluirInfraNoResumo = true;
       const primeiraCapturaJanela = tecnicoHistoryData
         .map((registro) => normalizarTexto(registro.capturado_em))
         .filter((capturadoEm) => capturadoEm && dataCapturaDentroDoIntervalo(capturadoEm))
@@ -4040,7 +4041,7 @@ def gerar_html_dashboard(
         const tecnicoKey = normalizarChaveUsuario(registro.tecnico || registro.tecnico_nome);
         if (!capturadoEm || !tecnicoKey) return;
         if (!dataCapturaDentroDoIntervalo(capturadoEm)) return;
-        if (tecnicosPermitidosHistorico.size && !tecnicosPermitidosHistorico.has(tecnicoKey)) return;
+        if (tecnicosPermitidosHistorico.size && !tecnicosPermitidosHistorico.has(tecnicoKey) && !(incluirInfraNoResumo && tecnicoKey === "infra")) return;
 
         if (!mapa.has(tecnicoKey)) {{
           mapa.set(tecnicoKey, {{
@@ -4104,7 +4105,8 @@ def gerar_html_dashboard(
         `;
         resumoTecnicosGrid.appendChild(card);
       }});
-      resumoTecnicosMeta.textContent = `Mostrando ${{itens.length}} técnico(s) do grupo Técnicos com O.S. iniciais antes dos movimentos da primeira coleta, entradas, saídas e total atual no intervalo selecionado.`;
+      const totalSomado = itens.reduce((acc, item) => acc + Number(item.totalOs || 0), 0);
+      resumoTecnicosMeta.textContent = `Mostrando ${{itens.length}} célula(s) de Técnicos e Infra, com soma total de ${{totalSomado}} O.S. no intervalo selecionado. Cada célula exibe O.S. iniciais, entradas, saídas e total atual.`;
     }}
 
     function atualizarMetas(registrosOperacionais, registrosFinalizados, registrosRanking, registrosVotos, totalDetalhes, totalVotosValidos, totalVotosDetalhamento, totalDetalhamentoPops, registrosBaseReincidencias) {{
@@ -4283,7 +4285,7 @@ def gerar_html_dashboard(
     if (scrollTopButton) {{
       scrollTopButton.addEventListener("click", () => {{
         const topoFiltros = filtroDataInicial?.closest(".toolbar");
-        const destino = topoFiltros ? topoFiltros.offsetTop - 16 : 0;
+        const destino = topoFiltros ? topoFiltros.offsetTop : 0;
         window.scrollTo({{ top: Math.max(destino, 0), behavior: "smooth" }});
       }});
       atualizarBotaoVoltarAoTopo();
