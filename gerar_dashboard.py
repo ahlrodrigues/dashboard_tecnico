@@ -1319,12 +1319,22 @@ def gerar_html_dashboard(
 	    <div class="panel full">
 	      <h2 class="section-title" id="tituloResumoTecnicos">Resumo dos técnicos</h2>
 	      <div class="panel-meta" id="resumoTecnicosMeta">Mostrando os totais mais recentes e os movimentos acumulados dos técnicos no intervalo selecionado.</div>
-	      <div class="metric-grid flow scrollable" id="resumoTecnicosGrid">
-	        <div class="metric-item compact">
-	          <span class="metric-label">Sem dados no recorte</span>
-	          <span class="metric-value">0</span>
-	        </div>
-	      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Técnico</th>
+              <th>OS iniciais</th>
+              <th>Entradas</th>
+              <th>Saídas</th>
+              <th>Total atual</th>
+            </tr>
+          </thead>
+          <tbody id="resumoTecnicosBody">
+            <tr><td colspan="5" class="empty">Sem dados no recorte.</td></tr>
+          </tbody>
+        </table>
+      </div>
 	    </div>
 
 	    <div class="panel full">
@@ -1487,7 +1497,7 @@ def gerar_html_dashboard(
     const dashboardVersionLabel = document.getElementById("dashboardVersionLabel");
     const historicoTecnicosTooltip = document.getElementById("historicoTecnicosTooltip");
     const resumoTecnicosMeta = document.getElementById("resumoTecnicosMeta");
-    const resumoTecnicosGrid = document.getElementById("resumoTecnicosGrid");
+    const resumoTecnicosBody = document.getElementById("resumoTecnicosBody");
     const detalhesHead = document.getElementById("detalhesHead");
     const rankingVotosHead = document.getElementById("rankingVotosHead");
     const reincidenciasHead = document.getElementById("reincidenciasHead");
@@ -4080,26 +4090,25 @@ def gerar_html_dashboard(
     }}
 
     function renderResumoTecnicosPainel() {{
-      if (!resumoTecnicosGrid || !resumoTecnicosMeta) return;
+      if (!resumoTecnicosBody || !resumoTecnicosMeta) return;
       const itens = obterResumoTecnicosPainel();
       if (!itens.length) {{
-        resumoTecnicosGrid.innerHTML = '<div class="metric-item compact"><span class="metric-label">Sem dados no recorte</span><span class="metric-value">0</span></div>';
+        resumoTecnicosBody.innerHTML = '<tr><td colspan="5" class="empty">Sem dados no recorte.</td></tr>';
         resumoTecnicosMeta.textContent = "Sem dados de técnicos no intervalo selecionado.";
         return;
       }}
 
-      resumoTecnicosGrid.innerHTML = "";
+      resumoTecnicosBody.innerHTML = "";
       itens.forEach((item) => {{
-        const card = document.createElement("div");
-        card.className = "metric-item compact";
-        card.innerHTML = `
-          <span class="metric-label">${{item.tecnico}}</span>
-          <span class="metric-value">${{item.totalOs}}</span>
-          <span class="metric-sub">OS iniciais: ${{item.osIniciais}}</span>
-          <span class="metric-sub">Entradas: ${{item.entradas}}</span>
-          <span class="metric-sub">Saídas: ${{item.saidas}}</span>
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${{item.tecnico}}</td>
+          <td>${{item.osIniciais}}</td>
+          <td>${{item.entradas}}</td>
+          <td>${{item.saidas}}</td>
+          <td>${{item.totalOs}}</td>
         `;
-        resumoTecnicosGrid.appendChild(card);
+        resumoTecnicosBody.appendChild(tr);
       }});
       resumoTecnicosMeta.textContent = `Mostrando ${{itens.length}} técnico(s) do grupo Técnicos com O.S. iniciais antes dos movimentos da primeira coleta, entradas, saídas e total atual no intervalo selecionado.`;
     }}
