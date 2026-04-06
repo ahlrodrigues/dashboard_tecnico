@@ -326,6 +326,18 @@ def gerar_html_dashboard(
       opacity: 0.82;
       vertical-align: baseline;
     }}
+    .hero-snapshot {{
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(247, 255, 251, 0.14);
+      color: rgba(247, 255, 251, 0.96);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }}
     .hero-meta-links {{
       display: inline-flex;
       align-items: center;
@@ -337,6 +349,13 @@ def gerar_html_dashboard(
       font-weight: 700;
       text-decoration: underline;
       text-underline-offset: 2px;
+    }}
+    .hero-status-line {{
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
     }}
     .hero p {{
       margin: 0;
@@ -881,6 +900,42 @@ def gerar_html_dashboard(
     .historico-tecnicos-legend-label {{
       white-space: nowrap;
     }}
+    .historico-tecnicos-xaxis {{
+      position: relative;
+      height: 36px;
+      margin-top: 6px;
+      overflow: visible;
+    }}
+    .historico-tecnicos-yaxis {{
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: visible;
+    }}
+    .historico-tecnicos-xaxis-tick {{
+      position: absolute;
+      top: 0;
+      transform: translateX(-50%);
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1px;
+      color: inherit;
+      font: inherit;
+      line-height: 1.1;
+      white-space: nowrap;
+      pointer-events: none;
+    }}
+    .historico-tecnicos-yaxis-tick {{
+      position: absolute;
+      transform: translateY(-50%);
+      color: inherit;
+      font: inherit;
+      line-height: 1;
+      white-space: nowrap;
+      text-align: right;
+      pointer-events: none;
+    }}
     #graficoHistoricoTecnicos {{
       display: block;
       height: 360px !important;
@@ -1106,6 +1161,9 @@ def gerar_html_dashboard(
         <div class="hero-head">
         <div class="hero-titles">
           <h1 id="dashboardTitleMain">{escape(titulo_dashboard_base)}<span class="hero-meta-inline"><span class="hero-version" id="dashboardVersionLabel">{escape(VERSAO_DASHBOARD_ESTATICA)}</span><span class="hero-meta-links"><a href="CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></span></span></h1>
+          <div class="hero-status-line">
+            <span class="hero-snapshot" id="dashboardSnapshotLabel">Snapshot {escape(data_snapshot_atual)}</span>
+          </div>
         </div>
         <div class="refresh-badge">
           <strong>Atualiza em</strong>
@@ -1329,7 +1387,9 @@ def gerar_html_dashboard(
 		      <h2 class="section-title" id="tituloHistoricoTecnicos">Histórico</h2>
 		      <div class="panel-meta" id="historicoTecnicosMeta">Mostrando O.S. encerradas por técnico, dia a dia, no período filtrado.</div>
 		      <div class="historico-tecnicos-legend" id="historicoTecnicosLegend" aria-label="Legenda do gráfico histórico"></div>
+		      <div class="historico-tecnicos-yaxis" id="historicoTecnicosYAxis" aria-hidden="true"></div>
 		      <canvas id="graficoHistoricoTecnicos"></canvas>
+		      <div class="historico-tecnicos-xaxis" id="historicoTecnicosXAxis" aria-hidden="true"></div>
 		      <div class="chartjs-html-tooltip" id="historicoTecnicosTooltip" aria-hidden="true"></div>
       <div class="table-wrap">
         <div class="table-head-inline">
@@ -1507,6 +1567,8 @@ def gerar_html_dashboard(
 	    const graficoDiarioMeta = document.getElementById("graficoDiarioMeta");
     const historicoTecnicosMeta = document.getElementById("historicoTecnicosMeta");
     const historicoTecnicosLegend = document.getElementById("historicoTecnicosLegend");
+    const historicoTecnicosYAxis = document.getElementById("historicoTecnicosYAxis");
+    const historicoTecnicosXAxis = document.getElementById("historicoTecnicosXAxis");
     const historicoTecnicosEventosMeta = document.getElementById("historicoTecnicosEventosMeta");
     const historicoTecnicosEventosBody = document.getElementById("historicoTecnicosEventosBody");
     const detalheMeta = document.getElementById("detalheMeta");
@@ -1530,6 +1592,7 @@ def gerar_html_dashboard(
     const tituloReincidencia = document.getElementById("tituloReincidencia");
     const dashboardTitleMain = document.getElementById("dashboardTitleMain");
     const dashboardVersionLabel = document.getElementById("dashboardVersionLabel");
+    const dashboardSnapshotLabel = document.getElementById("dashboardSnapshotLabel");
     const historicoTecnicosTooltip = document.getElementById("historicoTecnicosTooltip");
     const resumoTecnicosMeta = document.getElementById("resumoTecnicosMeta");
     const resumoTecnicosGrid = document.getElementById("resumoTecnicosGrid");
@@ -1539,7 +1602,8 @@ def gerar_html_dashboard(
     const scrollTopButton = document.getElementById("scrollTopButton");
 	    const movimentacoesGrid = document.getElementById("movimentacoesGrid");
 	    const popsGrid = document.getElementById("popsGrid");
-    const storageKey = "dashboard_tecnico_filtros";
+    const storageKeyBase = "dashboard_tecnico_filtros";
+    const storageVersionKey = "dashboard_tecnico_payload_version";
     const aliasesUsuarios = {{
       joaopaulo: "joaopaulo",
       joaojaulo: "joaopaulo",
@@ -1611,11 +1675,45 @@ def gerar_html_dashboard(
       if (dashboardVersionLabel) {{
         dashboardVersionLabel.textContent = dashboardVersion;
       }}
+      if (dashboardSnapshotLabel) {{
+        dashboardSnapshotLabel.textContent = `Snapshot ${{dataSnapshotAtual || "indisponível"}}`;
+      }}
       if (dashboardTitleMain) {{
         dashboardTitleMain.childNodes[0].textContent = dashboardTitleBase;
       }}
       if (dashboardTitle) {{
         document.title = dashboardTitle;
+      }}
+    }}
+
+    function obterStorageKeyAtual() {{
+      const versaoNormalizada = normalizarTexto(dashboardVersion).replace(/[^a-z0-9_-]+/gi, "_").toLowerCase() || "sem_versao";
+      return `${{storageKeyBase}}:${{versaoNormalizada}}`;
+    }}
+
+    function limparFiltrosSalvosAntigos() {{
+      try {{
+        const prefixo = `${{storageKeyBase}}:`;
+        const remover = [];
+        for (let i = 0; i < window.localStorage.length; i += 1) {{
+          const chave = window.localStorage.key(i);
+          if (chave && chave.startsWith(prefixo) && chave !== obterStorageKeyAtual()) {{
+            remover.push(chave);
+          }}
+        }}
+        remover.forEach((chave) => window.localStorage.removeItem(chave));
+      }} catch (_erro) {{
+      }}
+    }}
+
+    function sincronizarVersaoDashboard() {{
+      try {{
+        const versaoPersistida = window.localStorage.getItem(storageVersionKey);
+        if (versaoPersistida !== dashboardVersion) {{
+          limparFiltrosSalvosAntigos();
+          window.localStorage.setItem(storageVersionKey, dashboardVersion);
+        }}
+      }} catch (_erro) {{
       }}
     }}
 
@@ -1635,6 +1733,7 @@ def gerar_html_dashboard(
       refreshSeconds = Math.max(Number.parseInt(payload.refresh_seconds || refreshSeconds, 10) || refreshSeconds, 30);
       sgpBaseUrl = normalizarTexto(payload.sgp_base_url) || sgpBaseUrl;
       aplicarVersaoDashboard();
+      sincronizarVersaoDashboard();
       recalcularMetadadosBase();
       atualizarTecnicosPermitidosHistorico();
     }}
@@ -2015,12 +2114,12 @@ def gerar_html_dashboard(
         statusOs: filtroStatusOs.value,
         busca: filtroBusca.value,
       }};
-      window.localStorage.setItem(storageKey, JSON.stringify(estado));
+      window.localStorage.setItem(obterStorageKeyAtual(), JSON.stringify(estado));
     }}
 
     function restaurarFiltros() {{
       try {{
-        const bruto = window.localStorage.getItem(storageKey);
+        const bruto = window.localStorage.getItem(obterStorageKeyAtual());
         if (!bruto) return;
         const estado = JSON.parse(bruto);
         filtroDataInicial.value = estado.dataInicial || "";
@@ -2033,7 +2132,7 @@ def gerar_html_dashboard(
         filtroBusca.value = estado.busca || "";
         normalizarPeriodoSelecionado();
       }} catch (_erro) {{
-        window.localStorage.removeItem(storageKey);
+        window.localStorage.removeItem(obterStorageKeyAtual());
       }}
     }}
 
@@ -3337,10 +3436,14 @@ def gerar_html_dashboard(
 	      legend = true,
 	      legendOnClick = null,
 	      externalTooltip = null,
+	      onResize = null,
+	      yTicks = null,
+	      xTicks = null,
 	    }} = {{}}) {{
 	      return {{
 	        responsive: true,
 	        maintainAspectRatio: false,
+	        onResize,
 	        layout: {{
 	          padding: {{
 	            top: 8,
@@ -3369,15 +3472,26 @@ def gerar_html_dashboard(
 	        scales: {{
 	          y: {{
 	            beginAtZero: true,
-	            ticks: {{
+	            ticks: yTicks || {{
 	              precision: 0,
 	              maxTicksLimit: 6,
 	            }},
 	          }},
 	          x: {{
 	            grid: {{ display: false }},
+	            ticks: xTicks || undefined,
 	          }},
 	        }},
+	      }};
+	    }}
+
+	    function obterFontePadraoChartJs() {{
+	      return {{
+	        family: Chart.defaults.font?.family || "'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",
+	        size: Chart.defaults.font?.size || 12,
+	        style: Chart.defaults.font?.style || "normal",
+	        weight: Chart.defaults.font?.weight || "normal",
+	        lineHeight: Chart.defaults.font?.lineHeight || 1.2,
 	      }};
 	    }}
 
@@ -3540,6 +3654,10 @@ def gerar_html_dashboard(
 	      }},
 	      options: criarOpcoesGraficoLinha({{
 	        legend: false,
+	        onResize(chart) {{
+	          renderEixoYHistoricoTecnicos(chart);
+	          renderEixoXHistoricoTecnicos(chart);
+	        }},
 	        legendOnClick(evento, item, legend) {{
 	          const chart = legend.chart;
 	          const indice = item.datasetIndex;
@@ -3555,6 +3673,16 @@ def gerar_html_dashboard(
 	          Chart.defaults.plugins.legend.onClick.call(this, evento, item, legend);
 	        }},
 	        externalTooltip: renderTooltipHistoricoTecnicos,
+	        xTicks: {{
+	          display: false,
+	        }},
+	        yTicks: {{
+	          precision: 0,
+	          maxTicksLimit: 6,
+	          padding: 6,
+	          font: obterFontePadraoChartJs(),
+	          display: false,
+	        }},
 	      }})
 	    }});
 
@@ -3765,6 +3893,103 @@ def gerar_html_dashboard(
 	      const data = texto.slice(8, 10) + "/" + texto.slice(5, 7);
 	      const hora = texto.slice(11, 16);
 	      return totalPontos > 24 ? `${{data}} ${{hora}}` : hora;
+	    }}
+
+	    function formatarDiaSemanaCurto(dataIso) {{
+	      const data = new Date(`${{normalizarTexto(dataIso)}}T00:00:00`);
+	      if (Number.isNaN(data.getTime())) return "";
+	      return new Intl.DateTimeFormat("pt-BR", {{ weekday: "short" }})
+	        .format(data)
+	        .replace(".", "")
+	        .slice(0, 3);
+	    }}
+
+	    function obterTicksDataHistorico() {{
+	      const rawLabels = resumoHistoricoTecnicosAtual?.labelsBaseRaw || [];
+	      const total = rawLabels.length;
+	      if (!total) return [];
+
+	      const ticks = [];
+	      const passo = total <= 8 ? 1 : total <= 16 ? 2 : total <= 24 ? 3 : total <= 31 ? 4 : 5;
+	      const ultimoIndice = total - 1;
+	      for (let index = 0; index < total; index += 1) {{
+	        const dataIso = rawLabels[index];
+	        if (!dataIso) continue;
+	        const mostrar = total <= 8 || index === 0 || index === ultimoIndice || index % passo === 0;
+	        if (!mostrar) continue;
+	        ticks.push({{
+	          index,
+	          lines: [formatarDataTitulo(dataIso).slice(0, 5), formatarDiaSemanaCurto(dataIso)],
+	        }});
+	      }}
+	      return ticks;
+	    }}
+
+	    function renderEixoXHistoricoTecnicos(chart = null) {{
+	      if (!historicoTecnicosXAxis) return;
+	      historicoTecnicosXAxis.innerHTML = "";
+	      historicoTecnicosXAxis.style.color = Chart.defaults.color || "#666";
+	      historicoTecnicosXAxis.style.fontFamily = Chart.defaults.font?.family || "'Helvetica Neue', 'Helvetica', 'Arial', sans-serif";
+	      historicoTecnicosXAxis.style.fontSize = `${{Chart.defaults.font?.size || 12}}px`;
+	      historicoTecnicosXAxis.style.fontStyle = Chart.defaults.font?.style || "normal";
+	      historicoTecnicosXAxis.style.fontWeight = Chart.defaults.font?.weight || "normal";
+	      historicoTecnicosXAxis.style.lineHeight = String(Chart.defaults.font?.lineHeight || 1.2);
+
+	      const chartArea = chart?.chartArea;
+	      const labels = resumoHistoricoTecnicosAtual?.labelsBaseRaw || [];
+	      if (!chartArea || labels.length <= 1) {{
+	        historicoTecnicosXAxis.hidden = true;
+	        return;
+	      }}
+	      historicoTecnicosXAxis.hidden = false;
+
+	      const larguraPlot = chartArea.right - chartArea.left;
+	      const ultimoIndice = labels.length - 1;
+	      obterTicksDataHistorico().forEach((tick) => {{
+	        const proporcao = ultimoIndice <= 0 ? 0 : tick.index / ultimoIndice;
+	        const left = chartArea.left + larguraPlot * proporcao;
+	        const item = document.createElement("span");
+	        item.className = "historico-tecnicos-xaxis-tick";
+	        item.style.left = `${{left}}px`;
+
+	        tick.lines.forEach((linha) => {{
+	          const linhaEl = document.createElement("span");
+	          linhaEl.textContent = linha;
+	          item.appendChild(linhaEl);
+	        }});
+
+	        historicoTecnicosXAxis.appendChild(item);
+	      }});
+	    }}
+
+	    function renderEixoYHistoricoTecnicos(chart = null) {{
+	      if (!historicoTecnicosYAxis) return;
+	      historicoTecnicosYAxis.innerHTML = "";
+	      historicoTecnicosYAxis.style.color = Chart.defaults.color || "#666";
+	      historicoTecnicosYAxis.style.fontFamily = Chart.defaults.font?.family || "'Helvetica Neue', 'Helvetica', 'Arial', sans-serif";
+	      historicoTecnicosYAxis.style.fontSize = `${{Chart.defaults.font?.size || 12}}px`;
+	      historicoTecnicosYAxis.style.fontStyle = Chart.defaults.font?.style || "normal";
+	      historicoTecnicosYAxis.style.fontWeight = Chart.defaults.font?.weight || "normal";
+	      historicoTecnicosYAxis.style.lineHeight = String(Chart.defaults.font?.lineHeight || 1.2);
+
+	      const chartArea = chart?.chartArea;
+	      const escalaY = chart?.scales?.y;
+	      if (!chartArea || !escalaY?.ticks?.length) {{
+	        historicoTecnicosYAxis.hidden = true;
+	        return;
+	      }}
+	      historicoTecnicosYAxis.hidden = false;
+
+	      escalaY.ticks.forEach((tick) => {{
+	        const item = document.createElement("span");
+	        item.className = "historico-tecnicos-yaxis-tick";
+	        item.style.left = "0px";
+	        item.style.top = `${{escalaY.getPixelForValue(tick.value)}}px`;
+	        item.style.width = `${{Math.max(24, chartArea.left - 10)}}px`;
+	        item.style.paddingRight = "8px";
+	        item.textContent = normalizarTexto(tick.label);
+	        historicoTecnicosYAxis.appendChild(item);
+	      }});
 	    }}
 
 	    function diferencaMinutosEntreCapturas(anterior, atual) {{
@@ -4189,6 +4414,7 @@ def gerar_html_dashboard(
 	      resumoHistoricoTecnicosAtual = {{
 	        modo: "encerradas_diarias",
 	        labels,
+	        labelsBaseRaw: labelsBase,
 	        linhasTabela,
 	        totalTecnicos: tecnicosOrdenados.length,
 	        totalDias: labelsBase.length,
@@ -4207,10 +4433,14 @@ def gerar_html_dashboard(
 	      graficoHistoricoTecnicos.options.scales.y.ticks.stepSize = 1;
 	      graficoHistoricoTecnicos.update();
 	      renderLegendaHistoricoTecnicos(datasets);
+	      renderEixoYHistoricoTecnicos(graficoHistoricoTecnicos);
+	      renderEixoXHistoricoTecnicos(graficoHistoricoTecnicos);
 
 	      if (!labels.length || !datasets.length) {{
 	        historicoTecnicosMeta.textContent = "Sem O.S. encerradas suficientes para montar o histórico diário no intervalo selecionado.";
 	        renderLegendaHistoricoTecnicos([]);
+	        renderEixoYHistoricoTecnicos(graficoHistoricoTecnicos);
+	        renderEixoXHistoricoTecnicos(graficoHistoricoTecnicos);
 	        renderHistoricoTecnicosEventos();
 	        return;
 	      }}
