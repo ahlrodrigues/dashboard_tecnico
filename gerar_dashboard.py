@@ -3370,7 +3370,7 @@ def gerar_html_dashboard(
 	    }}
 
 	    const graficoHistoricoTecnicos = new Chart(document.getElementById("graficoHistoricoTecnicos"), {{
-	      type: "bar",
+	      type: "line",
 	      data: {{
 	        labels: [],
 	        datasets: []
@@ -3983,17 +3983,20 @@ def gerar_html_dashboard(
 	      graficoHistoricoTecnicos.data.labels = resumo.labels;
 	      graficoHistoricoTecnicos.data.datasets = [
 	        {{
-	          type: "bar",
+	          type: "line",
 	          label: "Itinerário",
 	          data: serieHistorico.dados,
 	          borderColor: "#1d4ed8",
-	          backgroundColor: hexParaRgba("#1d4ed8", 0.78),
-	          borderWidth: 1,
-	          borderRadius: 0,
-	          categoryPercentage: 1,
-	          barPercentage: 1,
-	          inflateAmount: 12,
-	          maxBarThickness: 48,
+	          backgroundColor: hexParaRgba("#1d4ed8", 0.16),
+	          borderWidth: 2,
+	          tension: serieHistorico.tension,
+	          stepped: serieHistorico.stepped,
+	          fill: false,
+	          pointRadius: 3,
+	          pointHoverRadius: 5,
+	          pointBackgroundColor: "#1d4ed8",
+	          pointBorderColor: "#ffffff",
+	          pointBorderWidth: 1.5,
 	          yAxisID: "y",
 	        }},
 	      ];
