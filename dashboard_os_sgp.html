@@ -1051,18 +1051,18 @@
 
 		    <div class="panel full chart-tooltip-host">
 		      <h2 class="section-title" id="tituloHistoricoTecnicos">Histórico</h2>
-		      <div class="panel-meta" id="historicoTecnicosMeta">Mostrando a evolução do itinerário no período filtrado.</div>
+		      <div class="panel-meta" id="historicoTecnicosMeta">Mostrando O.S. encerradas por técnico, dia a dia, no período filtrado.</div>
 		      <canvas id="graficoHistoricoTecnicos"></canvas>
 		      <div class="chartjs-html-tooltip" id="historicoTecnicosTooltip" aria-hidden="true"></div>
       <div class="table-wrap">
         <div class="table-head-inline">
-          <div class="panel-meta" id="historicoTecnicosEventosMeta">Lista fixa da evolução do itinerário e dos eventos registrados no período mostrado no gráfico.</div>
+          <div class="panel-meta" id="historicoTecnicosEventosMeta">Lista fixa das O.S. encerradas por técnico em cada dia do período mostrado no gráfico.</div>
           <div class="panel-inline-filter">
             <label for="filtroHistoricoTecnicosBusca">Buscar na tabela do histórico</label>
             <input
               type="search"
               id="filtroHistoricoTecnicosBusca"
-              placeholder="Filtrar por O.S., cliente, POP, evento ou detalhes"
+              placeholder="Filtrar por data, técnico ou total de encerradas"
               autocomplete="off"
             />
           </div>
@@ -1070,18 +1070,13 @@
         <table>
           <thead>
             <tr>
-              <th>Coleta</th>
-              <th>Itinerário</th>
-              <th>Variação</th>
-              <th>Evento</th>
-              <th>O.S.</th>
-              <th>Cliente</th>
-              <th>POP</th>
-              <th>Detalhes</th>
+              <th>Data</th>
+              <th>Técnico</th>
+              <th>Encerradas</th>
             </tr>
           </thead>
           <tbody id="historicoTecnicosEventosBody">
-            <tr><td colspan="8" class="empty">A evolução do itinerário e os eventos registrados no período aparecerão aqui automaticamente.</td></tr>
+            <tr><td colspan="3" class="empty">As O.S. encerradas por técnico e por dia aparecerão aqui automaticamente.</td></tr>
           </tbody>
         </table>
       </div>
@@ -3072,7 +3067,7 @@
 
 	    function obterLinhasTooltipHistoricoTecnicos(indice) {
 	      if (!resumoHistoricoTecnicosAtual) return { titulo: "", linhas: [] };
-	      if (resumoHistoricoTecnicosAtual.modo === "multiplos") {
+	      if (resumoHistoricoTecnicosAtual.modo === "encerradas_diarias") {
 	        return {
 	          titulo: resumoHistoricoTecnicosAtual?.labels?.[indice] || "",
 	          linhas: [],
@@ -3123,10 +3118,10 @@
 	      }
 
 	      const indice = tooltip.dataPoints[0].dataIndex;
-	      const conteudo = resumoHistoricoTecnicosAtual?.modo === "multiplos"
+	      const conteudo = resumoHistoricoTecnicosAtual?.modo === "encerradas_diarias"
 	        ? {
 	            titulo: resumoHistoricoTecnicosAtual?.labels?.[indice] || "",
-	            linhas: tooltip.dataPoints.map((ponto) => `${ponto.dataset.label}: ${ponto.formattedValue} O.S.`),
+	            linhas: tooltip.dataPoints.map((ponto) => `${ponto.dataset.label}: ${ponto.formattedValue} encerrada(s)`),
 	          }
 	        : obterLinhasTooltipHistoricoTecnicos(indice);
 	      historicoTecnicosTooltip.innerHTML = `
@@ -3563,86 +3558,32 @@
 	      if (!historicoTecnicosEventosMeta || !historicoTecnicosEventosBody) return;
 	      const resumo = resumoHistoricoTecnicosAtual;
 	      if (!resumo || !Array.isArray(resumo.labels) || !resumo.labels.length) {
-	        historicoTecnicosEventosMeta.textContent = "Sem histórico suficiente para detalhar os eventos por coleta.";
-	        historicoTecnicosEventosBody.innerHTML = `<tr><td colspan="8" class="empty">Sem eventos para exibir.</td></tr>`;
+	        historicoTecnicosEventosMeta.textContent = "Sem histórico suficiente para detalhar as O.S. encerradas por dia.";
+	        historicoTecnicosEventosBody.innerHTML = `<tr><td colspan="3" class="empty">Sem dados para exibir.</td></tr>`;
 	        return;
 	      }
-	      if (resumo.modo === "multiplos") {
-	        historicoTecnicosEventosMeta.textContent = "Selecione um técnico no filtro de usuário para ver o detalhamento de eventos por coleta.";
-	        historicoTecnicosEventosBody.innerHTML = `<tr><td colspan="8" class="empty">O gráfico acima mostra a evolução de cada técnico; selecione um usuário para detalhar os eventos.</td></tr>`;
+	      if (resumo.modo !== "encerradas_diarias") {
+	        historicoTecnicosEventosMeta.textContent = "Sem histórico diário de encerramentos disponível.";
+	        historicoTecnicosEventosBody.innerHTML = `<tr><td colspan="3" class="empty">Sem dados para exibir.</td></tr>`;
 	        return;
 	      }
-	      const linhas = [];
-	      let totalEventos = 0;
-	      let totalColetasComEvento = 0;
-	      resumo.eventosCarteira.forEach((evento, indice) => {
-	        const coleta = normalizarTexto(evento?.capturadoEm) || normalizarTexto(resumo.labels[indice]);
-	        const detalhes = Array.isArray(evento?.detalhes) ? evento.detalhes : [];
-	        const temVariacao = Number(evento?.deltaCarteira || 0) !== 0;
-	        if (!detalhes.length && !temVariacao) return;
-	        totalColetasComEvento += 1;
-
-	        if (detalhes.length) {
-	          detalhes.forEach((item) => {
-	            totalEventos += 1;
-	            linhas.push({
-	              classe: obterClasseEventoCarteira(item),
-	              valores: [
-	                coleta,
-	                String(evento?.itinerario ?? "-"),
-	                Number(evento?.deltaCarteira || 0) ? `${Number(evento.deltaCarteira || 0) > 0 ? "+" : ""}${Number(evento.deltaCarteira || 0)}` : "0",
-	                formatarTipoEventoCarteira(item),
-	                normalizarTexto(item.os_id) || "-",
-	                normalizarTexto(item.cliente) || "-",
-	                normalizarTexto(item.pop) || "-",
-	                formatarDetalhesEventoCarteira(item) || formatarEventoCarteira(item) || "-",
-	              ],
-	            });
-	          });
-	          return;
-	        }
-
-	        totalEventos += 1;
-	        const partes = [];
-	        if (temVariacao) {
-	          const delta = Number(evento.deltaCarteira || 0);
-	          partes.push(`delta do itinerário ${delta > 0 ? "+" : ""}${delta}`);
-	        }
-	        if (Number(evento?.entradasCarteira || 0) > 0) partes.push(`${evento.entradasCarteira} entrada(s)`);
-	        if (Number(evento?.saidasCarteira || 0) > 0) partes.push(`${evento.saidasCarteira} saída(s)`);
-	        if (Number(evento?.lacunaMinutos || 0) > 10) partes.push(`lacuna de ${evento.lacunaMinutos} min entre coletas`);
-	        linhas.push({
-	          classe: "event-aggregate",
-	          valores: [
-	            coleta,
-	            String(evento?.itinerario ?? "-"),
-	            partes.length && Number(evento?.deltaCarteira || 0) ? `${Number(evento.deltaCarteira || 0) > 0 ? "+" : ""}${Number(evento.deltaCarteira || 0)}` : "0",
-	            "Variação agregada",
-	            "-",
-	            "-",
-	            "-",
-	            partes.length ? `${partes.join(" | ")} | detalhe por O.S. indisponível neste ponto do histórico legado.` : "Detalhe por O.S. indisponível neste ponto do histórico legado.",
-	          ],
-	        });
-	      });
-
+	      const linhas = Array.isArray(resumo.linhasTabela) ? resumo.linhasTabela : [];
 	      const linhasFiltradas = linhas.filter((linha) => filtroHistoricoTecnicosCorresponde(linha));
 	      const termoBusca = normalizarTexto(filtroHistoricoTecnicosBusca?.value);
 	      historicoTecnicosEventosMeta.textContent = termoBusca
-	        ? `Lista fixa com ${linhasFiltradas.length} de ${totalEventos} evento(s), em ${totalColetasComEvento} coleta(s) do período mostrado no gráfico, após a busca local.`
-	        : `Lista fixa com ${totalEventos} evento(s) em ${totalColetasComEvento} coleta(s) do período mostrado no gráfico.`;
+	        ? `Lista fixa com ${linhasFiltradas.length} de ${linhas.length} linha(s) de encerramentos por dia, após a busca local.`
+	        : `Lista fixa com ${linhas.length} linha(s) de encerramentos por dia no período mostrado no gráfico.`;
 	      if (!linhas.length) {
-	        historicoTecnicosEventosBody.innerHTML = `<tr><td colspan="8" class="empty">Nenhuma variação relevante do itinerário no período filtrado.</td></tr>`;
+	        historicoTecnicosEventosBody.innerHTML = `<tr><td colspan="3" class="empty">Nenhuma O.S. encerrada encontrada no período filtrado.</td></tr>`;
 	        return;
 	      }
 	      if (!linhasFiltradas.length) {
-	        historicoTecnicosEventosBody.innerHTML = `<tr><td colspan="8" class="empty">Nenhum evento corresponde à busca informada.</td></tr>`;
+	        historicoTecnicosEventosBody.innerHTML = `<tr><td colspan="3" class="empty">Nenhuma linha corresponde à busca informada.</td></tr>`;
 	        return;
 	      }
 	      historicoTecnicosEventosBody.innerHTML = "";
 	      linhasFiltradas.forEach((linha) => {
 	        const tr = document.createElement("tr");
-	        tr.className = `history-event-row ${linha.classe || "event-aggregate"}`;
 	        linha.valores.forEach((valor) => {
 	          const td = document.createElement("td");
 	          td.textContent = valor;
@@ -3765,97 +3706,106 @@
 	    }
 
 	    function renderGraficoHistoricoTecnicos() {
-	      if (!filtroUsuario.value) {
-	        const resumoMultiplos = agruparResumoDiario();
-	        resumoHistoricoTecnicosAtual = {
-	          modo: "multiplos",
-	          labels: resumoMultiplos.labels,
-	          totalCapturas: resumoMultiplos.totalCapturas,
-	          totalCapturasOriginais: resumoMultiplos.totalCapturasOriginais,
-	          totalMudancas: resumoMultiplos.totalMudancas,
-	          totalTecnicos: resumoMultiplos.totalTecnicos,
-	          intervalo: resumoMultiplos.intervalo,
-	        };
-	        if (historicoTecnicosIndiceSelecionado >= resumoMultiplos.labels.length) {
-	          historicoTecnicosIndiceSelecionado = resumoMultiplos.labels.length - 1;
+	      const filtros = obterEstadoFiltros();
+	      const registrosFinalizados = filtrarBaseAnalitica(filtros);
+	      const intervalo = obterIntervaloSelecionado();
+	      const usuarioFiltro = normalizarChaveUsuario(filtroUsuario.value);
+	      const labelsBase = [];
+	      const mapaIndices = new Map();
+	      if (intervalo) {
+	        const cursor = new Date(`${intervalo.inicio}T00:00:00`);
+	        const fim = new Date(`${intervalo.fim}T00:00:00`);
+	        while (cursor <= fim) {
+	          const data = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}-${String(cursor.getDate()).padStart(2, "0")}`;
+	          mapaIndices.set(data, labelsBase.length);
+	          labelsBase.push(data);
+	          cursor.setDate(cursor.getDate() + 1);
 	        }
-	        graficoHistoricoTecnicos.data.labels = resumoMultiplos.labels;
-	        graficoHistoricoTecnicos.data.datasets = resumoMultiplos.datasets.map((dataset) => ({
-	          ...dataset,
-	          label: dataset.label.replace(/^Itinerário - /, ""),
-	        }));
-	        graficoHistoricoTecnicos.options.plugins.legend.display = resumoMultiplos.datasets.length > 1;
-	        graficoHistoricoTecnicos.options.scales.y.beginAtZero = false;
-	        graficoHistoricoTecnicos.options.scales.y.display = true;
-	        delete graficoHistoricoTecnicos.options.scales.y.min;
-	        delete graficoHistoricoTecnicos.options.scales.y.max;
-	        delete graficoHistoricoTecnicos.options.scales.y.ticks.stepSize;
-	        graficoHistoricoTecnicos.update();
-
-	        if (!resumoMultiplos.labels.length) {
-	          historicoTecnicosMeta.textContent = "Sem histórico suficiente para montar a evolução dos técnicos no intervalo selecionado.";
-	          renderHistoricoTecnicosEventos();
-	          return;
-	        }
-
-	        historicoTecnicosMeta.textContent = `Histórico de ${resumoMultiplos.totalTecnicos} técnico(s) no intervalo selecionado, com ${resumoMultiplos.totalMudancas} marcação(ões) distribuídas em ${resumoMultiplos.totalCapturas} coleta(s) destacadas de ${resumoMultiplos.totalCapturasOriginais || resumoMultiplos.totalCapturas}. Use o filtro de usuário para detalhar um técnico específico.`;
-	        renderHistoricoTecnicosEventos();
-	        return;
 	      }
 
-	      const resumo = compactarResumoHistoricoTecnicos(agruparHistoricoTecnicos());
-	      const serieHistorico = prepararSerieHistoricoTecnicos(resumo.totalCarteira);
-	      resumoHistoricoTecnicosAtual = resumo;
-	      resumoHistoricoTecnicosAtual.escalaVisual = serieHistorico.escalaVisual;
-	      if (historicoTecnicosIndiceSelecionado >= resumo.labels.length) {
-	        historicoTecnicosIndiceSelecionado = resumo.labels.length - 1;
-	      }
-	      graficoHistoricoTecnicos.data.labels = resumo.labels;
-	      graficoHistoricoTecnicos.data.datasets = [
-	        {
+	      const mapaTecnicos = new Map();
+	      registrosFinalizados.forEach((registro) => {
+	        const data = obterDataIntervaloFinalizacao(registro);
+	        const tecnicoKey = normalizarChaveUsuario(obterUsuario(registro));
+	        if (!data || !mapaIndices.has(data) || !tecnicoKey) return;
+	        if (usuarioFiltro && tecnicoKey !== usuarioFiltro) return;
+	        if (!mapaTecnicos.has(tecnicoKey)) {
+	          mapaTecnicos.set(tecnicoKey, {
+	            label: formatarNomeUsuarioExibicao(obterUsuario(registro) || tecnicoKey),
+	            valores: Array.from({ length: labelsBase.length }, () => 0),
+	          });
+	        }
+	        mapaTecnicos.get(tecnicoKey).valores[mapaIndices.get(data)] += 1;
+	      });
+
+	      const tecnicosOrdenados = [...mapaTecnicos.entries()]
+	        .map(([tecnicoKey, item]) => ({
+	          tecnicoKey,
+	          label: item.label,
+	          valores: item.valores,
+	          total: item.valores.reduce((acc, valor) => acc + valor, 0),
+	        }))
+	        .sort((a, b) => b.total - a.total || a.label.localeCompare(b.label, "pt-BR", { sensitivity: "base" }));
+
+	      const labels = labelsBase.map((data) => formatarDataTitulo(data));
+	      const datasets = tecnicosOrdenados.map((item, indice) => {
+	        const cor = paletaGraficoDiario[indice % paletaGraficoDiario.length];
+	        return {
 	          type: "line",
-	          label: "Itinerário",
-	          data: serieHistorico.dados,
-	          borderColor: "#1d4ed8",
-	          backgroundColor: hexParaRgba("#1d4ed8", 0.16),
+	          label: item.label,
+	          data: item.valores,
+	          borderColor: cor,
+	          backgroundColor: hexParaRgba(cor, 0.14),
 	          borderWidth: 2,
-	          tension: serieHistorico.tension,
-	          stepped: serieHistorico.stepped,
+	          tension: 0.18,
 	          fill: false,
-	          pointRadius: 3,
-	          pointHoverRadius: 5,
-	          pointBackgroundColor: "#1d4ed8",
+	          spanGaps: true,
+	          pointRadius: item.valores.map((valor) => (valor > 0 ? 3 : 0)),
+	          pointHoverRadius: item.valores.map((valor) => (valor > 0 ? 5 : 0)),
+	          pointBackgroundColor: cor,
 	          pointBorderColor: "#ffffff",
 	          pointBorderWidth: 1.5,
 	          yAxisID: "y",
-	        },
-	      ];
-	      graficoHistoricoTecnicos.options.plugins.legend.display = false;
-	      graficoHistoricoTecnicos.options.scales.y.beginAtZero = serieHistorico.eixoY.beginAtZero;
-	      graficoHistoricoTecnicos.options.scales.y.display = serieHistorico.escalaVisual === "real";
-	      if (serieHistorico.eixoY.min === undefined) delete graficoHistoricoTecnicos.options.scales.y.min;
-	      else graficoHistoricoTecnicos.options.scales.y.min = serieHistorico.eixoY.min;
-	      if (serieHistorico.eixoY.max === undefined) delete graficoHistoricoTecnicos.options.scales.y.max;
-	      else graficoHistoricoTecnicos.options.scales.y.max = serieHistorico.eixoY.max;
-	      if (serieHistorico.eixoY.stepSize === undefined) delete graficoHistoricoTecnicos.options.scales.y.ticks.stepSize;
-	      else graficoHistoricoTecnicos.options.scales.y.ticks.stepSize = serieHistorico.eixoY.stepSize;
+	        };
+	      });
+
+	      const linhasTabela = tecnicosOrdenados.flatMap((item) =>
+	        labelsBase.map((data, indice) => ({
+	          valores: [formatarDataTitulo(data), item.label, String(item.valores[indice])],
+	        })).filter((linha) => Number(linha.valores[2]) > 0)
+	      );
+
+	      resumoHistoricoTecnicosAtual = {
+	        modo: "encerradas_diarias",
+	        labels,
+	        linhasTabela,
+	        totalTecnicos: tecnicosOrdenados.length,
+	        totalDias: labelsBase.length,
+	        totalEncerradas: tecnicosOrdenados.reduce((acc, item) => acc + item.total, 0),
+	        intervalo,
+	      };
+	      if (historicoTecnicosIndiceSelecionado >= labels.length) {
+	        historicoTecnicosIndiceSelecionado = labels.length - 1;
+	      }
+	      graficoHistoricoTecnicos.data.labels = labels;
+	      graficoHistoricoTecnicos.data.datasets = datasets;
+	      graficoHistoricoTecnicos.options.plugins.legend.display = datasets.length > 1;
+	      graficoHistoricoTecnicos.options.scales.y.beginAtZero = true;
+	      graficoHistoricoTecnicos.options.scales.y.display = true;
+	      delete graficoHistoricoTecnicos.options.scales.y.min;
+	      delete graficoHistoricoTecnicos.options.scales.y.max;
+	      graficoHistoricoTecnicos.options.scales.y.ticks.stepSize = 1;
 	      graficoHistoricoTecnicos.update();
 
-	      if (!resumo.labels.length) {
-	        historicoTecnicosMeta.textContent = "Sem histórico suficiente para montar a evolução dos técnicos no intervalo selecionado.";
+	      if (!labels.length || !datasets.length) {
+	        historicoTecnicosMeta.textContent = "Sem O.S. encerradas suficientes para montar o histórico diário no intervalo selecionado.";
 	        renderHistoricoTecnicosEventos();
 	        return;
 	      }
 
-	      const totalLacunas = resumo.eventosCarteira.filter((item) => Number(item.lacunaMinutos || 0) > 10).length;
-	      const complementoLacunas = totalLacunas ? ` Há ${totalLacunas} lacuna(s) de coleta destacadas no tooltip.` : "";
-	      const itinerarioFinal = resumo.totalCarteira.length ? resumo.totalCarteira[resumo.totalCarteira.length - 1] : 0;
-	      const descricaoEscala = serieHistorico.escalaVisual === "variacao"
-	        ? "com poucas coletas, a linha mostra apenas as mudanças entre as coletas e mantém o nível anterior quando não há alteração; cada ponto exibe o valor real coletado"
-	        : "a linha usa a escala real dos valores observados no período";
-	      const totalCapturasOriginais = Number(resumo.totalCapturasOriginais || resumo.totalCapturas || 0);
-	      const totalAlteracoes = Math.max(0, Number(resumo.totalCapturas || 0) - 1);
-	      historicoTecnicosMeta.textContent = `Histórico de ${resumo.tecnicoSelecionado} com ${totalCapturasOriginais} coleta(s) no intervalo selecionado; o gráfico mostra apenas o ponto inicial e ${totalAlteracoes} alteração(ões) do itinerário. Terminou com ${itinerarioFinal} O.S.; ${descricaoEscala}.${complementoLacunas}`;
+	      historicoTecnicosMeta.textContent = usuarioFiltro
+	        ? `Histórico diário de O.S. encerradas por ${formatarNomeUsuarioExibicao(filtroUsuario.value)} no intervalo selecionado. Total encerrado no recorte: ${resumoHistoricoTecnicosAtual.totalEncerradas}.`
+	        : `Histórico diário de O.S. encerradas por ${resumoHistoricoTecnicosAtual.totalTecnicos} técnico(s) ao longo de ${resumoHistoricoTecnicosAtual.totalDias} dia(s) do recorte selecionado. Total encerrado no recorte: ${resumoHistoricoTecnicosAtual.totalEncerradas}.`;
 	      renderHistoricoTecnicosEventos();
 	    }
 
