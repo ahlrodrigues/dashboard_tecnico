@@ -842,16 +842,17 @@ def gerar_html_dashboard(
     }}
     .panel-historico-tecnicos {{
       overflow: visible;
-      min-height: 760px;
-      padding-bottom: 26px;
+      min-height: 980px;
+      padding-bottom: 48px;
     }}
     .panel-historico-tecnicos .table-wrap {{
-      margin-top: 28px;
+      margin-top: 72px;
     }}
     #graficoHistoricoTecnicos {{
       display: block;
-      height: 430px !important;
-      margin-top: 10px;
+      height: 500px !important;
+      margin-top: 14px;
+      margin-bottom: 24px;
     }}
     table {{
       width: 100%;
@@ -3416,6 +3417,12 @@ def gerar_html_dashboard(
 	      options: {{
 	        responsive: true,
 	        maintainAspectRatio: false,
+	        layout: {{
+	          padding: {{
+	            top: 8,
+	            bottom: 28,
+	          }},
+	        }},
 	        interaction: {{ mode: "index", intersect: false, axis: "x" }},
 	        plugins: {{
 	          legend: {{
