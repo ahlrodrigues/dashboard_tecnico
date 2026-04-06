@@ -1088,7 +1088,7 @@
 	    </div>
 
 	    <div class="panel full">
-	      <h2 class="section-title" id="tituloResumoTecnicos">Resumo dos técnicos</h2>
+	      <h2 class="section-title" id="tituloResumoTecnicos">Resumo</h2>
 	      <div class="panel-meta" id="resumoTecnicosMeta">Mostrando os totais mais recentes e os movimentos acumulados dos técnicos no intervalo selecionado.</div>
 	      <div class="metric-grid flow scrollable" id="resumoTecnicosGrid">
 	        <div class="metric-item compact">
@@ -2739,7 +2739,7 @@
       tituloGraficoMensal.textContent = `Gráfico mensal | ${resumo}`;
       tituloGraficoDiario.textContent = `Evolução do itinerário | ${resumo}`;
       tituloHistoricoTecnicos.textContent = "Histórico";
-      tituloResumoTecnicos.textContent = `Resumo dos técnicos | ${resumo}`;
+      tituloResumoTecnicos.textContent = `Resumo | ${resumo}`;
       tituloDetalhamento.textContent = `Detalhamento | ${resumo}`;
       tituloReincidencia.textContent = `Reincidência por cliente/contrato | ${resumo}`;
     }
@@ -3072,6 +3072,12 @@
 
 	    function obterLinhasTooltipHistoricoTecnicos(indice) {
 	      if (!resumoHistoricoTecnicosAtual) return { titulo: "", linhas: [] };
+	      if (resumoHistoricoTecnicosAtual.modo === "multiplos") {
+	        return {
+	          titulo: resumoHistoricoTecnicosAtual?.labels?.[indice] || "",
+	          linhas: [],
+	        };
+	      }
 	      const evento = Array.isArray(resumoHistoricoTecnicosAtual.eventosCarteira)
 	        ? resumoHistoricoTecnicosAtual.eventosCarteira[indice]
 	        : null;
@@ -3117,7 +3123,12 @@
 	      }
 
 	      const indice = tooltip.dataPoints[0].dataIndex;
-	      const conteudo = obterLinhasTooltipHistoricoTecnicos(indice);
+	      const conteudo = resumoHistoricoTecnicosAtual?.modo === "multiplos"
+	        ? {
+	            titulo: resumoHistoricoTecnicosAtual?.labels?.[indice] || "",
+	            linhas: tooltip.dataPoints.map((ponto) => `${ponto.dataset.label}: ${ponto.formattedValue} O.S.`),
+	          }
+	        : obterLinhasTooltipHistoricoTecnicos(indice);
 	      historicoTecnicosTooltip.innerHTML = `
 	        <div class="chartjs-html-tooltip-title">${formatarDataHoraTooltip(conteudo.titulo)}</div>
 	        ${conteudo.linhas.map((linha) => `<div class="chartjs-html-tooltip-line">${linha}</div>`).join("")}
@@ -3556,6 +3567,11 @@
 	        historicoTecnicosEventosBody.innerHTML = `<tr><td colspan="8" class="empty">Sem eventos para exibir.</td></tr>`;
 	        return;
 	      }
+	      if (resumo.modo === "multiplos") {
+	        historicoTecnicosEventosMeta.textContent = "Selecione um técnico no filtro de usuário para ver o detalhamento de eventos por coleta.";
+	        historicoTecnicosEventosBody.innerHTML = `<tr><td colspan="8" class="empty">O gráfico acima mostra a evolução de cada técnico; selecione um usuário para detalhar os eventos.</td></tr>`;
+	        return;
+	      }
 	      const linhas = [];
 	      let totalEventos = 0;
 	      let totalColetasComEvento = 0;
@@ -3749,6 +3765,44 @@
 	    }
 
 	    function renderGraficoHistoricoTecnicos() {
+	      if (!filtroUsuario.value) {
+	        const resumoMultiplos = agruparResumoDiario();
+	        resumoHistoricoTecnicosAtual = {
+	          modo: "multiplos",
+	          labels: resumoMultiplos.labels,
+	          totalCapturas: resumoMultiplos.totalCapturas,
+	          totalCapturasOriginais: resumoMultiplos.totalCapturasOriginais,
+	          totalMudancas: resumoMultiplos.totalMudancas,
+	          totalTecnicos: resumoMultiplos.totalTecnicos,
+	          intervalo: resumoMultiplos.intervalo,
+	        };
+	        if (historicoTecnicosIndiceSelecionado >= resumoMultiplos.labels.length) {
+	          historicoTecnicosIndiceSelecionado = resumoMultiplos.labels.length - 1;
+	        }
+	        graficoHistoricoTecnicos.data.labels = resumoMultiplos.labels;
+	        graficoHistoricoTecnicos.data.datasets = resumoMultiplos.datasets.map((dataset) => ({
+	          ...dataset,
+	          label: dataset.label.replace(/^Itinerário - /, ""),
+	        }));
+	        graficoHistoricoTecnicos.options.plugins.legend.display = resumoMultiplos.datasets.length > 1;
+	        graficoHistoricoTecnicos.options.scales.y.beginAtZero = false;
+	        graficoHistoricoTecnicos.options.scales.y.display = true;
+	        delete graficoHistoricoTecnicos.options.scales.y.min;
+	        delete graficoHistoricoTecnicos.options.scales.y.max;
+	        delete graficoHistoricoTecnicos.options.scales.y.ticks.stepSize;
+	        graficoHistoricoTecnicos.update();
+
+	        if (!resumoMultiplos.labels.length) {
+	          historicoTecnicosMeta.textContent = "Sem histórico suficiente para montar a evolução dos técnicos no intervalo selecionado.";
+	          renderHistoricoTecnicosEventos();
+	          return;
+	        }
+
+	        historicoTecnicosMeta.textContent = `Histórico de ${resumoMultiplos.totalTecnicos} técnico(s) no intervalo selecionado, com ${resumoMultiplos.totalMudancas} marcação(ões) distribuídas em ${resumoMultiplos.totalCapturas} coleta(s) destacadas de ${resumoMultiplos.totalCapturasOriginais || resumoMultiplos.totalCapturas}. Use o filtro de usuário para detalhar um técnico específico.`;
+	        renderHistoricoTecnicosEventos();
+	        return;
+	      }
+
 	      const resumo = compactarResumoHistoricoTecnicos(agruparHistoricoTecnicos());
 	      const serieHistorico = prepararSerieHistoricoTecnicos(resumo.totalCarteira);
 	      resumoHistoricoTecnicosAtual = resumo;
@@ -3776,6 +3830,7 @@
 	          yAxisID: "y",
 	        },
 	      ];
+	      graficoHistoricoTecnicos.options.plugins.legend.display = false;
 	      graficoHistoricoTecnicos.options.scales.y.beginAtZero = serieHistorico.eixoY.beginAtZero;
 	      graficoHistoricoTecnicos.options.scales.y.display = serieHistorico.escalaVisual === "real";
 	      if (serieHistorico.eixoY.min === undefined) delete graficoHistoricoTecnicos.options.scales.y.min;
@@ -3882,7 +3937,7 @@
         resumoTecnicosGrid.appendChild(card);
       });
       const totalSomado = itens.reduce((acc, item) => acc + Number(item.totalOs || 0), 0);
-      resumoTecnicosMeta.textContent = `Mostrando ${itens.length} célula(s) de Técnicos e Infra, com soma total de ${totalSomado} O.S. no intervalo selecionado. Cada célula exibe O.S. iniciais, entradas, saídas e total atual.`;
+      resumoTecnicosMeta.textContent = `Mostrando ${itens.length} célula(s) de Técnicos e Infra, com soma total de ${totalSomado} O.S. no intervalo selecionado. Cada célula exibe O.S. iniciais, entradas, saídas e total residual no último dia do recorte de data selecionado.`;
     }
 
     function atualizarMetas(registrosOperacionais, registrosFinalizados, registrosRanking, registrosVotos, totalDetalhes, totalVotosValidos, totalVotosDetalhamento, totalDetalhamentoPops, registrosBaseReincidencias) {
