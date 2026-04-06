@@ -3414,11 +3414,12 @@ def gerar_html_dashboard(
 	              pointStyle: "circle",
 	              boxWidth: 8,
 	              boxHeight: 8,
-	              padding: 16,
+	              padding: 20,
 	              color: "#2d4f43",
 	              font: {{
 	                size: 12,
 	                weight: "600",
+	                lineHeight: 18,
 	              }},
 	            }},
 	          }},
@@ -3434,15 +3435,30 @@ def gerar_html_dashboard(
 	            border: {{ color: "rgba(88, 113, 102, 0.24)" }},
 	            display: true,
 	            ticks: {{
-	              display: false,
+	              display: true,
+	              color: "#4f6f63",
+	              font: {{
+	                size: 11,
+	                weight: "600",
+	              }},
+	              padding: 6,
 	            }}
 	          }},
 	          x: {{
-	            grid: {{ display: false }},
+	            grid: {{ color: "rgba(88, 113, 102, 0.08)" }},
 	            border: {{ color: "rgba(88, 113, 102, 0.24)" }},
 	            offset: false,
 	            ticks: {{
-	              display: false,
+	              display: true,
+	              color: "#4f6f63",
+	              font: {{
+	                size: 11,
+	                weight: "600",
+	              }},
+	              maxRotation: 0,
+	              autoSkip: true,
+	              maxTicksLimit: 10,
+	              padding: 8,
 	            }}
 	          }}
 	        }}
