@@ -1896,7 +1896,7 @@ def gerar_html_dashboard(
         if (!chave) return true;
         if (chavesVistas.has(chave)) return false;
         chavesVistas.add(chave);
-        return true;
+        return ipEstaNosRangesConhecidos(registro);
       }});
 
       const chavesDuplicadas = new Set(
@@ -4136,8 +4136,8 @@ def gerar_html_dashboard(
 	      backlogOperacionalMeta.textContent = `Tabela com ${{registrosOperacionais.length}} O.S. no recorte de data, refinadas pelos demais filtros da página.`;
 	      detalhamentoPopsMeta.textContent = `Tabela de POPs com ${{totalDetalhamentoPops}} O.S. no recorte atual, considerando os filtros aplicados na página.`;
       rankingMeta.textContent = `Ranking com ${{totalLinhasRanking}} linha(s), consolidado a partir de ${{registrosFinalizados.length}} O.S. encerradas no recorte atual.`;
-      rankingVotosResumoMeta.textContent = `Ranking com ${{totalLinhasRankingVotosResumo}} linha(s), consolidado a partir de ${{totalVotosValidos}} voto(s) válido(s), considerando apenas 1 voto por IP e data no recorte atual.`;
-      rankingVotosMeta.textContent = `Tabela de votos atualizada com ${{totalVotosDetalhamento}} registro(s) do recorte atual; duplicidades por IP e data e IPs fora dos ranges permitidos deixam a linha inteira em vermelho.`;
+      rankingVotosResumoMeta.textContent = `Ranking com ${{totalLinhasRankingVotosResumo}} linha(s), consolidado a partir de ${{totalVotosValidos}} voto(s) válido(s), considerando apenas 1 voto por IP e data e excluindo IPs fora dos ranges permitidos no recorte atual.`;
+      rankingVotosMeta.textContent = `Tabela de votos atualizada com ${{totalVotosDetalhamento}} registro(s) do recorte atual; duplicidades por IP e data e IPs fora dos ranges permitidos deixam a linha inteira em vermelho e não entram na contabilização.`;
       detalheMeta.textContent = `Mostrando ${{totalDetalhes}} O.S. encerrada(s) após aplicar os filtros.`;
       const intervaloReincidencia = obterIntervaloReincidencia30Dias();
       const descricaoReincidencia = intervaloReincidencia
