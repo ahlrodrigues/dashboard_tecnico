@@ -3425,24 +3425,7 @@ def gerar_html_dashboard(
 	        }},
 	        interaction: {{ mode: "index", intersect: false, axis: "x" }},
 	        plugins: {{
-	          legend: {{
-	            display: false,
-	            position: "top",
-	            align: "start",
-	            labels: {{
-	              usePointStyle: true,
-	              pointStyle: "circle",
-	              boxWidth: 8,
-	              boxHeight: 8,
-	              padding: 18,
-	              color: "#2d4f43",
-	              font: {{
-	                size: 12,
-	                weight: "600",
-	                lineHeight: 20,
-	              }},
-	            }},
-	          }},
+	          legend: {{ display: false, position: "top" }},
 	          tooltip: {{
 	            enabled: false,
 	            external: renderTooltipHistoricoTecnicos,
