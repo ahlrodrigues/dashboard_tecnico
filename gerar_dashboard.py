@@ -1279,7 +1279,7 @@ def gerar_html_dashboard(
 	    </div>
 
 		    <div class="panel full chart-tooltip-host">
-		      <h2 class="section-title" id="tituloHistoricoTecnicos">Histórico dos técnicos</h2>
+		      <h2 class="section-title" id="tituloHistoricoTecnicos">Histórico</h2>
 		      <div class="panel-meta" id="historicoTecnicosMeta">Mostrando a evolução do itinerário no período filtrado.</div>
 		      <canvas id="graficoHistoricoTecnicos"></canvas>
 		      <div class="chartjs-html-tooltip" id="historicoTecnicosTooltip" aria-hidden="true"></div>
@@ -2374,6 +2374,10 @@ def gerar_html_dashboard(
       return usuarios;
     }}
 
+    function obterUsuariosPermitidosParaHistorico(filtros = obterEstadoFiltros()) {{
+      return obterUsuariosPermitidosParaVotosAPartirDeRegistros(filtrarDetalhes(filtros));
+    }}
+
     function filtrarBaseReincidencias(filtros = obterEstadoFiltros()) {{
       return detalhes.filter((registro) =>
         registroCorrespondeAEstadoFiltros(registro, filtros, FILTER_CAPABILITIES.analitica, {{
@@ -2965,7 +2969,7 @@ def gerar_html_dashboard(
       tituloRankingVotos.textContent = `Detalhamento dos votos | ${{resumo}}`;
       tituloGraficoMensal.textContent = `Gráfico mensal | ${{resumo}}`;
       tituloGraficoDiario.textContent = `Evolução do itinerário | ${{resumo}}`;
-      tituloHistoricoTecnicos.textContent = "Histórico dos técnicos";
+      tituloHistoricoTecnicos.textContent = "Histórico";
       tituloResumoTecnicos.textContent = `Resumo dos técnicos | ${{resumo}}`;
       tituloDetalhamento.textContent = `Detalhamento | ${{resumo}}`;
       tituloReincidencia.textContent = `Reincidência por cliente/contrato | ${{resumo}}`;
@@ -3878,7 +3882,9 @@ def gerar_html_dashboard(
 	    }}
 
 	    function agruparHistoricoTecnicos() {{
+	      const filtros = obterEstadoFiltros();
 	      const usuarioFiltro = normalizarChaveUsuario(filtroUsuario.value);
+	      const usuariosPermitidos = obterUsuariosPermitidosParaHistorico(filtros);
 	      const mapa = new Map();
 	      const rotulos = new Map();
 
@@ -3887,6 +3893,7 @@ def gerar_html_dashboard(
 	        if (!capturadoEm || !dataCapturaDentroDoIntervalo(capturadoEm)) return;
 
 	        const tecnicoKey = normalizarChaveUsuario(registro.tecnico || registro.tecnico_nome);
+	        if (usuariosPermitidos.size && !usuariosPermitidos.has(tecnicoKey)) return;
 	        if (usuarioFiltro && tecnicoKey !== usuarioFiltro) return;
 
 	        if (!mapa.has(capturadoEm)) {{
