@@ -55,6 +55,10 @@ def normalizar_status(valor: Any, status_id: Any) -> str:
         return "Desconhecido"
 
 
+def motivo_eh_remocao_conector(motivo: Any) -> bool:
+    return normalizar_identificador_pessoa(motivo) == "remocaodeconector"
+
+
 def classificar_finalizador(nome: Any, tecnicos: List[str], infra_keywords: List[str]) -> str:
     nome_norm = normalizar_identificador_pessoa(nome)
 
@@ -74,10 +78,14 @@ def classificar_grupo(
     finalizador: Any,
     responsavel: Any,
     tecnicos_auxiliares: Any,
+    motivo: Any,
     contrato_status: Any,
     tecnicos: List[str],
     infra_keywords: List[str],
 ) -> str:
+    if motivo_eh_remocao_conector(motivo):
+        return "Técnicos"
+
     nome_norm = normalizar_identificador_pessoa(finalizador)
     responsavel_norm = normalizar_identificador_pessoa(responsavel)
     auxiliares_norm = extrair_auxiliares(tecnicos_auxiliares)
@@ -106,9 +114,13 @@ def classificar_grupo(
 def classificar_grupo_encerramento(
     finalizador: Any,
     responsavel: Any,
+    motivo: Any,
     tecnicos: List[str],
     infra_keywords: List[str],
 ) -> str:
+    if motivo_eh_remocao_conector(motivo):
+        return "Técnicos"
+
     finalizador_norm = normalizar_identificador_pessoa(finalizador)
     responsavel_norm = normalizar_identificador_pessoa(responsavel)
 
@@ -248,6 +260,7 @@ def preparar_dataframe(raw_data: List[Dict[str, Any]], config: Dict[str, Any]) -
             finalizador=row.get("finalizado_por_dashboard"),
             responsavel=row.get("responsavel", ""),
             tecnicos_auxiliares=row.get("tecnicos_auxiliares", ""),
+            motivo=row.get("motivo", ""),
             contrato_status=row.get("contrato_status_dashboard", ""),
             tecnicos=tecnicos,
             infra_keywords=infra_keywords,
@@ -258,6 +271,7 @@ def preparar_dataframe(raw_data: List[Dict[str, Any]], config: Dict[str, Any]) -
         lambda row: classificar_grupo_encerramento(
             finalizador=row.get("finalizado_por_dashboard"),
             responsavel=row.get("responsavel", ""),
+            motivo=row.get("motivo", ""),
             tecnicos=tecnicos,
             infra_keywords=infra_keywords,
         ),

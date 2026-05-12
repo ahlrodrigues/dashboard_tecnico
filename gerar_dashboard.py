@@ -113,6 +113,8 @@ def montar_payload_dashboard(
         "status_dashboard": "Status",
     }
 
+    motivo_series = detalhes_df["motivo"].fillna("").astype(str).str.strip() if "motivo" in detalhes_df.columns else pd.Series(dtype=str)
+
     cards = {
         "aberta": int((detalhes_df["status_dashboard"] == "Aberta").sum()) if not detalhes_df.empty else 0,
         "encerrada": int(len(finalizadas_df)) if not finalizadas_df.empty else 0,
@@ -122,8 +124,8 @@ def montar_payload_dashboard(
         "em_execucao": int((detalhes_df["status_dashboard"] == "Em execução").sum()) if not detalhes_df.empty else 0,
         "inviabilidade": int((detalhes_df["contrato_status_dashboard"].fillna("").astype(str).str.strip() == "Inviabilidade Técnica").sum())
         if "contrato_status_dashboard" in detalhes_df.columns and not detalhes_df.empty else 0,
-        "instalacoes": int((detalhes_df["motivo"].fillna("").astype(str).str.strip() == "Instalação de KIT").sum()) if "motivo" in detalhes_df.columns else 0,
-        "remocoes": int((detalhes_df["motivo"].fillna("").astype(str).str.strip() == "Remoção de KIT").sum()) if "motivo" in detalhes_df.columns else 0,
+        "instalacoes": int((motivo_series == "Instalação de KIT").sum()) if not motivo_series.empty else 0,
+        "remocoes": int(motivo_series.isin(["Remoção de KIT", "Remoção de Conector"]).sum()) if not motivo_series.empty else 0,
         "por_outros": int(len(finalizadas_df) - (finalizadas_df["grupo_encerramento_dashboard"] == "Técnicos").sum())
         if "grupo_encerramento_dashboard" in finalizadas_df.columns and not finalizadas_df.empty else 0,
     }
@@ -1819,6 +1821,9 @@ def gerar_html_dashboard(
     }}
 
 	    function obterGrupo(registro) {{
+	      if (motivoEhRemocaoConector(registro)) {{
+	        return "Técnicos";
+	      }}
 	      const statusContrato = normalizarTexto(registro.contrato_status_dashboard);
 	      if (statusContrato.localeCompare("Inviabilidade Técnica", "pt-BR", {{ sensitivity: "accent" }}) === 0) {{
 	        return "Inviabilidade";
@@ -1828,6 +1833,7 @@ def gerar_html_dashboard(
 
 	    function obterGrupoEncerramento(registro) {{
 	      const grupoEncerramento = normalizarTexto(registro.grupo_encerramento_dashboard);
+	      if (motivoEhRemocaoConector(registro)) return "Técnicos";
 	      if (grupoEncerramento !== "Técnicos") return grupoEncerramento;
 	      return usuarioContaNoGrupoTecnicos(registro.finalizado_por_dashboard) ? "Técnicos" : "Outros";
 	    }}
@@ -1863,6 +1869,15 @@ def gerar_html_dashboard(
 
     function obterMotivo(registro) {{
       return normalizarTexto(registro.motivo);
+    }}
+
+    function motivoEhRemocaoConector(registro) {{
+      const chave = normalizarTexto(obterMotivo(registro))
+        .normalize("NFD")
+        .replace(/[̀-ͯ]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "");
+      return chave === "remocaodeconector";
     }}
 
     function motivoContaComoInviabilidadeNoFiltro(registro) {{
@@ -2272,6 +2287,11 @@ def gerar_html_dashboard(
       return obterStatus(registro) === valorFiltro;
     }}
 
+    function statusEhBacklog(registro) {{
+      const status = obterStatus(registro);
+      return status === "Aberta" || status === "Pendente" || status === "Em execução";
+    }}
+
     function registroCorrespondeAEstadoFiltros(registro, filtros, capacidades, opcoes = {{}}) {{
       const {{
         obterData = null,
@@ -2543,7 +2563,7 @@ def gerar_html_dashboard(
     }}
 
     function filtrarDetalhamentoPops(registros) {{
-      return registros;
+      return registros.filter((registro) => statusEhBacklog(registro));
     }}
 
 	    function filtrarBaseEncerramentos(filtros = obterEstadoFiltros()) {{
@@ -4580,7 +4600,7 @@ def gerar_html_dashboard(
       const filtros = obterEstadoFiltros();
       const registros = filtrarDetalhes(filtros);
       const registrosStatusOperacional = filtrarBaseStatusOperacional(filtros);
-      const registrosOperacionais = registrosStatusOperacional;
+      const registrosOperacionais = registrosStatusOperacional.filter((registro) => statusEhBacklog(registro));
       const registrosAnaliticos = filtrarBaseAnalitica(filtros);
       const registrosPops = registrosStatusOperacional;
       const registrosDetalhamentoPops = filtrarDetalhamentoPops(registrosPops);
