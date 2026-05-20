@@ -1903,10 +1903,14 @@ def gerar_html_dashboard(
     }}
 
     function obterUsuario(registro) {{
+      const responsavel = normalizarTexto(registro.responsavel);
+      const finalizadoPor = normalizarTexto(registro.finalizado_por_dashboard);
       if (motivoEhRemocaoConector(registro)) {{
-        return normalizarTexto(registro.responsavel || registro.finalizado_por_dashboard);
+        if (!responsavel) return "Em branco";
+        const chaveResponsavel = normalizarChaveUsuario(responsavel);
+        return rotulosCanonicosUsuarios[chaveResponsavel] || chaveResponsavel || responsavel;
       }}
-      return normalizarTexto(registro.finalizado_por_dashboard);
+      return finalizadoPor || responsavel;
     }}
 
     function obterPop(registro) {{
@@ -3046,21 +3050,18 @@ def gerar_html_dashboard(
       const mapa = new Map();
 
       registros.forEach((registro) => {{
-        const usuario = obterUsuario(registro) || "Sem usuário";
+        const usuarioBase = obterUsuario(registro) || "Sem usuário";
+        const usuarioChave = normalizarChaveUsuario(usuarioBase) || "semusuario";
+        const usuario = formatarNomeUsuarioExibicao(usuarioBase) || "Sem usuário";
         const grupo = obterGrupoFiltro(registro) || "Outros";
-        const chave = `${{usuario}}|||${{grupo}}`;
-        mapa.set(chave, (mapa.get(chave) || 0) + 1);
+        const chave = `${{usuarioChave}}|||${{grupo}}`;
+        if (!mapa.has(chave)) {{
+          mapa.set(chave, {{ usuario, grupo, total: 0 }});
+        }}
+        mapa.get(chave).total += 1;
       }});
 
-      return [...mapa.entries()]
-        .map(([chave, total]) => {{
-          const [usuario, grupo] = chave.split("|||");
-          return {{
-            usuario,
-            grupo,
-            total,
-          }};
-        }})
+      return [...mapa.values()]
         .sort((a, b) => b.total - a.total || a.usuario.localeCompare(b.usuario, "pt-BR", {{ sensitivity: "base" }}));
     }}
 
