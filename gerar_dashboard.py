@@ -501,6 +501,81 @@ def gerar_html_dashboard(
     .update-overlay.error .update-status {{
       color: #a13a2a;
     }}
+    .refresh-confirm-overlay {{
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(12, 38, 30, 0.46);
+      backdrop-filter: blur(8px);
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.24s ease, visibility 0.24s ease;
+      z-index: 41;
+    }}
+    .refresh-confirm-overlay.active {{
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }}
+    .refresh-confirm-dialog {{
+      width: min(460px, 100%);
+      padding: 28px 26px;
+      border-radius: 24px;
+      background: rgba(252, 253, 248, 0.98);
+      border: 1px solid rgba(23, 98, 76, 0.12);
+      box-shadow: 0 24px 64px rgba(23, 50, 41, 0.18);
+      text-align: center;
+    }}
+    .refresh-confirm-dialog h3 {{
+      margin: 0 0 10px;
+      font-size: 22px;
+      color: var(--text);
+    }}
+    .refresh-confirm-dialog p {{
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.5;
+      font-size: 14px;
+    }}
+    .refresh-confirm-actions {{
+      margin-top: 18px;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }}
+    .refresh-confirm-actions button {{
+      border-radius: 999px;
+      padding: 10px 16px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+    }}
+    .refresh-confirm-actions .btn-confirm {{
+      border: 0;
+      color: #f7fffb;
+      background: var(--accent);
+      box-shadow: 0 10px 24px rgba(23, 50, 41, 0.2);
+    }}
+    .refresh-confirm-actions .btn-confirm:hover {{
+      transform: translateY(-1px);
+      background: #1b7359;
+    }}
+    .refresh-confirm-actions .btn-cancel {{
+      border: 1px solid var(--line);
+      color: var(--text);
+      background: #ffffff;
+      box-shadow: 0 8px 20px rgba(23, 50, 41, 0.1);
+    }}
+    .refresh-confirm-actions .btn-cancel:hover {{
+      transform: translateY(-1px);
+      background: #f5faf7;
+    }}
     @keyframes refresh-spin {{
       to {{
         transform: rotate(360deg);
@@ -1158,6 +1233,16 @@ def gerar_html_dashboard(
       <div class="update-status" id="updateOverlayStatus">Conectando ao serviço de atualização...</div>
     </div>
   </div>
+  <div class="refresh-confirm-overlay" id="refreshConfirmOverlay" aria-hidden="true">
+    <div class="refresh-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="refreshConfirmTitle">
+      <h3 id="refreshConfirmTitle">Atualização automática</h3>
+      <p>O tempo da atualização automática terminou. Deseja atualizar o dashboard agora?</p>
+      <div class="refresh-confirm-actions">
+        <button id="refreshConfirmYes" class="btn-confirm" type="button">Atualizar agora</button>
+        <button id="refreshConfirmNo" class="btn-cancel" type="button">Agora não</button>
+      </div>
+    </div>
+  </div>
   <div class="wrap">
     <section class="hero">
         <div class="hero-head">
@@ -1538,6 +1623,9 @@ def gerar_html_dashboard(
 	    const quickRangeButtons = Array.from(document.querySelectorAll("[data-range]"));
     const refreshCountdown = document.getElementById("refreshCountdown");
     const refreshNowButton = document.getElementById("refreshNowButton");
+    const refreshConfirmOverlay = document.getElementById("refreshConfirmOverlay");
+    const refreshConfirmYes = document.getElementById("refreshConfirmYes");
+    const refreshConfirmNo = document.getElementById("refreshConfirmNo");
     const updateOverlay = document.getElementById("updateOverlay");
     const updateOverlayMessage = document.getElementById("updateOverlayMessage");
     const updateOverlayStatus = document.getElementById("updateOverlayStatus");
@@ -1636,6 +1724,8 @@ def gerar_html_dashboard(
     let pollingAtualizacaoId = null;
     let restanteRefresh = refreshSeconds;
     let intervaloRefreshId = null;
+    let confirmacaoRefreshPendente = false;
+    let resolverConfirmacaoRefresh = null;
     let timeoutAplicarFiltrosBusca = null;
     let ordenacaoDetalhes = {{ col: "data_finalizacao_dashboard", dir: "desc" }};
     let ordenacaoRankingVotos = {{ col: votosCols[0] || "data", dir: "asc" }};
@@ -4768,6 +4858,26 @@ def gerar_html_dashboard(
       }}
     }}
 
+    function fecharPopupConfirmacaoAutoRefresh(confirmado) {{
+      if (!confirmacaoRefreshPendente) return;
+      confirmacaoRefreshPendente = false;
+      refreshConfirmOverlay.classList.remove("active");
+      refreshConfirmOverlay.setAttribute("aria-hidden", "true");
+      const resolver = resolverConfirmacaoRefresh;
+      resolverConfirmacaoRefresh = null;
+      if (typeof resolver === "function") resolver(Boolean(confirmado));
+    }}
+
+    function abrirPopupConfirmacaoAutoRefresh() {{
+      if (confirmacaoRefreshPendente) return Promise.resolve(false);
+      confirmacaoRefreshPendente = true;
+      refreshConfirmOverlay.classList.add("active");
+      refreshConfirmOverlay.setAttribute("aria-hidden", "false");
+      return new Promise((resolve) => {{
+        resolverConfirmacaoRefresh = resolve;
+      }});
+    }}
+
     async function consultarStatusAtualizacao() {{
       try {{
         const resposta = await window.fetch(refreshStatusUrl, {{
@@ -4888,12 +4998,19 @@ def gerar_html_dashboard(
       refreshCountdown.textContent = formatarTempo(restanteRefresh);
 
       intervaloRefreshId = window.setInterval(() => {{
-        if (atualizandoArquivos) return;
+        if (atualizandoArquivos || confirmacaoRefreshPendente) return;
 
         restanteRefresh -= 1;
         if (restanteRefresh <= 0) {{
           refreshCountdown.textContent = "00:00";
-          executarAtualizacaoArquivos("auto");
+          abrirPopupConfirmacaoAutoRefresh().then((confirmado) => {{
+            if (confirmado) {{
+              executarAtualizacaoArquivos("auto");
+              return;
+            }}
+            restanteRefresh = refreshSeconds;
+            refreshCountdown.textContent = formatarTempo(restanteRefresh);
+          }});
           return;
         }}
         refreshCountdown.textContent = formatarTempo(restanteRefresh);
@@ -4902,6 +5019,22 @@ def gerar_html_dashboard(
 
     refreshNowButton.addEventListener("click", () => {{
       executarAtualizacaoArquivos("manual");
+    }});
+    refreshConfirmYes.addEventListener("click", () => {{
+      fecharPopupConfirmacaoAutoRefresh(true);
+    }});
+    refreshConfirmNo.addEventListener("click", () => {{
+      fecharPopupConfirmacaoAutoRefresh(false);
+    }});
+    refreshConfirmOverlay.addEventListener("click", (event) => {{
+      if (event.target === refreshConfirmOverlay) {{
+        fecharPopupConfirmacaoAutoRefresh(false);
+      }}
+    }});
+    window.addEventListener("keydown", (event) => {{
+      if (event.key === "Escape" && confirmacaoRefreshPendente) {{
+        fecharPopupConfirmacaoAutoRefresh(false);
+      }}
     }});
     detalhesHead.addEventListener("click", (event) => {{
       const botao = event.target.closest(".sort-header");
