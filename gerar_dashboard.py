@@ -1813,6 +1813,9 @@ def gerar_html_dashboard(
     }}
 
     function obterUsuario(registro) {{
+      if (motivoEhRemocaoConector(registro)) {{
+        return normalizarTexto(registro.responsavel || registro.finalizado_por_dashboard);
+      }}
       return normalizarTexto(registro.finalizado_por_dashboard);
     }}
 
@@ -1820,10 +1823,10 @@ def gerar_html_dashboard(
       return normalizarTexto(registro.pop);
     }}
 
-	    function obterGrupo(registro) {{
-	      if (motivoEhRemocaoConector(registro)) {{
-	        return "Técnicos";
-	      }}
+		    function obterGrupo(registro) {{
+		      if (motivoEhRemocaoConector(registro)) {{
+		        return "Técnicos";
+		      }}
 	      const statusContrato = normalizarTexto(registro.contrato_status_dashboard);
 	      if (statusContrato.localeCompare("Inviabilidade Técnica", "pt-BR", {{ sensitivity: "accent" }}) === 0) {{
 	        return "Inviabilidade";
@@ -1831,12 +1834,16 @@ def gerar_html_dashboard(
 	      return normalizarTexto(registro.grupo_dashboard);
 	    }}
 
-	    function obterGrupoEncerramento(registro) {{
-	      const grupoEncerramento = normalizarTexto(registro.grupo_encerramento_dashboard);
-	      if (motivoEhRemocaoConector(registro)) return "Técnicos";
-	      if (grupoEncerramento !== "Técnicos") return grupoEncerramento;
-	      return usuarioContaNoGrupoTecnicos(registro.finalizado_por_dashboard) ? "Técnicos" : "Outros";
-	    }}
+		    function obterGrupoEncerramento(registro) {{
+		      if (motivoEhRemocaoConector(registro)) {{
+		        const responsavel = normalizarTexto(registro.responsavel);
+		        if (responsavel && responsavel.toLowerCase().includes("infra")) return "Infra";
+		        return usuarioContaNoGrupoTecnicos(responsavel) ? "Técnicos" : "Outros";
+		      }}
+		      const grupoEncerramento = normalizarTexto(registro.grupo_encerramento_dashboard);
+		      if (grupoEncerramento !== "Técnicos") return grupoEncerramento;
+		      return usuarioContaNoGrupoTecnicos(registro.finalizado_por_dashboard) ? "Técnicos" : "Outros";
+		    }}
 
 	    function obterGrupoFiltro(registro) {{
 	      const grupoStatusContrato = obterGrupo(registro);
@@ -2861,19 +2868,19 @@ def gerar_html_dashboard(
       return "";
     }}
 
-	    function agruparResumo(registros) {{
-	      return mesesOrdem.map((mes) => {{
-	        const itens = registros.filter((registro) => obterMesPorDataTexto(obterDataIntervaloFinalizacao(registro)) === mes);
-	        return {{
-          mes_nome: mes,
-          total: itens.length,
-          tecnicos: itens.filter((registro) => obterGrupoFiltro(registro) === "Técnicos").length,
-          infra: itens.filter((registro) => obterGrupoFiltro(registro) === "Infra").length,
-          inviabilidade: itens.filter((registro) => obterGrupoFiltro(registro) === "Inviabilidade").length,
-          outros: itens.filter((registro) => obterGrupoFiltro(registro) === "Outros").length,
-        }};
-      }});
-    }}
+		    function agruparResumo(registros) {{
+		      return mesesOrdem.map((mes) => {{
+		        const itens = registros.filter((registro) => obterMesPorDataTexto(obterDataIntervaloFinalizacao(registro)) === mes);
+		        return {{
+	          mes_nome: mes,
+	          total: itens.length,
+	          tecnicos: itens.filter((registro) => obterGrupoFiltro(registro) === "Técnicos").length,
+	          infra: itens.filter((registro) => obterGrupoFiltro(registro) === "Infra").length,
+	          inviabilidade: itens.filter((registro) => obterGrupoFiltro(registro) === "Inviabilidade").length,
+	          outros: itens.filter((registro) => obterGrupoFiltro(registro) === "Outros").length,
+	        }};
+	      }});
+	    }}
 
 	    function formatarDuracaoDias(mediaDias) {{
 	      if (mediaDias === null || Number.isNaN(mediaDias)) return "-";
@@ -3426,17 +3433,17 @@ def gerar_html_dashboard(
       }});
     }}
 
-	    const graficoMensal = new Chart(document.getElementById("graficoMensal"), {{
-      type: "bar",
-      data: {{
-        labels: mesesOrdem,
-        datasets: [
-          {{ label: "Total", data: [], backgroundColor: "#17624c" }},
-          {{ label: "Técnicos", data: [], backgroundColor: "#4e9c83" }},
-          {{ label: "Infra", data: [], backgroundColor: "#7bc6ac" }},
-          {{ label: "Inviabilidade", data: [], backgroundColor: "#d18b2c" }},
-          {{ label: "Outros", data: [], backgroundColor: "#b8d8c8" }}
-        ]
+		    const graficoMensal = new Chart(document.getElementById("graficoMensal"), {{
+	      type: "bar",
+	      data: {{
+	        labels: mesesOrdem,
+	        datasets: [
+	          {{ label: "Total", data: [], backgroundColor: "#17624c" }},
+	          {{ label: "Técnicos", data: [], backgroundColor: "#4e9c83" }},
+	          {{ label: "Infra", data: [], backgroundColor: "#7bc6ac" }},
+	          {{ label: "Inviabilidade", data: [], backgroundColor: "#d18b2c" }},
+	          {{ label: "Outros", data: [], backgroundColor: "#b8d8c8" }}
+	        ]
       }},
       options: {{
         responsive: true,

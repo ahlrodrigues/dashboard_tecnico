@@ -119,7 +119,7 @@ def classificar_grupo_encerramento(
     infra_keywords: List[str],
 ) -> str:
     if motivo_eh_remocao_conector(motivo):
-        return "Técnicos"
+        return classificar_finalizador(responsavel, tecnicos, infra_keywords)
 
     finalizador_norm = normalizar_identificador_pessoa(finalizador)
     responsavel_norm = normalizar_identificador_pessoa(responsavel)
